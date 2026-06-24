@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FanLog - Your Sports Identity</title>
+  <meta name="description" content="Map your teams, rate your devotion, calculate your Fandom Index, and join the waitlist.">
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+  <!-- Stylesheets -->
+  <script type="module" crossorigin src="/assets/index-ChsUWLPu.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-J_ceuLBi.css">
+</head>
+<body>
+
+  <!-- Minimal ambient theme element -->
+  <div class="ambient-gradient" id="ambient-bg"></div>
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="header-container">
+      <div class="logo-area" id="admin-trigger" title="Double click for Admin Panel">
+        <span class="logo-icon">🏟</span>
+        <span class="logo-text">FanLog</span>
+      </div>
+      <div class="header-cta" id="header-cta-container">
+        <button id="btn-header-waitlist" class="btn btn-secondary btn-sm">Join Waitlist</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ONBOARDING FLOW AND APP CONTENT -->
+  <main id="app-content">
+
+    <!-- STEP 1: WELCOME / HERO SCREEN -->
+    <section id="step-welcome" class="onboarding-step active">
+      <div class="welcome-container">
+        <div class="welcome-badge">Pre-Launch Beta</div>
+        <h1 class="welcome-title">Your Fandom, <br><span class="text-gradient">Quantified.</span></h1>
+        <p class="welcome-subtitle">FanLog captures your sports identity as a clean, data-driven metric instrument. Rate your devotion, calculate your Fandom Index, and claim your verified card.</p>
+        
+        <!-- Showcase Morphing Card -->
+        <div class="morphing-card-wrapper">
+          <div id="welcome-card" class="fandom-index-card">
+            <!-- Card Header -->
+            <div class="fcard-header">
+              <div class="fcard-brand">
+                <span class="fcard-dot"></span>
+                <span class="fcard-brand-label">FANLOG PROFILE</span>
+              </div>
+              <div class="fcard-archetype" id="w-card-archetype">PURE LOYALIST</div>
+            </div>
+            
+            <!-- Rainbow Chart Graphic (Wealthsimple Style) -->
+            <div class="fcard-rainbow-wrapper">
+              <div class="rainbow-chart-container">
+                <svg viewBox="0 0 300 180" class="rainbow-svg" id="w-card-rainbow-svg">
+                  <!-- JS builds concentric tracks and filled arcs here -->
+                </svg>
+                <div class="rainbow-score-box">
+                  <span class="fcard-score-value" id="w-card-score">95</span>
+                  <span class="rainbow-score-label">FANLOG SCORE</span>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Dynamic Team Legend Chips -->
+            <div class="fcard-legend-container" id="w-card-legend">
+              <!-- JS builds team chips here -->
+            </div>
+            
+            <!-- Card Metadata -->
+            <div class="fcard-meta-grid">
+              <div class="fcard-meta-box">
+                <span class="fcard-meta-label">FAN ID</span>
+                <span class="fcard-meta-value" id="w-card-name">@BradyFan</span>
+              </div>
+              <div class="fcard-meta-box">
+                <span class="fcard-meta-label" id="w-card-since-label">FAN SINCE</span>
+                <span class="fcard-meta-value" id="w-card-since">2001</span>
+              </div>
+              <div class="fcard-meta-box">
+                <span class="fcard-meta-label" id="w-card-prediction-label">PREDICTION</span>
+                <span class="fcard-meta-value" id="w-card-prediction">2028</span>
+              </div>
+              <div class="fcard-meta-box">
+                <span class="fcard-meta-label">STATUS</span>
+                <span class="fcard-meta-value text-accent" id="w-card-status">SAMPLE</span>
+              </div>
+            </div>
+            
+            <!-- Card Footer -->
+            <div class="fcard-footer">
+              <div class="fcard-barcode">
+                <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+              </div>
+              <div class="fcard-serial">FL-2026-INDEX</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="welcome-actions">
+          <button id="btn-start-flow" class="btn btn-primary btn-lg">Generate Your Fandom Index</button>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- STEP 2: TEAM BUILDER -->
+    <section id="step-builder" class="onboarding-step">
+      <div class="builder-step-container">
+        <div class="step-header">
+          <span class="step-indicator">STEP 1 OF 3</span>
+          <h2 class="step-title">Map Your Teams</h2>
+          <p class="step-subtitle">Select the teams you root for. Choose at least one. The first team added will be set as your Top Team, which drives your primary color scheme.</p>
+        </div>
+        
+        <div class="builder-flow-grid">
+          <!-- Selection panel -->
+          <div class="builder-inputs-panel">
+            <div class="team-adder-box">
+              <div class="form-group-row">
+                <div class="form-group">
+                  <label for="b-sport-select">League</label>
+                  <select id="b-sport-select" class="theme-select">
+                    <option value="" disabled selected>Select League</option>
+                    <option value="nfl">NFL (Football)</option>
+                    <option value="nba">NBA (Basketball)</option>
+                    <option value="nhl">NHL (Hockey)</option>
+                    <option value="mlb">MLB (Baseball)</option>
+                    <option value="mls">MLS (Soccer)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="b-team-select">Team</label>
+                  <select id="b-team-select" class="theme-select" disabled>
+                    <option value="" disabled selected>Select Team</option>
+                  </select>
+                </div>
+              </div>
+              <button type="button" id="b-add-team-btn" class="btn btn-secondary btn-sm btn-block">Add Team to Profile</button>
+            </div>
+            
+            <div class="added-teams-container">
+              <label>Selected Teams (Min 1, mark radio for Top Team)</label>
+              <div id="b-added-teams-list" class="added-teams-list">
+                <div class="no-teams-placeholder">No teams added yet. Select a team above to start.</div>
+              </div>
+            </div>
+            
+            <div class="builder-step-actions">
+              <button id="btn-to-quiz" class="btn btn-primary btn-block" disabled>Continue to Fandom Quiz</button>
+            </div>
+          </div>
+          
+          <!-- Live Preview Visual Spotlight -->
+          <div class="builder-preview-panel">
+            <div class="builder-preview-info">
+              <h3>Live Brand Color</h3>
+              <p>Your top team's color palette adapts the card styling instantly.</p>
+              <div class="preview-team-spotlight" id="builder-spotlight">
+                <div class="spotlight-logo-holder">
+                  <span id="preview-spotlight-logo-fallback">🏟</span>
+                  <img id="preview-spotlight-logo" src="" alt="Team Logo" style="display: none;" crossorigin="anonymous">
+                </div>
+                <h4 id="preview-spotlight-name">Select a Team</h4>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- STEP 3: PER-TEAM DEVOTION QUIZ -->
+    <section id="step-quiz" class="onboarding-step">
+      <div class="quiz-step-container">
+        <div class="step-header">
+          <span class="step-indicator" id="quiz-progress-text">STEP 2 OF 3</span>
+          <h2 class="step-title">Devotion Quiz: <span id="quiz-team-name" class="text-gradient">Team</span></h2>
+          <p class="step-subtitle">Assess your devotion index. All questions are required.</p>
+        </div>
+        
+        <div class="quiz-box-card">
+          <!-- Horizontal progress indicator -->
+          <div class="quiz-progress-bar-container">
+            <div id="quiz-progress-bar-fill" class="quiz-progress-bar-fill"></div>
+          </div>
+          
+          <!-- Question container -->
+          <div id="quiz-questions-list" class="quiz-questions-list">
+            <!-- Dynamically populated in main.js -->
+          </div>
+          
+          <div class="quiz-actions">
+            <button id="btn-quiz-next" class="btn btn-primary btn-block" disabled>Next Team</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- STEP 4: REVEAL / CALCULATING ANIMATION -->
+    <section id="step-reveal" class="onboarding-step">
+      <div class="reveal-step-container">
+        <h2 class="reveal-loading-title">Calculating Fandom Index...</h2>
+        <div class="reveal-progress-container">
+          <div class="reveal-progress-track">
+            <div id="reveal-progress-fill" class="reveal-progress-fill"></div>
+          </div>
+        </div>
+        <div class="reveal-ticker" id="reveal-ticker">00</div>
+      </div>
+    </section>
+
+
+    <!-- STEP 5: MAIN LANDING PAGE WITH FINISHED CARD -->
+    <section id="step-main" class="onboarding-step">
+      <div class="main-landing-container">
+        
+        <!-- CARD DISPLAY AND DETAILS -->
+        <div class="main-card-hero-row">
+          
+          <!-- Card Column -->
+          <div class="main-card-column">
+            <div class="fcard-scene">
+              <div class="fcard-element" id="final-card">
+                
+                <!-- FRONT FACE -->
+                <div class="fcard-face fcard-front" id="fcard-front-face">
+                  <div class="fcard-inner-border">
+                    <!-- Card Header -->
+                    <div class="fcard-header">
+                      <div class="fcard-brand">
+                        <span class="fcard-dot"></span>
+                        <span class="fcard-brand-label">FANLOG PROFILE</span>
+                      </div>
+                      <div class="fcard-archetype" id="f-card-archetype">PURE LOYALIST</div>
+                    </div>
+                    
+                    <!-- Rainbow Chart Graphic (Wealthsimple Style) -->
+                    <div class="fcard-rainbow-wrapper">
+                      <div class="rainbow-chart-container">
+                        <svg viewBox="0 0 300 180" class="rainbow-svg" id="f-card-rainbow-svg">
+                          <!-- JS builds concentric tracks and filled arcs here -->
+                        </svg>
+                        <div class="rainbow-score-box">
+                          <span class="fcard-score-value" id="f-card-score">--</span>
+                          <span class="rainbow-score-label">FANLOG SCORE</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- Dynamic Team Legend Chips -->
+                    <div class="fcard-legend-container" id="f-card-legend">
+                      <!-- Rendered dynamically -->
+                    </div>
+                    
+                    <!-- Card Metadata -->
+                    <div class="fcard-meta-grid">
+                      <div class="fcard-meta-box">
+                        <span class="fcard-meta-label">FAN ID</span>
+                        <span class="fcard-meta-value" id="f-card-name">@GUEST</span>
+                      </div>
+                      <div class="fcard-meta-box">
+                        <span class="fcard-meta-label" id="f-card-since-label">FAN SINCE</span>
+                        <span class="fcard-meta-value" id="f-card-since">----</span>
+                      </div>
+                      <div class="fcard-meta-box">
+                        <span class="fcard-meta-label" id="f-card-prediction-label">PREDICTION</span>
+                        <span class="fcard-meta-value" id="f-card-prediction">----</span>
+                      </div>
+                      <div class="fcard-meta-box">
+                        <span class="fcard-meta-label">STATUS</span>
+                        <span class="fcard-meta-value" id="f-card-status" style="color: var(--text-muted);">UNVERIFIED</span>
+                      </div>
+                    </div>
+                    
+                    <!-- Card Footer -->
+                    <div class="fcard-footer">
+                      <div class="fcard-barcode">
+                        <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+                      </div>
+                      <div class="fcard-serial" id="f-card-serial">FL-2026-INDEX</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- BACK FACE -->
+                <div class="fcard-face fcard-back" id="fcard-back-face">
+                  <div class="fcard-inner-border">
+                    <div class="success-header">
+                      <div class="success-badge">✓ WAITLIST JOINED</div>
+                      <h3>Identity Card Verified!</h3>
+                      <p>You have joined the FanLog waitlist. Download your card, copy the details, or share your profile link below.</p>
+                    </div>
+                    
+                    <div class="card-back-serial-box">
+                      <span class="back-serial-label">REGISTRATION ID</span>
+                      <span class="back-serial-value" id="f-card-serial-back">FL-2026-WAIT-0000</span>
+                    </div>
+
+                    <div class="card-back-meta">
+                      <div class="back-meta-item">
+                        <span>Name:</span>
+                        <strong id="back-val-name">@GUEST</strong>
+                      </div>
+                      <div class="back-meta-item">
+                        <span>Score:</span>
+                        <strong id="back-val-score">0</strong>
+                      </div>
+                    </div>
+
+                    <div class="card-back-footer">
+                      <p>FanLog Pre-launch MVP 2026</p>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+          
+          <!-- CTA Column next to Card -->
+          <div class="main-card-actions-column">
+            <div class="badge-status-pill" id="page-status-badge">Waitlist Open</div>
+            <h2 class="main-reveal-title">Your Sports Identity is Ready.</h2>
+            <p class="main-reveal-desc">This is your Fandom Index — a data-driven score of your sports devotion. Save it, share it, and sign up below to claim your permanent handle.</p>
+            
+            <div class="card-actions-grid">
+              <button id="b-download-png" class="btn btn-primary btn-block">
+                <span>Download Card Image</span>
+              </button>
+              <button id="b-copy-link" class="btn btn-secondary btn-block">
+                <span>Copy Shareable Link</span>
+              </button>
+            </div>
+            
+            <div class="social-share-horizontal">
+              <button class="social-btn x-btn" data-platform="X / Twitter" title="Share on X">X</button>
+              <button class="social-btn insta-btn" data-platform="Instagram Stories" title="Share on Instagram">IG</button>
+              <button class="social-btn imsg-btn" data-platform="iMessage" title="Share via Messages">MSG</button>
+            </div>
+            
+            <div class="restart-flow-box">
+              <button id="b-restart-flow" class="btn-link">Create a new card</button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- PRODUCT FEATURE SHOWCASE -->
+        <section class="showcase-section" id="showcase-section">
+          <div class="section-header">
+            <h2 class="section-title">The Fan Experience, Transformed</h2>
+            <p class="section-subtitle">FanLog is a permanent, verified archive of your life as a sports fan. Look inside the app.</p>
+          </div>
+
+          <div class="showcase-container">
+            
+            <!-- Showcase Row 1: Fandom Index Uniqueness -->
+            <div class="showcase-row">
+              <div class="showcase-content">
+                <div class="showcase-badge">Sports Identity</div>
+                <h3 class="showcase-title">Your Fandom, Quantified</h3>
+                <p class="showcase-description">Your fandom isn't a simple list of clubs—it is a visual, data-driven instrument custom-mapped to your personal devotion. The Fandom Index rates your team-by-team intensity mathematically, creating a balanced score. It is a completely unique, crisp representation of who you root for, instantly shareable on socials.</p>
+              </div>
+              <div class="showcase-visual card-highlight-box">
+                <div class="glow-accent-blob"></div>
+                <div class="showcase-card-mini">
+                  <span class="mini-icon">📊</span>
+                  <h4>Quantified Devotion</h4>
+                  <p>Every dynamic brand color, average metric, and custom archetype tagline is calculated from your real sports identity.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Showcase Row 2: Game Logger (with mockup image) -->
+            <div class="showcase-row alternate">
+              <div class="showcase-content">
+                <div class="showcase-badge">The Game Log</div>
+                <h3 class="showcase-title">Log Every Moment Witnessed</h3>
+                <p class="showcase-description">Track how you actually watched the game. Log specific quarters, halves, or innings watched. Missed the third period? Log it honestly. Tag your entries with verified 'In Person' badges via location checks, and keep a searchable, permanent journal of your commentary on every matchup.</p>
+              </div>
+              <div class="showcase-visual">
+                <img src="/assets/game_logger_mockup-CtbhAP1g.png" alt="FanLog Game Logger UI Mockup" class="showcase-img" crossorigin="anonymous">
+              </div>
+            </div>
+
+            <!-- Showcase Row 3: Live Chat Rooms (with mockup image) -->
+            <div class="showcase-row">
+              <div class="showcase-content">
+                <div class="showcase-badge">Live Chat Rooms</div>
+                <h3 class="showcase-title">Real-Time Banter, Certified Proof</h3>
+                <p class="showcase-description">Every game gets a live, active chat room. Talk banter and game analysis with thousands of fans in team-split layouts. Best of all, checking into the chat room during live game time acts as cryptographic proof of watch, certifying your log entry with a permanent verified badge.</p>
+              </div>
+              <div class="showcase-visual">
+                <img src="/assets/live_chat_mockup-BsO8YWOm.png" alt="FanLog Live Chat UI Mockup" class="showcase-img" crossorigin="anonymous">
+              </div>
+            </div>
+
+            <!-- Showcase Row 4: Stats/Wrapped (with mockup image) -->
+            <div class="showcase-row alternate">
+              <div class="showcase-content">
+                <div class="showcase-badge">Fandom Wrapped</div>
+                <h3 class="showcase-title">Spotify Wrapped, for Sports Fans</h3>
+                <p class="showcase-description">Go beyond team statistics and track your own performance as a supporter. Discover your live watch streaks, win-loss records while watching, league splits, and team devotion ratios. Do you jinx your team when you watch? Our sports data engine will prove it.</p>
+              </div>
+              <div class="showcase-visual">
+                <img src="/assets/stats_wrapped_mockup-DnamNas7.png" alt="FanLog Fandom Stats Wrapped UI Mockup" class="showcase-img" crossorigin="anonymous">
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- WAITLIST SIGNUP FORM (AT THE BOTTOM OF STEP 5) -->
+        <section class="waitlist-capture-section" id="waitlist-section">
+          <div class="waitlist-section-header">
+            <h2 class="waitlist-title">Join the FanLog Waitlist</h2>
+            <p class="waitlist-subtitle">Save your Fandom Index card, lock in your details, and claim early waitlist access.</p>
+          </div>
+          
+          <div class="waitlist-form-container">
+            <form id="fan-card-form" class="waitlist-form">
+              <div class="form-group-row">
+                <div class="form-group">
+                  <label for="fan-name">Fan Name or Handle</label>
+                  <input type="text" id="fan-name" maxlength="15" placeholder="e.g. @Ethan" required>
+                </div>
+                <div class="form-group">
+                  <label for="fan-email">Email Address</label>
+                  <input type="email" id="fan-email" placeholder="name@example.com" required>
+                </div>
+              </div>
+              
+              <div class="form-group-row">
+                <div class="form-group">
+                  <label for="fan-since">Top Team Fan Since</label>
+                  <input type="number" id="fan-since" min="1900" max="2026" placeholder="e.g. 2003" required>
+                </div>
+                <div class="form-group">
+                  <label for="prediction-year">Top Team Title Prediction</label>
+                  <input type="number" id="prediction-year" min="2026" max="2041" value="2027" required>
+                </div>
+              </div>
+              
+              <button type="submit" class="btn btn-primary btn-block" id="submit-btn">
+                <span>Finalize Card & Join Waitlist</span>
+              </button>
+            </form>
+          </div>
+        </section>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Hidden Admin Panel Modal -->
+  <div class="admin-modal-overlay" id="admin-modal">
+    <div class="admin-modal-container">
+      <div class="admin-modal-header">
+        <h3>FanLog Admin Panel</h3>
+        <button class="close-modal-btn" id="admin-close-btn">&times;</button>
+      </div>
+      <div class="admin-modal-content">
+        <!-- Password gate -->
+        <div id="admin-login-area">
+          <p>Please enter the administrator password to access the waitlist data.</p>
+          <div class="form-group">
+            <input type="password" id="admin-password" placeholder="Enter password">
+          </div>
+          <button id="admin-login-btn" class="btn btn-primary">Login</button>
+          <p id="admin-login-error" class="error-text" style="display: none; color: #ff3333; margin-top: 10px; font-size: 0.9em;"></p>
+        </div>
+
+        <!-- Dashboard dashboard -->
+        <div id="admin-dashboard-area" style="display: none;">
+          <div class="admin-actions-bar">
+            <div>
+              <strong>Waitlist Signups: </strong><span id="admin-signup-count">0</span>
+            </div>
+            <div class="admin-btn-group">
+              <button id="admin-export-btn" class="btn btn-secondary btn-sm">Export CSV</button>
+              <button id="admin-clear-btn" class="btn btn-danger btn-sm">Clear All</button>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Teams & Devotion Scores</th>
+                  <th>Title Prediction</th>
+                </tr>
+              </thead>
+              <tbody id="admin-table-body">
+                <!-- Populated via Javascript -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="footer-container">
+      <div class="footer-logo">
+        <span class="logo-icon">🏟</span>
+        <span class="logo-text">FanLog</span>
+      </div>
+      <div class="footer-meta">
+        <p class="copyright">&copy; 2026 FanLog. All rights reserved.</p>
+        <div class="footer-links">
+          <a href="#" class="footer-link" id="privacy-link">Privacy Policy</a>
+          <a href="#" class="footer-link" id="terms-link">Terms of Service</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+</body>
+</html>

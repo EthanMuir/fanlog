@@ -1,0 +1,19 @@
+{
+  "name": "fanlog-landing-page",
+  "version": "1.0.0",
+  "description": "Pre-launch landing page and interactive trading card generator for FanLog",
+  "main": "main.js",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "canvas-confetti": "^1.9.3",
+    "html2canvas": "^1.4.1"
+  },
+  "devDependencies": {
+    "vite": "^5.2.11"
+  }
+}
