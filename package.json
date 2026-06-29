@@ -10,6 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@ethanhodge7373/hub-sdk": "^0.1.0",
     "canvas-confetti": "^1.9.3",
     "html2canvas": "^1.4.1"
   },
