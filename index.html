@@ -21,7 +21,7 @@
   <header class="site-header">
     <div class="header-container">
       <div class="logo-area" id="admin-trigger" title="Double click for Admin Panel">
-        <span class="logo-icon">🏟</span>
+        <img src="fanlog_logo.png" alt="FanLog Logo" class="logo-img">
         <span class="logo-text">FanLog</span>
       </div>
       <div class="header-cta" id="header-cta-container">
@@ -35,80 +35,88 @@
 
     <!-- STEP 1: WELCOME / HERO SCREEN -->
     <section id="step-welcome" class="onboarding-step active">
-      <div class="welcome-container">
-        <div class="welcome-badge">Pre-Launch Beta</div>
-        <h1 class="welcome-title">Your Fandom, <br><span class="text-gradient">Quantified.</span></h1>
-        <p class="welcome-subtitle">FanLog captures your sports identity as a clean, data-driven metric instrument. Rate your devotion, calculate your Fandom Index, and claim your verified card.</p>
-        
-        <!-- Showcase Morphing Card -->
-        <div class="morphing-card-wrapper">
-          <div id="welcome-card" class="fandom-index-card">
-            <!-- Card Header -->
-            <div class="fcard-header">
-              <div class="fcard-brand">
-                <span class="fcard-dot"></span>
-                <span class="fcard-brand-label">FANLOG PROFILE</span>
-              </div>
-              <div class="fcard-archetype" id="w-card-archetype">PURE LOYALIST</div>
+      <div class="welcome-hero-grid">
+        <!-- Title & Subtitle -->
+        <div class="welcome-hero-left">
+          <div class="welcome-badge">Pre-Launch Beta</div>
+          <h1 class="welcome-title">Your Fandom, <br><span class="text-gradient">Quantified.</span></h1>
+          <p class="welcome-subtitle">FanLog is a sports tracking app that logs your game history, compiles your supporter stats, and certifies your fan identity card.</p>
+        </div>
+
+        <!-- Onboarding Actions (Left Side, below subtitle on desktop, below card on mobile) -->
+        <div class="welcome-hero-actions">
+          <div class="welcome-actions">
+            <div class="welcome-input-container">
+              <label for="welcome-fan-name" class="welcome-input-label">Enter Fan Name or Handle</label>
+              <input type="text" id="welcome-fan-name" placeholder="e.g. @Ethan" maxlength="15" required>
             </div>
-            
-            <!-- Rainbow Chart Graphic (Wealthsimple Style) -->
-            <div class="fcard-rainbow-wrapper">
-              <div class="rainbow-chart-container">
-                <svg viewBox="0 0 300 180" class="rainbow-svg" id="w-card-rainbow-svg">
-                  <!-- JS builds concentric tracks and filled arcs here -->
-                </svg>
-                <div class="rainbow-score-box">
-                  <span class="fcard-score-value" id="w-card-score">95</span>
-                  <span class="rainbow-score-label">FANLOG SCORE</span>
-                </div>
-              </div>
-            </div>
-            
-            <!-- Dynamic Team Legend Chips -->
-            <div class="fcard-legend-container" id="w-card-legend">
-              <!-- JS builds team chips here -->
-            </div>
-            
-            <!-- Card Metadata -->
-            <div class="fcard-meta-grid">
-              <div class="fcard-meta-box" style="grid-column: span 2; align-items: center; text-align: center;">
-                <span class="fcard-meta-label">FAN ID</span>
-                <div class="fcard-name-wrapper" style="display: flex; align-items: center; gap: 4px; justify-content: center; width: 100%;">
-                  <span class="fcard-meta-value" id="w-card-name">@BradyFan</span>
-                  <span id="w-card-verified-badge" class="verified-badge" style="display: none; color: #10b981; font-size: 0.85rem;" title="Verified Waitlist Member">✓</span>
-                </div>
-              </div>
-              <div class="fcard-meta-box">
-                <span class="fcard-meta-label" id="w-card-since-label">FAN SINCE</span>
-                <span class="fcard-meta-value" id="w-card-since">2001</span>
-              </div>
-              <div class="fcard-meta-box">
-                <span class="fcard-meta-label" id="w-card-prediction-label">PREDICTION</span>
-                <span class="fcard-meta-value" id="w-card-prediction">2028</span>
-              </div>
-              <div class="fcard-meta-box" style="grid-column: span 2; align-items: center; text-align: center;">
-                <span class="fcard-meta-label">TIER</span>
-                <span class="fcard-meta-value text-accent" id="w-card-tier">SAMPLE</span>
-              </div>
-            </div>
-            
-            <!-- Card Footer -->
-            <div class="fcard-footer">
-              <div class="fcard-barcode">
-                <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
-              </div>
-              <div class="fcard-serial">FL-2026-INDEX</div>
-            </div>
+            <button id="btn-start-flow" class="btn btn-primary btn-lg" disabled>Generate Your Fandom Index</button>
           </div>
         </div>
 
-        <div class="welcome-actions">
-          <div class="welcome-input-container">
-            <label for="welcome-fan-name" class="welcome-input-label">Enter Fan Name or Handle</label>
-            <input type="text" id="welcome-fan-name" placeholder="e.g. @Ethan" maxlength="15" required>
+        <!-- Right Side: Main Showcase Morphing Card -->
+        <div class="welcome-hero-right">
+          <div class="morphing-card-wrapper">
+            <div id="welcome-card" class="fandom-index-card">
+              <!-- Card Header -->
+              <div class="fcard-header">
+                <div class="fcard-brand">
+                  <span class="fcard-dot"></span>
+                  <span class="fcard-brand-label">FANLOG PROFILE</span>
+                </div>
+                <div class="fcard-archetype" id="w-card-archetype">PURE LOYALIST</div>
+              </div>
+              
+              <!-- Rainbow Chart Graphic (Wealthsimple Style) -->
+              <div class="fcard-rainbow-wrapper">
+                <div class="rainbow-chart-container">
+                  <svg viewBox="0 0 300 180" class="rainbow-svg" id="w-card-rainbow-svg">
+                    <!-- JS builds concentric tracks and filled arcs here -->
+                  </svg>
+                  <div class="rainbow-score-box">
+                    <span class="fcard-score-value" id="w-card-score">95</span>
+                    <span class="rainbow-score-label">FANLOG SCORE</span>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Dynamic Team Legend Chips -->
+              <div class="fcard-legend-container" id="w-card-legend">
+                <!-- JS builds team chips here -->
+              </div>
+              
+              <!-- Card Metadata -->
+              <div class="fcard-meta-grid">
+                <div class="fcard-meta-box span-2">
+                  <span class="fcard-meta-label">FAN ID</span>
+                  <div class="fcard-name-wrapper" style="display: flex; align-items: center; gap: 4px; justify-content: center; width: 100%;">
+                    <span class="fcard-meta-value" id="w-card-name">@BradyFan</span>
+                    <span id="w-card-verified-badge" class="verified-badge" style="display: none; color: #10b981; font-size: 0.85rem;" title="Verified Waitlist Member">✓</span>
+                  </div>
+                </div>
+                <div class="fcard-meta-box">
+                  <span class="fcard-meta-label" id="w-card-since-label">FAN SINCE</span>
+                  <span class="fcard-meta-value" id="w-card-since">2001</span>
+                </div>
+                <div class="fcard-meta-box">
+                  <span class="fcard-meta-label" id="w-card-prediction-label">PREDICTION</span>
+                  <span class="fcard-meta-value" id="w-card-prediction">2028</span>
+                </div>
+                <div class="fcard-meta-box span-2">
+                  <span class="fcard-meta-label">TIER</span>
+                  <span class="fcard-meta-value text-accent" id="w-card-tier">SAMPLE</span>
+                </div>
+              </div>
+              
+              <!-- Card Footer -->
+              <div class="fcard-footer">
+                <div class="fcard-barcode">
+                  <span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+                </div>
+                <div class="fcard-serial">FL-2026-INDEX</div>
+              </div>
+            </div>
           </div>
-          <button id="btn-start-flow" class="btn btn-primary btn-lg" disabled>Generate Your Fandom Index</button>
         </div>
       </div>
     </section>
@@ -285,7 +293,7 @@
                     
                     <!-- Card Metadata -->
                     <div class="fcard-meta-grid">
-                      <div class="fcard-meta-box" style="grid-column: span 2; align-items: center; text-align: center;">
+                      <div class="fcard-meta-box span-2">
                         <span class="fcard-meta-label">FAN ID</span>
                         <div class="fcard-name-wrapper" style="display: flex; align-items: center; gap: 4px; justify-content: center; width: 100%;">
                           <span class="fcard-meta-value" id="f-card-name">@GUEST</span>
@@ -300,7 +308,7 @@
                         <span class="fcard-meta-label" id="f-card-prediction-label">PREDICTION</span>
                         <span class="fcard-meta-value" id="f-card-prediction">----</span>
                       </div>
-                      <div class="fcard-meta-box" style="grid-column: span 2; align-items: center; text-align: center;">
+                      <div class="fcard-meta-box span-2">
                         <span class="fcard-meta-label">TIER</span>
                         <span class="fcard-meta-value" id="f-card-tier" style="color: var(--text-muted);">ROOKIE</span>
                       </div>
@@ -530,7 +538,7 @@
   <footer class="site-footer">
     <div class="footer-container">
       <div class="footer-logo">
-        <span class="logo-icon">🏟</span>
+        <img src="fanlog_logo.png" alt="FanLog Logo" class="logo-img">
         <span class="logo-text">FanLog</span>
       </div>
       <div class="footer-meta">

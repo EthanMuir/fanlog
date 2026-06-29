@@ -67,8 +67,8 @@ button, input, select {
   width: 100%;
   height: 100%;
   background: 
-    radial-gradient(circle at 80% 20%, rgba(var(--team-primary), 0.05) 0%, transparent 50%),
-    radial-gradient(circle at 20% 80%, rgba(var(--team-secondary), 0.03) 0%, transparent 50%);
+    radial-gradient(circle at 80% 20%, color-mix(in srgb, var(--team-primary) 12%, transparent) 0%, transparent 60%),
+    radial-gradient(circle at 20% 80%, color-mix(in srgb, var(--team-secondary) 8%, transparent) 0%, transparent 60%);
   z-index: -2;
   pointer-events: none;
   transition: background 1.5s ease;
@@ -218,8 +218,12 @@ button, input, select {
   user-select: none;
 }
 
-.logo-icon {
-  font-size: 1.5rem;
+.logo-img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--team-primary) 30%, transparent));
+  transition: filter 0.5s ease;
 }
 
 .logo-text {
@@ -246,20 +250,46 @@ button, input, select {
   transform: translateY(0);
 }
 
-/* Step 1: Welcome */
+/* Step 1: Welcome Grid Layout */
 #step-welcome.active {
-  display: flex;
-  flex-direction: column;
+  display: block;
+}
+
+.welcome-hero-grid {
+  display: grid;
+  grid-template-areas: 
+    "left right"
+    "actions right";
+  grid-template-columns: 1.1fr 0.9fr;
+  grid-template-rows: auto auto;
+  gap: 24px 60px;
+  max-width: 1200px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 80px 24px;
   align-items: center;
 }
 
-.welcome-container {
-  max-width: 800px;
-  padding: 80px 24px;
-  text-align: center;
+.welcome-hero-left {
+  grid-area: left;
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
+}
+
+.welcome-hero-actions {
+  grid-area: actions;
+  display: flex;
+  width: 100%;
+}
+
+.welcome-hero-right {
+  grid-area: right;
+  display: flex;
+  justify-content: center;
   align-items: center;
+  perspective: 1200px;
+  width: 100%;
 }
 
 .welcome-badge {
@@ -277,26 +307,75 @@ button, input, select {
 }
 
 .welcome-title {
-  font-size: 4rem;
+  font-size: 3.8rem;
   font-weight: 900;
-  line-height: 1.1;
+  line-height: 1.05;
   letter-spacing: -2px;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .welcome-subtitle {
-  font-size: 1.25rem;
+  font-size: 1.15rem;
   color: var(--text-muted);
-  margin-bottom: 48px;
+  margin-bottom: 0px;
   font-weight: 300;
-  max-width: 600px;
+  max-width: 520px;
+  line-height: 1.5;
+}
+
+.welcome-actions {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.welcome-input-container {
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .morphing-card-wrapper {
-  margin-bottom: 48px;
   display: flex;
   justify-content: center;
   perspective: 1200px;
+  width: 100%;
+}
+
+@media (max-width: 992px) {
+  .welcome-hero-grid {
+    grid-template-areas: 
+      "left"
+      "right"
+      "actions";
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+    gap: 40px;
+    padding: 60px 24px;
+    text-align: center;
+  }
+  .welcome-hero-left {
+    align-items: center;
+  }
+  .welcome-hero-actions {
+    justify-content: center;
+  }
+  .welcome-title {
+    font-size: 3rem;
+  }
+  .welcome-subtitle {
+    margin-bottom: 0;
+  }
+  .welcome-actions {
+    align-items: center;
+  }
+  .welcome-input-container {
+    max-width: 420px;
+  }
 }
 
 /* Step 2: Team Builder Layout */
@@ -1172,7 +1251,13 @@ button, input, select {
 .fcard-meta-box {
   display: flex;
   flex-direction: column;
+  align-items: center;
+  text-align: center;
   gap: 2px;
+}
+
+.fcard-meta-box.span-2 {
+  grid-column: span 2;
 }
 
 .fcard-meta-label {
@@ -1658,7 +1743,7 @@ button, input, select {
 .site-footer {
   padding: 40px 24px;
   border-top: 1px solid var(--border-color);
-  background-color: var(--bg-primary);
+  background-color: transparent;
 }
 
 .footer-container {
@@ -2002,4 +2087,71 @@ button, input, select {
   font-size: 0.9rem;
   font-weight: 900;
   flex-shrink: 0;
+}
+
+/* Welcome Screen Features List */
+.welcome-features-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  width: 100%;
+  max-width: 900px;
+  margin: -10px auto 48px auto;
+  text-align: left;
+}
+
+.welcome-feature-item {
+  display: flex;
+  gap: 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  padding: 20px;
+  transition: var(--transition-smooth);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.welcome-feature-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--team-primary);
+  box-shadow: 0 0 20px color-mix(in srgb, var(--team-primary) 12%, transparent);
+  transform: translateY(-2px);
+}
+
+.feature-item-icon {
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.feature-item-text h3 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: var(--text-main);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.feature-item-text p {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+/* Glassmorphism panel tint updates for more color */
+.builder-inputs-panel, 
+.quiz-questions-list, 
+.fcard-front, 
+.fcard-back,
+.waitlist-card {
+  border: 1px solid color-mix(in srgb, var(--team-primary) 15%, var(--border-color)) !important;
+  box-shadow: 0 20px 45px color-mix(in srgb, var(--team-primary) 10%, rgba(0, 0, 0, 0.4)) !important;
+}
+
+@media (max-width: 768px) {
+  .welcome-features-list {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin-bottom: 36px;
+  }
 }
