@@ -260,14 +260,25 @@ button, input, select {
   grid-template-areas: 
     "left right"
     "actions right";
-  grid-template-columns: 1.1fr 0.9fr;
+  grid-template-columns: 1.15fr 0.85fr;
   grid-template-rows: auto auto;
-  gap: 24px 60px;
-  max-width: 1200px;
+  gap: 24px 80px;
+  max-width: 1300px;
   width: 100%;
   margin: 0 auto;
-  padding: 80px 24px;
+  padding: 40px 24px;
   align-items: center;
+  min-height: calc(100vh - 180px);
+}
+
+@media (min-width: 1200px) {
+  .welcome-hero-right {
+    transform: scale(1.08);
+    transform-origin: center center;
+  }
+  .welcome-title {
+    font-size: 4.4rem;
+  }
 }
 
 .welcome-hero-left {
