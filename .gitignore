@@ -1,9 +1,3 @@
-<<<<<<< HEAD
-node_modules
-dist
-.env.local
-.env*.local
-=======
 # Dependencies
 node_modules/
 
@@ -26,4 +20,5 @@ Thumbs.db
 .idea/
 *.suo
 *.ntvs@
->>>>>>> main
+
+.env.local
