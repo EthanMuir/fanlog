@@ -984,10 +984,10 @@ button, input, select {
   padding: 3px 8px;
   border-radius: 4px;
   border: 1px solid rgba(255,255,255,0.05);
-  max-width: 180px;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  white-space: nowrap;
+  max-width: 210px;
+  word-break: break-word;
+  white-space: normal;
+  text-align: right;
 }
 
 /* Card Score */
@@ -1810,4 +1810,196 @@ button, input, select {
   .fcard-bar-fill {
     transition: none !important;
   }
+}
+
+/* Fandom Hub & Number Input Styles */
+.theme-number-input {
+  width: 100%;
+  padding: 14px 16px;
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  color: var(--text-main);
+  font-size: 0.95rem;
+  transition: var(--transition-smooth);
+}
+.theme-number-input:focus {
+  outline: none;
+  border-color: var(--team-primary);
+  box-shadow: 0 0 0 3px rgba(var(--team-primary), 0.15);
+}
+.theme-number-input::placeholder {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.prediction-input-container {
+  margin-top: 4px;
+}
+
+.hub-step-container {
+  max-width: 680px;
+  width: 100%;
+  padding: 60px 24px;
+  margin: 0 auto;
+}
+
+.hub-box-card {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  padding: 32px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.hub-teams-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.hub-team-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: var(--bg-tertiary);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  padding: 16px 20px;
+  transition: var(--transition-smooth);
+}
+
+.hub-team-card.top-team-active {
+  border-color: var(--team-primary);
+  box-shadow: 0 0 12px rgba(var(--team-primary), 0.15);
+}
+
+.hub-team-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.hub-team-logo {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  background-color: #ffffff;
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.hub-team-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hub-team-name {
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.hub-team-meta-row {
+  display: flex;
+  gap: 12px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.hub-team-score-badge {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.hub-team-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.hub-actions-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+@media (max-width: 576px) {
+  .hub-team-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .hub-team-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .hub-actions-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Custom Welcome Screen Inputs & Verified Badges */
+.welcome-input-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 24px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.welcome-input-label {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+}
+
+#welcome-fan-name {
+  width: 100%;
+  padding: 14px 16px;
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  color: var(--text-main);
+  font-size: 1.05rem;
+  font-weight: 600;
+  text-align: center;
+  transition: var(--transition-smooth);
+}
+
+#welcome-fan-name:focus {
+  outline: none;
+  border-color: var(--team-primary);
+  background-color: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 0 0 3px rgba(var(--team-primary), 0.15);
+}
+
+#welcome-fan-name::placeholder {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.fcard-name-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.verified-badge {
+  color: #10b981;
+  font-size: 0.9rem;
+  font-weight: 900;
+  flex-shrink: 0;
 }
