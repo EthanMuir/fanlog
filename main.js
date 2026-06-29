@@ -1,7 +1,7 @@
 import { sportsData } from './teams.js';
 import confetti from 'canvas-confetti';
 import html2canvas from 'html2canvas';
-import { HubSDK } from '@hodgepodge73/hub-sdk';
+import { HubSDK } from '@ethanhodge7373/hub-sdk';
 
 HubSDK.init({
   appSlug: 'fanlog',
