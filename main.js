@@ -1606,6 +1606,24 @@ btnRestartFlow.addEventListener('click', () => {
   goToStep(2);
 });
 
+// --- DEVICE DETECTION UTILITY ---
+function getDeviceDetails() {
+  const ua = navigator.userAgent;
+  const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isAndroid = /Android/i.test(ua);
+  const isMobile = isIOS || isAndroid;
+  return { isIOS, isAndroid, isMobile };
+}
+
+// Helper to trigger direct local file download as fallback
+function triggerFileDownload(canvas, topTeamFormatted, nameFormatted) {
+  const nameFormattedClean = nameFormatted ? nameFormatted.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'guest';
+  const link = document.createElement('a');
+  link.download = `fanlog_index_${topTeamFormatted}_card_${nameFormattedClean}.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+}
+
 // --- PNG EXPORT VIA HTML2CANVAS ---
 btnDownloadPng.addEventListener('click', () => {
   const frontFace = document.getElementById('f-card-front-face');
@@ -1628,15 +1646,31 @@ btnDownloadPng.addEventListener('click', () => {
     cardElement.style.transform = originalTransform;
     frontFace.style.boxShadow = originalBoxShadow;
     
-    // Download
     const nameFormatted = fanNameInput.value ? fanNameInput.value.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'guest';
     const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
     const topTeamFormatted = topTeam ? topTeam.id : 'fandom';
+    const device = getDeviceDetails();
     
-    const link = document.createElement('a');
-    link.download = `fanlog_index_${topTeamFormatted}_card_${nameFormatted}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
+    // Check if sharing files natively via Web Share is supported (perfect for mobile systems)
+    if (device.isMobile && navigator.canShare && navigator.canShare({ files: [new File([], 'test.png', { type: 'image/png' })] })) {
+      canvas.toBlob(blob => {
+        if (!blob) {
+          triggerFileDownload(canvas, topTeamFormatted, nameFormatted);
+          return;
+        }
+        const file = new File([blob], `fanlog_card_${nameFormatted}.png`, { type: 'image/png' });
+        navigator.share({
+          files: [file],
+          title: 'My FanLog Fandom Index Card',
+          text: 'Check out my verified FanLog sports profile!'
+        }).catch(() => {
+          // Fallback if they click cancel on sharing dialog
+          triggerFileDownload(canvas, topTeamFormatted, nameFormatted);
+        });
+      }, 'image/png');
+    } else {
+      triggerFileDownload(canvas, topTeamFormatted, nameFormatted);
+    }
   }).catch(err => {
     console.error("PNG render failed:", err);
     alert("Could not generate card image. Please try again.");
@@ -1651,6 +1685,21 @@ btnCopyLink.addEventListener('click', () => {
   const tagline = generateSportsIdentityTagline();
   const shareText = `Just calculated my Fandom Index! Archetype: "${tagline}". Top Team: ${topTeam ? topTeam.name : 'sports'}. Calculate yours on FanLog: ${window.location.origin}`;
   
+  const device = getDeviceDetails();
+  if (device.isMobile && navigator.share) {
+    navigator.share({
+      title: 'FanLog Fandom Index Card',
+      text: shareText,
+      url: window.location.origin
+    }).catch(() => {
+      copyToClipboardText(shareText);
+    });
+  } else {
+    copyToClipboardText(shareText);
+  }
+});
+
+function copyToClipboardText(shareText) {
   navigator.clipboard.writeText(shareText).then(() => {
     const originalText = btnCopyLink.innerHTML;
     btnCopyLink.innerHTML = '<span>Link Copied!</span>';
@@ -1665,17 +1714,29 @@ btnCopyLink.addEventListener('click', () => {
   }).catch(() => {
     alert("Here is your shareable link:\n\n" + shareText);
   });
-});
+}
 
-// Mock Social Shares
+// Real Social Share Handlers
 const socialButtons = document.querySelectorAll('.social-share-horizontal .social-btn');
 socialButtons.forEach(btn => {
   btn.addEventListener('click', () => {
     const platform = btn.getAttribute('data-platform');
     const tagline = generateSportsIdentityTagline();
-    const shareMessage = `Fandom Index Profile: "${tagline}". Mapped my teams on @fanlog. Join the waitlist: ${window.location.origin}`;
+    const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
+    const teamName = topTeam ? topTeam.name : 'my teams';
+    const shareMessage = `Fandom Index Archetype: "${tagline}" supporting ${teamName}. Mapped my teams on FanLog:`;
     
-    alert(`[MOCK SHARE] Sharing to ${platform}:\n\n"${shareMessage}"`);
+    if (platform === 'X / Twitter') {
+      const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareMessage)}&url=${encodeURIComponent(window.location.origin)}`;
+      window.open(xUrl, '_blank');
+    } else if (platform === 'iMessage') {
+      const smsUrl = `sms:&body=${encodeURIComponent(shareMessage + ' ' + window.location.origin)}`;
+      window.location.href = smsUrl;
+    } else if (platform === 'Instagram Stories') {
+      alert("Step 1: Download your card PNG image using the 'Download Card Image' button.\n\nStep 2: Open Instagram, go to post a Story, and select the downloaded card image from your gallery!");
+    } else {
+      alert(`Archetype: "${tagline}". Link copied: ${window.location.origin}`);
+    }
   });
 });
 
