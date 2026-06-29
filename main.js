@@ -1,6 +1,13 @@
 import { sportsData } from './teams.js';
 import confetti from 'canvas-confetti';
 import html2canvas from 'html2canvas';
+import { HubSDK } from '@hodgepodge73/hub-sdk';
+
+HubSDK.init({
+  appSlug: 'fanlog',
+  supabaseUrl: import.meta.env.VITE_SUPABASE_URL,
+  supabaseKey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+});
 
 // --- STATE MANAGEMENT ---
 let selectedTeams = [];
