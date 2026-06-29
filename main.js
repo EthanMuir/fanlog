@@ -15,6 +15,31 @@ let currentQuizTeamIndex = 0;
 let userQuizAnswers = {}; // key: "teamId_questionKey", value: score
 let activeMorphIndex = 0;
 let morphIntervalId = null;
+let savedHandle = ""; // Track user handle from the start
+
+// Helper to determine devotion tier based on overall score
+function getDevotionTier(score) {
+  if (score >= 90) return "MYTHIC";
+  if (score >= 75) return "ALL-STAR";
+  if (score >= 55) return "PRO";
+  return "ROOKIE";
+}
+
+// Automatically recalculate the top team based on highest devotion score
+function recalculateTopTeam() {
+  if (selectedTeams.length === 0) return;
+  let maxScore = -1;
+  selectedTeams.forEach(t => {
+    t.isTop = false; // Reset
+    if (t.score > maxScore) {
+      maxScore = t.score;
+    }
+  });
+  const topTeam = selectedTeams.find(t => t.score === maxScore);
+  if (topTeam) {
+    topTeam.isTop = true;
+  }
+}
 
 // Mock handles for random profile generator
 const sampleHandles = [
@@ -67,7 +92,14 @@ function generateRandomMorphProfile() {
   const avgOthers = otherTeams.reduce((sum, t) => sum + t.score, 0) / otherTeams.length;
   const overallScore = Math.round(topTeam.score * 0.6 + avgOthers * 0.4);
   
-  const name = sampleHandles[Math.floor(Math.random() * sampleHandles.length)];
+  const welcomeInput = document.getElementById('welcome-fan-name');
+  let name = "";
+  if (welcomeInput && welcomeInput.value.trim()) {
+    const val = welcomeInput.value.trim();
+    name = val.startsWith('@') ? val : `@${val}`;
+  } else {
+    name = sampleHandles[Math.floor(Math.random() * sampleHandles.length)];
+  }
   const tagline = generateSportsIdentityTagline(chosen);
   
   const since = String(Math.floor(1975 + Math.random() * 50)); // 1975 to 2025
@@ -86,16 +118,16 @@ function generateRandomMorphProfile() {
   };
 }
 
-// --- QUIZ QUESTIONS DATABASE ---
-const quizQuestions = [
+// --- QUIZ QUESTIONS DATABASE BANK (10 Devotion Questions) ---
+const quizQuestionsDatabase = [
   {
     key: 'frequency',
     text: 'How frequently do you watch or listen to their games?',
     options: [
-      { text: 'Highlights only / major games', score: 10 },
-      { text: 'About half the games', score: 18 },
-      { text: 'Almost every single game', score: 25 },
-      { text: '100% of matches live or recorded', score: 30 }
+      { text: 'Highlights only / major games', score: 5 },
+      { text: 'About half the games', score: 12 },
+      { text: 'Almost every single game', score: 18 },
+      { text: '100% of matches live or recorded', score: 25 }
     ]
   },
   {
@@ -104,7 +136,7 @@ const quizQuestions = [
     options: [
       { text: 'Minutes (It’s just a game)', score: 5 },
       { text: 'A few hours (Annoyed but fine)', score: 12 },
-      { text: 'Until the next day (Ruins my evening)', score: 20 },
+      { text: 'Until the next day (Ruins my evening)', score: 18 },
       { text: 'Days (Hard to shake off)', score: 25 }
     ]
   },
@@ -115,7 +147,7 @@ const quizQuestions = [
       { text: 'Avoid debates entirely', score: 5 },
       { text: 'Polite banter only', score: 12 },
       { text: 'Will engage if provoked', score: 18 },
-      { text: 'Die-hard defender energy', score: 20 }
+      { text: 'Die-hard defender energy', score: 25 }
     ]
   },
   {
@@ -124,11 +156,77 @@ const quizQuestions = [
     options: [
       { text: 'None / digital fan only', score: 5 },
       { text: 'A cap or a t-shirt', score: 12 },
-      { text: 'Multiple jerseys & memorabilia', score: 20 },
+      { text: 'Multiple jerseys & memorabilia', score: 18 },
       { text: 'Full home shrine / game-worn items', score: 25 }
+    ]
+  },
+  {
+    key: 'attendance',
+    text: 'How often do you try to attend games in person?',
+    options: [
+      { text: 'Never / TV & digital fan only', score: 5 },
+      { text: 'Once every few years', score: 12 },
+      { text: 'At least once a season', score: 18 },
+      { text: 'Season ticket holder / multiple games a year', score: 25 }
+    ]
+  },
+  {
+    key: 'news',
+    text: 'How closely do you follow team news and rumors?',
+    options: [
+      { text: 'Only when major stories break', score: 5 },
+      { text: 'Weekly check-ins / summaries', score: 12 },
+      { text: 'Daily feed scrolling', score: 18 },
+      { text: 'Notifications on / refresh hourly', score: 25 }
+    ]
+  },
+  {
+    key: 'superstitions',
+    text: 'Do you have any game-day superstitions or lucky rituals?',
+    options: [
+      { text: 'None, it has no effect', score: 5 },
+      { text: 'A favorite shirt or seat', score: 12 },
+      { text: 'Lucky charms / specific routine', score: 18 },
+      { text: 'Complete game-day lockdown / strict rituals', score: 25 }
+    ]
+  },
+  {
+    key: 'finance',
+    text: 'How much money do you spend on your team annually?',
+    options: [
+      { text: 'Almost nothing', score: 5 },
+      { text: 'Under $100 (basic gear)', score: 12 },
+      { text: 'Up to $500 (tickets/streaming/gear)', score: 18 },
+      { text: '$500+ (major trips/tickets/exclusive merch)', score: 25 }
+    ]
+  },
+  {
+    key: 'history',
+    text: 'How well do you know the team\'s history and roster?',
+    options: [
+      { text: 'Know the star players only', score: 5 },
+      { text: 'Know the current roster and coach', score: 12 },
+      { text: 'Know deep history and prospects', score: 18 },
+      { text: 'Walking encyclopedia of stats and lore', score: 25 }
+    ]
+  },
+  {
+    key: 'priority',
+    text: 'Would you cancel personal plans to watch a critical game?',
+    options: [
+      { text: 'No, personal plans always come first', score: 5 },
+      { text: 'Only for a championship game', score: 12 },
+      { text: 'Yes, for any playoff/rivalry matchup', score: 18 },
+      { text: 'Yes, my schedule revolves around game day', score: 25 }
     ]
   }
 ];
+
+// Helper to select N random questions from the database bank
+function getRandomQuizQuestions(num) {
+  const shuffled = [...quizQuestionsDatabase].sort(() => 0.5 - Math.random());
+  return shuffled.slice(0, num);
+}
 
 // --- DOM ELEMENTS QUERY ---
 // Navigation and Buttons
@@ -143,14 +241,18 @@ const btnHeaderWaitlist = document.getElementById('btn-header-waitlist');
 // Step 2 Team Builder Inputs
 const bSportSelect = document.getElementById('b-sport-select');
 const bTeamSelect = document.getElementById('b-team-select');
-const bAddTeamBtn = document.getElementById('b-add-team-btn');
-const bAddedTeamsList = document.getElementById('b-added-teams-list');
+const bSinceInput = document.getElementById('b-since-input');
 
 // Step 3 Quiz
 const quizProgressText = document.getElementById('quiz-progress-text');
 const quizTeamName = document.getElementById('quiz-team-name');
 const quizProgressBarFill = document.getElementById('quiz-progress-bar-fill');
 const quizQuestionsList = document.getElementById('quiz-questions-list');
+
+// Step 3.5 Fandom Hub Elements
+const hubAddedTeamsList = document.getElementById('hub-added-teams-list');
+const btnHubAddTeam = document.getElementById('btn-hub-add-team');
+const btnHubFinish = document.getElementById('btn-hub-finish');
 
 // Step 4 Reveal
 const revealProgressFill = document.getElementById('reveal-progress-fill');
@@ -160,8 +262,6 @@ const revealTicker = document.getElementById('reveal-ticker');
 const waitlistForm = document.getElementById('fan-card-form');
 const fanNameInput = document.getElementById('fan-name');
 const fanEmailInput = document.getElementById('fan-email');
-const fanSinceInput = document.getElementById('fan-since');
-const predictionInput = document.getElementById('prediction-year');
 
 // Admin Panel Modal Elements
 const adminTrigger = document.getElementById('admin-trigger');
@@ -186,16 +286,46 @@ const backValScore = document.getElementById('back-val-score');
 document.addEventListener('DOMContentLoaded', () => {
   goToStep(1);
   setupWaitlistBindings();
+  setupWelcomeInputBindings();
 });
+
+function setupWelcomeInputBindings() {
+  const welcomeInput = document.getElementById('welcome-fan-name');
+  const btnStartFlow = document.getElementById('btn-start-flow');
+  if (welcomeInput) {
+    welcomeInput.addEventListener('input', (e) => {
+      const val = e.target.value.trim();
+      savedHandle = val;
+      
+      const nameVal = val ? (val.startsWith('@') ? val : `@${val}`) : '@GUEST';
+      
+      // Update welcome card name instantly
+      const wCardName = document.getElementById('w-card-name');
+      if (wCardName) {
+        wCardName.textContent = nameVal;
+      }
+      
+      // Enable/disable start button based on validation
+      if (btnStartFlow) {
+        if (val.length > 0) {
+          btnStartFlow.removeAttribute('disabled');
+        } else {
+          btnStartFlow.setAttribute('disabled', 'true');
+        }
+      }
+    });
+  }
+}
 
 // --- STEP VISIBILITY CONTROLLER ---
 function goToStep(stepIndex) {
   const steps = [
-    document.getElementById('step-welcome'),
-    document.getElementById('step-builder'),
-    document.getElementById('step-quiz'),
-    document.getElementById('step-reveal'),
-    document.getElementById('step-main')
+    document.getElementById('step-welcome'), // 1
+    document.getElementById('step-builder'), // 2
+    document.getElementById('step-quiz'),    // 3
+    document.getElementById('step-hub'),     // 4
+    document.getElementById('step-reveal'),  // 5
+    document.getElementById('step-main')     // 6
   ];
 
   steps.forEach(stepEl => {
@@ -218,14 +348,19 @@ function goToStep(stepIndex) {
     stopMorphingLoop();
   }
 
-  // Handle calculation reveal sequence
+  // Render Hub UI
   if (stepIndex === 4) {
+    renderHubUI();
+  }
+
+  // Handle calculation reveal sequence
+  if (stepIndex === 5) {
     runRevealSequence();
   }
 
   // Header button visibility control
   const headerCta = document.getElementById('header-cta-container');
-  if (stepIndex === 5) {
+  if (stepIndex === 6) {
     headerCta.style.display = 'block';
   } else {
     headerCta.style.display = 'none';
@@ -552,7 +687,7 @@ function updateCardDOM(cardEl, profile, transition = false) {
   const nameEl = cardEl.querySelector('#' + cardEl.id.charAt(0) + '-card-name');
   const sinceEl = cardEl.querySelector('#' + cardEl.id.charAt(0) + '-card-since');
   const predictionEl = cardEl.querySelector('#' + cardEl.id.charAt(0) + '-card-prediction');
-  const statusEl = cardEl.querySelector('#' + cardEl.id.charAt(0) + '-card-status');
+  const tierEl = cardEl.querySelector('#' + cardEl.id.charAt(0) + '-card-tier');
   
   const sinceLabelEl = cardEl.querySelector('#' + cardEl.id.charAt(0) + '-card-since-label');
   const predictionLabelEl = cardEl.querySelector('#' + cardEl.id.charAt(0) + '-card-prediction-label');
@@ -560,10 +695,8 @@ function updateCardDOM(cardEl, profile, transition = false) {
   const svgEl = cardEl.querySelector('.rainbow-svg');
   const legendContainer = cardEl.querySelector('.fcard-legend-container');
   
-  // Sort teams: Top team outermost (index 0)
+  // Sort teams: Highest score first (outermost/top bar)
   const sortedTeams = [...profile.teams].sort((a, b) => {
-    if (a.isTop && !b.isTop) return -1;
-    if (!a.isTop && b.isTop) return 1;
     return b.score - a.score;
   });
   
@@ -589,14 +722,26 @@ function updateCardDOM(cardEl, profile, transition = false) {
       if (predictionLabelEl) predictionLabelEl.textContent = "PREDICTION";
     }
     
-    if (statusEl) {
-      statusEl.textContent = profile.status || 'UNVERIFIED';
-      if (profile.status === 'VERIFIED') {
-        statusEl.style.color = '#10b981';
-      } else if (profile.status === 'SAMPLE') {
-        statusEl.style.color = 'var(--team-secondary)';
+    if (tierEl) {
+      const tierVal = getDevotionTier(profile.overallScore);
+      tierEl.textContent = tierVal;
+      if (tierVal === 'MYTHIC') {
+        tierEl.style.color = '#a855f7';
+      } else if (tierVal === 'ALL-STAR') {
+        tierEl.style.color = '#3b82f6';
+      } else if (tierVal === 'PRO') {
+        tierEl.style.color = '#10b981';
       } else {
-        statusEl.style.color = 'var(--text-muted)';
+        tierEl.style.color = 'var(--text-muted)';
+      }
+    }
+
+    const verifiedBadge = cardEl.querySelector('#' + cardEl.id.charAt(0) + '-card-verified-badge');
+    if (verifiedBadge) {
+      if (profile.status === 'VERIFIED') {
+        verifiedBadge.style.display = 'inline-block';
+      } else {
+        verifiedBadge.style.display = 'none';
       }
     }
     
@@ -623,7 +768,7 @@ function updateCardDOM(cardEl, profile, transition = false) {
   };
 
   if (transition) {
-    const fadeEls = [archetypeEl, nameEl, sinceEl, predictionEl, statusEl, scoreEl, legendContainer, sinceLabelEl, predictionLabelEl].filter(Boolean);
+    const fadeEls = [archetypeEl, nameEl, sinceEl, predictionEl, tierEl, scoreEl, legendContainer, sinceLabelEl, predictionLabelEl].filter(Boolean);
     
     // Trigger fade out
     fadeEls.forEach(el => el.classList.add('fading'));
@@ -664,6 +809,19 @@ function stopMorphingLoop() {
 }
 
 // --- STEP 2: TEAM BUILDER LOGIC ---
+function checkBuilderInputsStatus() {
+  const league = bSportSelect.value;
+  const teamId = bTeamSelect.value;
+  const sinceVal = bSinceInput ? parseInt(bSinceInput.value) : NaN;
+  const sinceValid = !isNaN(sinceVal) && sinceVal >= 1900 && sinceVal <= 2026;
+
+  if (league && teamId && sinceValid) {
+    btnToQuiz.removeAttribute('disabled');
+  } else {
+    btnToQuiz.setAttribute('disabled', 'true');
+  }
+}
+
 bSportSelect.addEventListener('change', (e) => {
   const selectedLeague = e.target.value;
   const leagueData = sportsData[selectedLeague];
@@ -681,6 +839,7 @@ bSportSelect.addEventListener('change', (e) => {
   } else {
     bTeamSelect.setAttribute('disabled', 'true');
   }
+  checkBuilderInputsStatus();
 });
 
 // Selector adapts preview spotlight instantly
@@ -688,13 +847,26 @@ bTeamSelect.addEventListener('change', (e) => {
   const league = bSportSelect.value;
   const teamId = e.target.value;
   updateSpotlight(teamId, league);
+  checkBuilderInputsStatus();
 });
+
+if (bSinceInput) {
+  bSinceInput.addEventListener('input', checkBuilderInputsStatus);
+}
 
 function updateSpotlight(teamId, league) {
   const spotlightLogo = document.getElementById('preview-spotlight-logo');
   const spotlightFallback = document.getElementById('preview-spotlight-logo-fallback');
   const spotlightName = document.getElementById('preview-spotlight-name');
   const spotlightContainer = document.getElementById('builder-spotlight');
+  
+  if (!league || !teamId) {
+    spotlightFallback.style.display = 'block';
+    spotlightLogo.style.display = 'none';
+    spotlightName.textContent = 'Select a Team';
+    spotlightContainer.style.borderColor = 'var(--border-color)';
+    return;
+  }
   
   const team = sportsData[league]?.teams.find(t => t.id === teamId);
   if (team) {
@@ -715,12 +887,13 @@ function updateSpotlight(teamId, league) {
   }
 }
 
-bAddTeamBtn.addEventListener('click', () => {
+btnToQuiz.addEventListener('click', () => {
   const league = bSportSelect.value;
   const teamId = bTeamSelect.value;
+  const sinceVal = bSinceInput ? bSinceInput.value : '';
   
-  if (!league || !teamId) {
-    alert("Please select both a League and a Team.");
+  if (!league || !teamId || !sinceVal) {
+    alert("Please select league, team, and enter the year you became a fan.");
     return;
   }
   
@@ -744,84 +917,23 @@ bAddTeamBtn.addEventListener('click', () => {
     secondaryColor: team.secondary,
     isTop: selectedTeams.length === 0, // Auto-mark first team as Top
     league: league.toUpperCase(),
-    score: 0
+    score: 0,
+    fanSince: sinceVal,
+    prediction: "",
+    quizQuestions: getRandomQuizQuestions(4) // Choose 4 random questions for this team
   };
   
   selectedTeams.push(newTeam);
+  currentQuizTeamIndex = selectedTeams.length - 1;
   
   // Reset fields
   bSportSelect.value = "";
   bTeamSelect.innerHTML = '<option value="" disabled selected>Select Team</option>';
   bTeamSelect.setAttribute('disabled', 'true');
-  
+  if (bSinceInput) bSinceInput.value = "";
   updateSpotlight(null, null);
-  updateBuilderUI();
-});
-
-function updateBuilderUI() {
-  bAddedTeamsList.innerHTML = '';
+  checkBuilderInputsStatus();
   
-  if (selectedTeams.length === 0) {
-    bAddedTeamsList.innerHTML = '<div class="no-teams-placeholder">No teams added yet. Select a team above to start.</div>';
-    btnToQuiz.setAttribute('disabled', 'true');
-    return;
-  }
-  
-  btnToQuiz.removeAttribute('disabled');
-  
-  selectedTeams.forEach(team => {
-    const row = document.createElement('div');
-    row.className = `builder-team-row ${team.isTop ? 'top-team-active' : ''}`;
-    row.innerHTML = `
-      <div class="builder-team-left">
-        <img class="builder-team-logo" src="${team.logo}" alt="${team.name}" crossorigin="anonymous">
-        <div class="builder-team-info">
-          <span class="builder-team-name">${team.name}</span>
-          <span class="builder-team-league">${team.league}</span>
-        </div>
-      </div>
-      <div class="builder-team-actions">
-        <label class="builder-top-radio">
-          <input type="radio" name="builder-top-team" ${team.isTop ? 'checked' : ''} onchange="window.setBuilderTopTeam('${team.id}')">
-          <span class="builder-radio-circle"></span>
-          <span>Top</span>
-        </label>
-        <span class="builder-remove-btn" onclick="window.removeBuilderTeam('${team.id}')" title="Remove Team">&times;</span>
-      </div>
-    `;
-    bAddedTeamsList.appendChild(row);
-  });
-  
-  // Set theme to matching top team
-  const topTeam = selectedTeams.find(t => t.isTop);
-  if (topTeam) {
-    document.documentElement.style.setProperty('--team-primary', topTeam.primaryColor);
-    document.documentElement.style.setProperty('--team-secondary', topTeam.secondaryColor);
-  }
-}
-
-// Bind to window for inline calls
-window.setBuilderTopTeam = (teamId) => {
-  selectedTeams.forEach(t => {
-    t.isTop = (t.id === teamId);
-  });
-  updateBuilderUI();
-};
-
-window.removeBuilderTeam = (teamId) => {
-  const teamToRemove = selectedTeams.find(t => t.id === teamId);
-  const wasTop = teamToRemove ? teamToRemove.isTop : false;
-  selectedTeams = selectedTeams.filter(t => t.id !== teamId);
-  if (wasTop && selectedTeams.length > 0) {
-    selectedTeams[0].isTop = true;
-  }
-  updateBuilderUI();
-};
-
-btnToQuiz.addEventListener('click', () => {
-  if (selectedTeams.length === 0) return;
-  currentQuizTeamIndex = 0;
-  userQuizAnswers = {};
   goToStep(3);
   renderQuizForCurrentTeam();
 });
@@ -832,7 +944,7 @@ function renderQuizForCurrentTeam() {
   if (!team) return;
   
   // Dynamic header styles
-  quizProgressText.textContent = `TEAM ${currentQuizTeamIndex + 1} OF ${selectedTeams.length}`;
+  quizProgressText.textContent = `TEAM QUIZ`;
   quizTeamName.textContent = team.name;
   
   // Set primary team theme color for quiz elements
@@ -840,20 +952,14 @@ function renderQuizForCurrentTeam() {
   document.documentElement.style.setProperty('--team-secondary', team.secondaryColor);
   
   // Update progress bar
-  const progressPercent = (currentQuizTeamIndex / selectedTeams.length) * 100;
-  quizProgressBarFill.style.width = `${progressPercent}%`;
+  quizProgressBarFill.style.width = `100%`;
   
   // Render questions
   quizQuestionsList.innerHTML = '';
   btnQuizNext.setAttribute('disabled', 'true');
+  btnQuizNext.textContent = 'Complete Team Profile';
   
-  if (currentQuizTeamIndex === selectedTeams.length - 1) {
-    btnQuizNext.textContent = 'Finish & Reveal Fandom Index';
-  } else {
-    btnQuizNext.textContent = 'Next Team';
-  }
-  
-  quizQuestions.forEach(q => {
+  team.quizQuestions.forEach(q => {
     const qItem = document.createElement('div');
     qItem.className = 'quiz-question-item';
     
@@ -891,16 +997,52 @@ function renderQuizForCurrentTeam() {
     qItem.appendChild(optionsGrid);
     quizQuestionsList.appendChild(qItem);
   });
+
+  // Render Championship Prediction
+  const predItem = document.createElement('div');
+  predItem.className = 'quiz-question-item';
+  
+  const predText = document.createElement('span');
+  predText.className = 'quiz-question-text';
+  predText.textContent = 'When do you predict they will win their next championship/title?';
+  predItem.appendChild(predText);
+  
+  const inputContainer = document.createElement('div');
+  inputContainer.className = 'prediction-input-container';
+  
+  const predInput = document.createElement('input');
+  predInput.type = 'number';
+  predInput.id = 'quiz-prediction-input';
+  predInput.className = 'theme-number-input';
+  predInput.min = '2026';
+  predInput.max = '2050';
+  predInput.placeholder = 'e.g. 2027';
+  predInput.required = true;
+  
+  if (team.prediction) {
+    predInput.value = team.prediction;
+  }
+  
+  inputContainer.appendChild(predInput);
+  predItem.appendChild(inputContainer);
+  quizQuestionsList.appendChild(predItem);
+  
+  predInput.addEventListener('input', checkQuizAnswersStatus);
 }
 
 function checkQuizAnswersStatus() {
   const team = selectedTeams[currentQuizTeamIndex];
-  const allAnswered = quizQuestions.every(q => {
+  if (!team) return;
+  const allAnswered = team.quizQuestions.every(q => {
     const answerKey = `${team.id}_${q.key}`;
     return typeof userQuizAnswers[answerKey] === 'number';
   });
   
-  if (allAnswered) {
+  const predInput = document.getElementById('quiz-prediction-input');
+  const predVal = predInput ? parseInt(predInput.value) : NaN;
+  const predValid = !isNaN(predVal) && predVal >= 2026 && predVal <= 2050;
+  
+  if (allAnswered && predValid) {
     btnQuizNext.removeAttribute('disabled');
   } else {
     btnQuizNext.setAttribute('disabled', 'true');
@@ -909,25 +1051,108 @@ function checkQuizAnswersStatus() {
 
 btnQuizNext.addEventListener('click', () => {
   const team = selectedTeams[currentQuizTeamIndex];
+  if (!team) return;
   
   // Calculate total score out of 100 for current team
   let totalScore = 0;
-  quizQuestions.forEach(q => {
+  team.quizQuestions.forEach(q => {
     const answerKey = `${team.id}_${q.key}`;
     totalScore += userQuizAnswers[answerKey] || 0;
   });
   
   team.score = totalScore;
   
-  currentQuizTeamIndex++;
-  if (currentQuizTeamIndex < selectedTeams.length) {
-    renderQuizForCurrentTeam();
-    quizQuestionsList.scrollTop = 0;
-  } else {
-    // Go to Step 4 Reveal Screen
-    goToStep(4);
+  const predInput = document.getElementById('quiz-prediction-input');
+  if (predInput) {
+    team.prediction = predInput.value;
   }
+  
+  recalculateTopTeam();
+  goToStep(4); // Go to Step 4 Fandom Hub
 });
+
+// --- STEP 3.5: FANDOM HUB LOGIC ---
+function renderHubUI() {
+  if (!hubAddedTeamsList) return;
+  hubAddedTeamsList.innerHTML = '';
+  
+  if (selectedTeams.length === 0) {
+    hubAddedTeamsList.innerHTML = '<div class="no-teams-placeholder">No teams in your profile yet. Add a team to start.</div>';
+    btnHubFinish.setAttribute('disabled', 'true');
+    return;
+  }
+  
+  btnHubFinish.removeAttribute('disabled');
+  
+  selectedTeams.forEach(team => {
+    const card = document.createElement('div');
+    card.className = `hub-team-card ${team.isTop ? 'top-team-active' : ''}`;
+    
+    // Resolve colors
+    let teamColor = team.primaryColor;
+    let teamSecondary = team.secondaryColor;
+    const dbColors = getTeamDatabaseColors(team.name);
+    if (dbColors) {
+      teamColor = dbColors.primary;
+      teamSecondary = dbColors.secondary;
+    }
+    teamColor = teamColor || 'var(--team-primary)';
+    teamSecondary = teamSecondary || 'var(--team-secondary)';
+    const adaptedColor = getContrastAdaptedColor(teamColor, teamSecondary);
+    
+    card.style.borderLeft = `4px solid ${adaptedColor}`;
+    
+    card.innerHTML = `
+      <div class="hub-team-left">
+        <img class="hub-team-logo" src="${team.logo}" alt="${team.name}" crossorigin="anonymous">
+        <div class="hub-team-info">
+          <span class="hub-team-name">${team.name}</span>
+          <div class="hub-team-meta-row">
+            <span>League: <strong>${team.league}</strong></span>
+            <span>Fan Since: <strong>${team.fanSince}</strong></span>
+            <span>Prediction: <strong>${team.prediction}</strong></span>
+          </div>
+        </div>
+      </div>
+      <div class="hub-team-actions">
+        <span class="hub-team-score-badge" style="color: ${adaptedColor}">Score: ${team.score}</span>
+        ${team.isTop ? `<span class="hub-top-badge" style="background-color: ${adaptedColor}; color: #fff; padding: 3px 8px; border-radius: 4px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase;">Top Team</span>` : ''}
+        <span class="builder-remove-btn" onclick="window.removeHubTeam('${team.id}')" title="Remove Team">&times;</span>
+      </div>
+    `;
+    hubAddedTeamsList.appendChild(card);
+  });
+  
+  // Set theme to matching top team
+  const topTeam = selectedTeams.find(t => t.isTop);
+  if (topTeam) {
+    document.documentElement.style.setProperty('--team-primary', topTeam.primaryColor);
+    document.documentElement.style.setProperty('--team-secondary', topTeam.secondaryColor);
+  }
+}
+
+window.removeHubTeam = (teamId) => {
+  selectedTeams = selectedTeams.filter(t => t.id !== teamId);
+  recalculateTopTeam();
+  renderHubUI();
+};
+
+if (btnHubAddTeam) {
+  btnHubAddTeam.addEventListener('click', () => {
+    if (selectedTeams.length >= 4) {
+      alert("You've reached the maximum limit of 4 teams. Remove a team to add another.");
+      return;
+    }
+    goToStep(2);
+  });
+}
+
+if (btnHubFinish) {
+  btnHubFinish.addEventListener('click', () => {
+    if (selectedTeams.length === 0) return;
+    goToStep(5); // Transition to Step 5: Reveal
+  });
+}
 
 // --- STEP 4: REVEAL SEQUENCE ---
 function runRevealSequence() {
@@ -999,13 +1224,15 @@ function setupStep5MainPage(finalScore) {
   const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
   const tagline = generateSportsIdentityTagline();
   
+  const displayHandle = savedHandle ? (savedHandle.startsWith('@') ? savedHandle : `@${savedHandle}`) : "@GUEST";
+  
   // Form profile object
   const userProfile = {
-    name: "@GUEST",
+    name: displayHandle,
     tagline: tagline,
     overallScore: finalScore,
-    since: "----",
-    prediction: "----",
+    since: topTeam.fanSince || "----",
+    prediction: topTeam.prediction || "----",
     status: "UNVERIFIED",
     primaryColor: topTeam.primaryColor,
     secondaryColor: topTeam.secondaryColor,
@@ -1015,28 +1242,81 @@ function setupStep5MainPage(finalScore) {
   // Reset Form
   waitlistForm.reset();
   
+  // Pre-fill name input
+  if (fanNameInput) {
+    fanNameInput.value = savedHandle;
+  }
+  
   // Render card
   updateCardDOM(document.getElementById('final-card'), userProfile, true);
   
   // Sync form modifications to live card front
   fanNameInput.addEventListener('input', (e) => {
-    const nameVal = e.target.value ? (e.target.value.startsWith('@') ? e.target.value : `@${e.target.value}`) : '@GUEST';
+    const val = e.target.value.trim();
+    savedHandle = val;
+    const nameVal = val ? (val.startsWith('@') ? val : `@${val}`) : '@GUEST';
     document.getElementById('f-card-name').textContent = nameVal;
   });
   
-  fanSinceInput.addEventListener('input', (e) => {
-    document.getElementById('f-card-since').textContent = e.target.value || '----';
-  });
-  
-  predictionInput.addEventListener('input', (e) => {
-    document.getElementById('f-card-prediction').textContent = e.target.value || '----';
-  });
-  
   // Transition step
-  goToStep(5);
+  goToStep(6);
 }
 
 // --- DYNAMIC SPORTS IDENTITY TAGLINE ENGINE ---
+// --- DYNAMIC SPORTS IDENTITY TAGLINE ENGINE ---
+const teamSpecificPhrases = {
+  chiefs: { base: "Chiefs Kingdom", high: "Chiefs Kingdom Dynasty Guard", standard: "Red & Gold Faithful" },
+  eagles: { base: "Eagles Nation", high: "Midnight Green Zealot", standard: "Eagles Faithful" },
+  cowboys: { base: "America's Team", high: "Lone Star Martyr", standard: "Cowboys Traditionalist" },
+  niners: { base: "Faithful Union", high: "Red & Gold Niners Devotee", standard: "49ers Loyalist" },
+  packers: { base: "Cheeseheads", high: "Frozen Tundra Guardian", standard: "Cheesehead Loyalist" },
+  bills: { base: "Bills Mafia", high: "Bills Mafia Die-hard", standard: "Bills Devotee" },
+  seahawks: { base: "12th Man", high: "Loudest 12th Man Disciple", standard: "Seahawks Faithful" },
+  patriots: { base: "Foxborough", high: "Foxborough Dynastist", standard: "Patriots Loyalist" },
+  raiders: { base: "Raider Nation", high: "Silver & Black Raider", standard: "Raiders Faithful" },
+  giants_nfl: { base: "Big Blue", high: "Big Blue Giants Zealot", standard: "Giants Loyalist" },
+  lakers: { base: "Showtime Lakers", high: "Showtime Lakers Purist", standard: "Lakers Nation Loyalist" },
+  celtics: { base: "Green Team", high: "Celtics Dynasty Guardian", standard: "Celtics Traditionalist" },
+  warriors: { base: "Dub Nation", high: "Dub Nation Elite Devotee", standard: "Warriors Loyalist" },
+  bulls: { base: "Chicago Bulls", high: "Windy City Bulls Zealot", standard: "Bulls Faithful" },
+  raptors: { base: "We The North", high: "We The North Die-hard", standard: "Raptors Traditionalist" },
+  heat: { base: "Heat Nation", high: "Heat Nation Flame Guard", standard: "Heat Loyalist" },
+  knicks: { base: "Knicks Faithful", high: "Orange & Blue Knicks Martyr", standard: "Knicks Supporter" },
+  bucks: { base: "Fear The Deer", high: "Deer District Guardian", standard: "Bucks Loyalist" },
+  suns: { base: "Planet Orange", high: "Valley of the Suns Zealot", standard: "Suns Fanatic" },
+  nets: { base: "Brooklyn Nets", high: "Brooklyn Grit Traditionalist", standard: "Nets Loyalist" },
+  leafs: { base: "Leafs Nation", high: "Leafs Nation Martyr", standard: "Leafs Traditionalist" },
+  bruins: { base: "Spoked-B", high: "Boston Bruins Bruiser", standard: "Bruins Loyalist" },
+  blackhawks: { base: "Blackhawks", high: "Madhouse on Madison Purist", standard: "Blackhawks Traditionalist" },
+  canadiens: { base: "Bleu-Blanc-Rouge", high: "Bleu-Blanc-Rouge Purist", standard: "Canadiens Loyalist" },
+  canucks: { base: "Canucks Nation", high: "Pacific Canucks Sufferer", standard: "Canucks Faithful" },
+  knights: { base: "Golden Knights", high: "Golden Misfits Devotee", standard: "Knights Guardian" },
+  rangers: { base: "Broadway Blues", high: "Broadway Blue Rangers Zealot", standard: "Rangers Faithful" },
+  avalanche: { base: "Avalanche", high: "Mile High Avalanche Guard", standard: "Avalanche Loyalist" },
+  oilers: { base: "Oilers Country", high: "Copper & Blue Oilers Elite", standard: "Oilers Loyalist" },
+  penguins: { base: "Pens Nation", high: "Black & Gold Penguins Purist", standard: "Penguins Loyalist" },
+  yankees: { base: "Pinstripes", high: "Bronx Bomber Aristocrat", standard: "Pinstripe Loyalist" },
+  redsox: { base: "Red Sox Nation", high: "Fenway Faithful Guardian", standard: "Red Sox Loyalist" },
+  dodgers: { base: "Think Blue", high: "Chavez Ravine Traditionalist", standard: "Dodgers Loyalist" },
+  cubs: { base: "Wrigleyville", high: "Bleacher Bum Traditionalist", standard: "Cubs Faithful" },
+  giants_mlb: { base: "Orange & Black", high: "Bay Area Giants Purist", standard: "Giants Faithful" },
+  bluejays: { base: "Blue Jays", high: "Blue Jays Nation Devotee", standard: "Jays Traditionalist" },
+  braves: { base: "Tomahawk", high: "Tomahawk chop Faithful", standard: "Braves Loyalist" },
+  astros: { base: "Space City", high: "Orbit District Guardian", standard: "Astros Loyalist" },
+  mets: { base: "Amazin' Mets", high: "Amazin' Mets Martyr", standard: "Mets Traditionalist" },
+  cardinals: { base: "Redbirds", high: "St. Louis Redbirds Purist", standard: "Cardinals Loyalist" },
+  miami: { base: "Inter Miami", high: "Vice City Herons Zealot", standard: "Inter Miami Loyalist" },
+  galaxy: { base: "LA Galaxy", high: "Angel City Galaxy Guard", standard: "Galaxy Loyalist" },
+  sounders: { base: "Emerald City", high: "Rave Green Sounders Fanatic", standard: "Sounders Loyalist" },
+  lafc: { base: "LAFC", high: "Black & Gold LAFC Guard", standard: "LAFC Loyalist" },
+  timbers: { base: "Rose City", high: "Rose City Timbers Devotee", standard: "Timbers Traditionalist" },
+  atlanta_utd: { base: "Five Stripes", high: "Five Stripes Mercedes Guard", standard: "Atlanta United Loyalist" },
+  toronto_fc: { base: "Reds", high: "BMO Field Reds Guardian", standard: "Toronto FC Loyalist" },
+  nycfc: { base: "Pigeons", high: "Pigeon Nation Elite", standard: "NYCFC Loyalist" },
+  crew: { base: "Crew", high: "Yellow & Black Crew Guardian", standard: "Crew Loyalist" },
+  cincinnati: { base: "FC Cincinnati", high: "Bailey Wall Guardian", standard: "Cincinnati Loyalist" }
+};
+
 function generateSportsIdentityTagline(teams = selectedTeams) {
   const count = teams.length;
   if (count === 0) return "Add a Top Team";
@@ -1054,49 +1334,24 @@ function generateSportsIdentityTagline(teams = selectedTeams) {
   const leagues = teams.map(t => t.league ? t.league.toLowerCase() : "");
   const uniqueLeagues = [...new Set(leagues)].filter(Boolean);
 
-  // 1. Specific City Pride Checks (Toronto, Boston, NY, LA)
-  const isCity = (cityName) => teams.every(t => t.city && t.city.toLowerCase() === cityName.toLowerCase());
-  
-  if (count >= 2) {
-    if (isCity("toronto")) {
-      return "The Six Supporter";
-    }
-    if (isCity("boston")) {
-      return "Title Town Patriot";
-    }
-    if (isCity("new york")) {
-      return "Empire State Fanatic";
-    }
-    if (isCity("los angeles")) {
-      return "Angelenos Devotee";
-    }
-  }
-
-  // 2. Score Gaps & Devotion Profiles
   const scores = teams.map(t => t.score);
   const maxScore = Math.max(...scores);
   const minScore = Math.min(...scores);
   
-  if (count >= 2) {
-    // Large gap: Top team is extremely high, others are very low
-    if (topTeam.score >= 92 && otherTeams.every(t => t.score < 55)) {
-      return "Monogamous Devotee";
-    }
-    // High-roller: all teams are 90+
-    if (teams.every(t => t.score >= 90)) {
-      return "Uncompromising Zealot";
-    }
-    // Casuals: all teams are 60 or below
-    if (teams.every(t => t.score <= 60)) {
-      return "Passive Enthusiast";
-    }
-    // Equal devotion: all scores are very close
-    if (maxScore - minScore <= 8) {
-      return "Equal-Opportunity Fan";
-    }
-  }
+  const sinceYears = teams.map(t => parseInt(t.fanSince)).filter(y => !isNaN(y));
+  const earliestSince = sinceYears.length > 0 ? Math.min(...sinceYears) : 2026;
+  const latestSince = sinceYears.length > 0 ? Math.max(...sinceYears) : 1900;
 
-  // 3. Rivals Check (Same-league rivalries)
+  const eastCities = ['new york', 'boston', 'philadelphia', 'montreal', 'toronto', 'miami', 'buffalo', 'chicago', 'pittsburgh', 'atlanta', 'columbus', 'cincinnati', 'milwaukee'];
+  const westCities = ['los angeles', 'san francisco', 'seattle', 'las vegas', 'vancouver', 'portland', 'phoenix', 'denver', 'edmonton'];
+  const centralCities = ['dallas', 'kansas city', 'houston', 'st. louis', 'green bay'];
+
+  const citiesLower = cities.map(c => c ? c.toLowerCase() : "");
+  const hasEast = citiesLower.some(c => eastCities.includes(c));
+  const hasWest = citiesLower.some(c => westCities.includes(c));
+  const hasCentral = citiesLower.some(c => centralCities.includes(c));
+
+  // 1. Rivals Check (Same-league rivalries) - Highly specific and fun
   const hasRivalry = (
     (ids.includes('lakers') && ids.includes('celtics')) ||
     (ids.includes('yankees') && ids.includes('redsox')) ||
@@ -1109,7 +1364,131 @@ function generateSportsIdentityTagline(teams = selectedTeams) {
     return "The Chaos Agent";
   }
 
-  // 4. Multisport & League Profiles
+  // 2. Specific City Pride Checks (Toronto, Boston, NY, LA, Chicago, SF)
+  const isCity = (cityName) => teams.every(t => t.city && t.city.toLowerCase() === cityName.toLowerCase());
+  
+  if (count >= 2) {
+    if (isCity("toronto")) {
+      if (teams.some(t => t.id === 'leafs' && t.score >= 80)) {
+        return "Toronto Sports Martyr";
+      }
+      return "The Six Traditionalist";
+    }
+    if (isCity("boston")) {
+      return "Title Town Aristocrat";
+    }
+    if (isCity("new york")) {
+      return "Five-Borough Die-hard";
+    }
+    if (isCity("los angeles")) {
+      return "Hollywood Heavyweight";
+    }
+    if (isCity("chicago")) {
+      return "Windy City Faithful";
+    }
+    if (isCity("san francisco")) {
+      return "Bay Area Purist";
+    }
+  }
+
+  // 3. Devotion / Heartbreak Syndicates (Based on Database status)
+  if (count >= 2) {
+    const heartbreakTeams = teams.filter(t => t.status === 'heartbreak');
+    const champsTeams = teams.filter(t => t.status === 'champs' || t.status === 'powerhouse');
+    
+    // Multiple heartbreak teams with high devotion
+    if (heartbreakTeams.length >= 2 && heartbreakTeams.every(t => t.score >= 70)) {
+      return "Noble Sufferer";
+    }
+    
+    // Glutton for punishment: Top team is heartbreak with extremely high score
+    if (topTeam.status === 'heartbreak' && topTeam.score >= 90) {
+      return "Glutton for Punishment";
+    }
+    
+    // Multiple champs/powerhouse teams with high score, especially if fanSince is recent
+    if (champsTeams.length >= 2 && champsTeams.every(t => t.score >= 80)) {
+      if (latestSince >= 2020) {
+        return "Modern Era Bandwagoner";
+      }
+      return "Dynasty Collector";
+    }
+  }
+
+  // 4. Generational / Legacy Loyalty
+  if (earliestSince < 1998 && avgScore >= 75) {
+    return "Legacy Traditionalist";
+  }
+
+  // 5. Large Score Gaps & Devotion Profiles
+  if (count >= 2) {
+    // Large gap: Top team is extremely high, others are very low (Monogamous fan at heart)
+    if (topTeam.score >= 90 && otherTeams.every(t => t.score < 55)) {
+      return "Monogamous Devotee";
+    }
+    // High-roller: all teams are 88+
+    if (teams.every(t => t.score >= 88)) {
+      return "Uncompromising Zealot";
+    }
+    // Casuals: all teams are 60 or below
+    if (teams.every(t => t.score <= 60)) {
+      return "Passive Enthusiast";
+    }
+    // Equal devotion: all scores are very close
+    if (maxScore - minScore <= 6) {
+      return "Equal-Opportunity Fan";
+    }
+  }
+
+  // 6. Highly Specific Team-Specific Tagline Matcher
+  if (topTeam && teamSpecificPhrases[topTeam.id]) {
+    const phrase = teamSpecificPhrases[topTeam.id];
+    if (topTeam.score >= 85) {
+      return phrase.high;
+    } else {
+      return phrase.standard;
+    }
+  }
+
+  // 7. Geographic / Cities Spread Checks
+  if (count >= 2) {
+    if (uniqueCities.length === 1) {
+      return "Metro-Area Zealot";
+    }
+    
+    // Specific regional clusters
+    if (hasEast && hasWest) {
+      return "Coast-to-Coast Analyst";
+    }
+    if (hasEast && !hasWest && !hasCentral) {
+      return "Eastern Seaboard Purist";
+    }
+    if (hasWest && !hasEast && !hasCentral) {
+      return "Pacific Coast Loyalist";
+    }
+    if (hasCentral && !hasEast && !hasWest) {
+      return "Heartland Traditionalist";
+    }
+  }
+
+  // 8. Solo Teams (1 team)
+  if (count === 1) {
+    if (topTeam.id === 'leafs' && topTeam.score >= 85) {
+      return "Toronto Sports Martyr";
+    }
+    if (topTeam.status === 'heartbreak' && topTeam.score >= 80) {
+      return "The Heartbreak Specialist";
+    }
+    if (topTeam.status === 'champs' && topTeam.score >= 80) {
+      return "The Glory Collector";
+    }
+    if (earliestSince < 2000 && topTeam.score >= 80) {
+      return "Generational Guardian";
+    }
+    return "The Pure Loyalist";
+  }
+
+  // 9. Multisport & League Profiles (Fallbacks for multi-team profiles)
   if (uniqueLeagues.length === 1) {
     if (uniqueLeagues[0] === "mls") {
       return "Global Game Disciple";
@@ -1120,44 +1499,22 @@ function generateSportsIdentityTagline(teams = selectedTeams) {
     if (uniqueLeagues[0] === "nba") {
       return "Hardwood Obsessive";
     }
+    if (uniqueLeagues[0] === "nhl") {
+      return "Ice Hockey Purist";
+    }
+    if (uniqueLeagues[0] === "mlb") {
+      return "Diamond Tactician";
+    }
   }
   
   if (uniqueLeagues.length === 2) {
-    return "Dual-Sport Specialist";
+    return "Dual-Front Analyst";
   }
   if (uniqueLeagues.length === 3) {
-    return "Tri-Sport Authority";
+    return "Tri-Arena Sage";
   }
   if (uniqueLeagues.length >= 4) {
     return "Omni-Sport Polymath";
-  }
-
-  // 5. Solo Teams
-  if (count === 1) {
-    if (topTeam.id === 'leafs' && topTeam.score >= 90) {
-      return "Toronto Sports Martyr";
-    }
-    if (topTeam.status === 'heartbreak' && topTeam.score >= 80) {
-      return "The Heartbreak Specialist";
-    }
-    if (topTeam.status === 'champs' && topTeam.score >= 80) {
-      return "The Glory Collector";
-    }
-    return "The Pure Loyalist";
-  }
-
-  // 6. Generic fallbacks
-  if (uniqueCities.length === 1) {
-    return "Hometown Hero";
-  }
-  if (avgIntensity >= 4.5) {
-    return "The Obsessive Fanatic";
-  }
-  if (avgIntensity <= 1.8) {
-    return "Fairweather Observer";
-  }
-  if (count >= 3 && uniqueCities.length === count) {
-    return "Coast-to-Coast Analyst";
   }
 
   return "Fandom Connoisseur";
@@ -1176,10 +1533,10 @@ function setupWaitlistBindings() {
     const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
     const name = fanNameInput.value;
     const email = fanEmailInput.value;
-    const since = fanSinceInput.value || 'N/A';
-    const prediction = predictionInput.value;
+    const since = topTeam.fanSince || 'N/A';
+    const prediction = topTeam.prediction || 'N/A';
     
-    if (!name || !email || !prediction || !since) {
+    if (!name || !email) {
       alert("Please fill in all required fields.");
       return;
     }
@@ -1203,11 +1560,10 @@ function setupWaitlistBindings() {
       localStorage.setItem('fanlog_waitlist', JSON.stringify(currentWaitlist));
     }
     
-    // Update card front status text
-    const statusValFront = document.getElementById('f-card-status');
-    if (statusValFront) {
-      statusValFront.textContent = 'VERIFIED';
-      statusValFront.style.color = '#10b981';
+    // Show verified checkmark next to name
+    const verifiedBadge = document.getElementById('f-card-verified-badge');
+    if (verifiedBadge) {
+      verifiedBadge.style.display = 'inline-block';
     }
     
     // Setup Card back fields
@@ -1244,8 +1600,9 @@ btnRestartFlow.addEventListener('click', () => {
     cardScene.classList.remove('flipped');
   }
   
-  // Reset back to Step 2 Team Builder
-  updateBuilderUI();
+  // Clear any inputs in Step 2
+  if (bSinceInput) bSinceInput.value = "";
+  
   goToStep(2);
 });
 

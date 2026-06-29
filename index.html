@@ -72,9 +72,12 @@
             
             <!-- Card Metadata -->
             <div class="fcard-meta-grid">
-              <div class="fcard-meta-box">
+              <div class="fcard-meta-box" style="grid-column: span 2; align-items: center; text-align: center;">
                 <span class="fcard-meta-label">FAN ID</span>
-                <span class="fcard-meta-value" id="w-card-name">@BradyFan</span>
+                <div class="fcard-name-wrapper" style="display: flex; align-items: center; gap: 4px; justify-content: center; width: 100%;">
+                  <span class="fcard-meta-value" id="w-card-name">@BradyFan</span>
+                  <span id="w-card-verified-badge" class="verified-badge" style="display: none; color: #10b981; font-size: 0.85rem;" title="Verified Waitlist Member">✓</span>
+                </div>
               </div>
               <div class="fcard-meta-box">
                 <span class="fcard-meta-label" id="w-card-since-label">FAN SINCE</span>
@@ -84,9 +87,9 @@
                 <span class="fcard-meta-label" id="w-card-prediction-label">PREDICTION</span>
                 <span class="fcard-meta-value" id="w-card-prediction">2028</span>
               </div>
-              <div class="fcard-meta-box">
-                <span class="fcard-meta-label">STATUS</span>
-                <span class="fcard-meta-value text-accent" id="w-card-status">SAMPLE</span>
+              <div class="fcard-meta-box" style="grid-column: span 2; align-items: center; text-align: center;">
+                <span class="fcard-meta-label">TIER</span>
+                <span class="fcard-meta-value text-accent" id="w-card-tier">SAMPLE</span>
               </div>
             </div>
             
@@ -101,7 +104,11 @@
         </div>
 
         <div class="welcome-actions">
-          <button id="btn-start-flow" class="btn btn-primary btn-lg">Generate Your Fandom Index</button>
+          <div class="welcome-input-container">
+            <label for="welcome-fan-name" class="welcome-input-label">Enter Fan Name or Handle</label>
+            <input type="text" id="welcome-fan-name" placeholder="e.g. @Ethan" maxlength="15" required>
+          </div>
+          <button id="btn-start-flow" class="btn btn-primary btn-lg" disabled>Generate Your Fandom Index</button>
         </div>
       </div>
     </section>
@@ -111,9 +118,9 @@
     <section id="step-builder" class="onboarding-step">
       <div class="builder-step-container">
         <div class="step-header">
-          <span class="step-indicator">STEP 1 OF 3</span>
-          <h2 class="step-title">Map Your Teams</h2>
-          <p class="step-subtitle">Select the teams you root for. Choose at least one. The first team added will be set as your Top Team, which drives your primary color scheme.</p>
+          <span class="step-indicator" id="builder-step-indicator">STEP 1 OF 3</span>
+          <h2 class="step-title">Add Your Team</h2>
+          <p class="step-subtitle">Select a team you root for and tell us how long you've supported them.</p>
         </div>
         
         <div class="builder-flow-grid">
@@ -139,13 +146,9 @@
                   </select>
                 </div>
               </div>
-              <button type="button" id="b-add-team-btn" class="btn btn-secondary btn-sm btn-block">Add Team to Profile</button>
-            </div>
-            
-            <div class="added-teams-container">
-              <label>Selected Teams (Min 1, mark radio for Top Team)</label>
-              <div id="b-added-teams-list" class="added-teams-list">
-                <div class="no-teams-placeholder">No teams added yet. Select a team above to start.</div>
+              <div class="form-group">
+                <label for="b-since-input">When did you start being a fan?</label>
+                <input type="number" id="b-since-input" class="theme-number-input" min="1900" max="2026" placeholder="e.g. 2003" required>
               </div>
             </div>
             
@@ -195,6 +198,29 @@
           
           <div class="quiz-actions">
             <button id="btn-quiz-next" class="btn btn-primary btn-block" disabled>Next Team</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- STEP 3.5: FANDOM HUB -->
+    <section id="step-hub" class="onboarding-step">
+      <div class="hub-step-container">
+        <div class="step-header">
+          <span class="step-indicator">STEP 3 OF 4</span>
+          <h2 class="step-title">Your Fandom Map</h2>
+          <p class="step-subtitle">Here are the teams you've added. Choose your Top Team (drives card colors) and decide if you want to add another team.</p>
+        </div>
+        
+        <div class="hub-box-card">
+          <div id="hub-added-teams-list" class="hub-teams-list">
+            <!-- Dynamically populated in main.js -->
+          </div>
+          
+          <div class="hub-actions-grid">
+            <button id="btn-hub-add-team" class="btn btn-secondary btn-block">Add Another Team</button>
+            <button id="btn-hub-finish" class="btn btn-primary btn-block">Calculate Fandom Index</button>
           </div>
         </div>
       </div>
@@ -259,9 +285,12 @@
                     
                     <!-- Card Metadata -->
                     <div class="fcard-meta-grid">
-                      <div class="fcard-meta-box">
+                      <div class="fcard-meta-box" style="grid-column: span 2; align-items: center; text-align: center;">
                         <span class="fcard-meta-label">FAN ID</span>
-                        <span class="fcard-meta-value" id="f-card-name">@GUEST</span>
+                        <div class="fcard-name-wrapper" style="display: flex; align-items: center; gap: 4px; justify-content: center; width: 100%;">
+                          <span class="fcard-meta-value" id="f-card-name">@GUEST</span>
+                          <span id="f-card-verified-badge" class="verified-badge" style="display: none; color: #10b981; font-size: 0.85rem;" title="Verified Waitlist Member">✓</span>
+                        </div>
                       </div>
                       <div class="fcard-meta-box">
                         <span class="fcard-meta-label" id="f-card-since-label">FAN SINCE</span>
@@ -271,9 +300,9 @@
                         <span class="fcard-meta-label" id="f-card-prediction-label">PREDICTION</span>
                         <span class="fcard-meta-value" id="f-card-prediction">----</span>
                       </div>
-                      <div class="fcard-meta-box">
-                        <span class="fcard-meta-label">STATUS</span>
-                        <span class="fcard-meta-value" id="f-card-status" style="color: var(--text-muted);">UNVERIFIED</span>
+                      <div class="fcard-meta-box" style="grid-column: span 2; align-items: center; text-align: center;">
+                        <span class="fcard-meta-label">TIER</span>
+                        <span class="fcard-meta-value" id="f-card-tier" style="color: var(--text-muted);">ROOKIE</span>
                       </div>
                     </div>
                     
@@ -432,17 +461,6 @@
                 <div class="form-group">
                   <label for="fan-email">Email Address</label>
                   <input type="email" id="fan-email" placeholder="name@example.com" required>
-                </div>
-              </div>
-              
-              <div class="form-group-row">
-                <div class="form-group">
-                  <label for="fan-since">Top Team Fan Since</label>
-                  <input type="number" id="fan-since" min="1900" max="2026" placeholder="e.g. 2003" required>
-                </div>
-                <div class="form-group">
-                  <label for="prediction-year">Top Team Title Prediction</label>
-                  <input type="number" id="prediction-year" min="2026" max="2041" value="2027" required>
                 </div>
               </div>
               
