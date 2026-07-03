@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <!-- Circular Background (Leafs Blue) -->
+  <circle cx="60" cy="60" r="56" fill="#00205B" stroke="#0038A8" stroke-width="3"/>
+  
+  <!-- Face/Skin -->
+  <path d="M60 40c-14 0-16 10-16 20 0 12 7 18 16 18s16-6 16-18c0-10-2-20-16-20z" fill="#FDD3B1"/>
+  
+  <!-- Excited Eyes -->
+  <circle cx="53" cy="55" r="3.5" fill="#1E293B"/>
+  <circle cx="67" cy="55" r="3.5" fill="#1E293B"/>
+  
+  <!-- Rosy Cheeks -->
+  <circle cx="48" cy="61" r="4.5" fill="#FA8072" opacity="0.75"/>
+  <circle cx="72" cy="61" r="4.5" fill="#FA8072" opacity="0.75"/>
+  
+  <!-- Enthusiastic Smile -->
+  <path d="M54 62q6 5 12 0" stroke="#1E293B" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+  
+  <!-- Ears -->
+  <circle cx="42" cy="58" r="4.5" fill="#FDD3B1"/>
+  <circle cx="78" cy="58" r="4.5" fill="#FDD3B1"/>
+  
+  <!-- Sports Baseball Cap -->
+  <!-- Visor/Brim (Blue) -->
+  <path d="M40 41c10-8 30-8 40 0z" fill="#0038A8"/>
+  <!-- Cap Main Dome (White) -->
+  <path d="M43 42.5c0-15 34-15 34 0z" fill="#FFFFFF"/>
+  <!-- Custom Maple Leaf Logo on Cap (Exciting Detail!) -->
+  <path d="M60 28 l1.5 2.5 h2.5 l-2 1.5 l1 2.5 l-3-1.5 l-3 1.5 l1-2.5 l-2-1.5 h2.5 z" fill="#00205B"/>
+  
+  <!-- Fan Jersey (Leafs Blue with white trim) -->
+  <path d="M26 95c6-14 16-19 34-19s28 5 34 19z" fill="#00205B"/>
+  <!-- White Collar -->
+  <path d="M51 76.2l9 12 9-12z" fill="#FFFFFF"/>
+  <!-- Mini Maple Leaf Crest on Chest -->
+  <path d="M60 85 l1 2 h2 l-1.5 1 l0.8 2.2 l-2.3-1.2 l-2.3 1.2 l0.8-2.2 l-1.5-1 h2 z" fill="#FFFFFF"/>
+</svg>

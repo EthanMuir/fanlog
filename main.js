@@ -855,35 +855,33 @@ if (bSinceInput) {
 }
 
 function updateSpotlight(teamId, league) {
-  const spotlightLogo = document.getElementById('preview-spotlight-logo');
-  const spotlightFallback = document.getElementById('preview-spotlight-logo-fallback');
-  const spotlightName = document.getElementById('preview-spotlight-name');
-  const spotlightContainer = document.getElementById('builder-spotlight');
+  const previewContainer = document.getElementById('builder-logo-preview');
+  const previewLogoImg = document.getElementById('builder-preview-logo-img');
+  const previewTeamName = document.getElementById('builder-preview-team-name');
   
   if (!league || !teamId) {
-    spotlightFallback.style.display = 'block';
-    spotlightLogo.style.display = 'none';
-    spotlightName.textContent = 'Select a Team';
-    spotlightContainer.style.borderColor = 'var(--border-color)';
+    if (previewContainer) previewContainer.style.display = 'none';
     return;
   }
   
   const team = sportsData[league]?.teams.find(t => t.id === teamId);
   if (team) {
-    spotlightFallback.style.display = 'none';
-    spotlightLogo.src = team.logo;
-    spotlightLogo.style.display = 'block';
-    spotlightName.textContent = team.name;
+    if (previewLogoImg) {
+      previewLogoImg.src = team.logo;
+    }
+    if (previewTeamName) {
+      previewTeamName.textContent = team.name;
+    }
+    if (previewContainer) {
+      previewContainer.style.display = 'flex';
+      previewContainer.style.borderColor = team.primary;
+    }
     
     // Shift accents dynamically
     document.documentElement.style.setProperty('--team-primary', team.primary);
     document.documentElement.style.setProperty('--team-secondary', team.secondary);
-    spotlightContainer.style.borderColor = team.primary;
   } else {
-    spotlightFallback.style.display = 'block';
-    spotlightLogo.style.display = 'none';
-    spotlightName.textContent = 'Select a Team';
-    spotlightContainer.style.borderColor = 'var(--border-color)';
+    if (previewContainer) previewContainer.style.display = 'none';
   }
 }
 
@@ -956,6 +954,7 @@ function renderQuizForCurrentTeam() {
   
   // Render questions
   quizQuestionsList.innerHTML = '';
+  quizQuestionsList.scrollTop = 0;
   btnQuizNext.setAttribute('disabled', 'true');
   btnQuizNext.textContent = 'Complete Team Profile';
   
@@ -1250,13 +1249,49 @@ function setupStep5MainPage(finalScore) {
   // Render card
   updateCardDOM(document.getElementById('final-card'), userProfile, true);
   
+  // Helper to load or refresh the demo iframe with current user state
+  function updateDemoIframe() {
+    const rawInput = savedHandle ? savedHandle.trim() : "";
+    let finalName = rawInput || "Guest";
+    let finalHandle = rawInput ? (rawInput.startsWith('@') ? rawInput : `@${rawInput}`) : "@GUEST";
+    
+    if (rawInput.startsWith('@')) {
+      finalName = rawInput.slice(1);
+      finalHandle = rawInput;
+    } else if (rawInput) {
+      finalName = rawInput;
+      finalHandle = `@${rawInput.toLowerCase().replace(/\s+/g, '_')}`;
+    }
+
+    const teamIds = selectedTeams.map(t => t.id).join(',');
+    const userName = encodeURIComponent(finalName);
+    const userHandle = encodeURIComponent(finalHandle);
+    
+    const demoUrl = `./app/?name=${userName}&handle=${userHandle}&favorites=${teamIds}`;
+    
+    const demoIframe = document.getElementById('demo-mockup-iframe');
+    if (demoIframe) {
+      demoIframe.src = demoUrl;
+    }
+  }
+
+  // Load the iframe initially
+  updateDemoIframe();
+  
   // Sync form modifications to live card front
-  fanNameInput.addEventListener('input', (e) => {
-    const val = e.target.value.trim();
-    savedHandle = val;
-    const nameVal = val ? (val.startsWith('@') ? val : `@${val}`) : '@GUEST';
-    document.getElementById('f-card-name').textContent = nameVal;
-  });
+  if (fanNameInput) {
+    fanNameInput.addEventListener('input', (e) => {
+      const val = e.target.value.trim();
+      savedHandle = val;
+      const nameVal = val ? (val.startsWith('@') ? val : `@${val}`) : '@GUEST';
+      document.getElementById('f-card-name').textContent = nameVal;
+    });
+
+    // Reload iframe on blur to apply modified name/handle without lag while typing
+    fanNameInput.addEventListener('blur', () => {
+      updateDemoIframe();
+    });
+  }
   
   // Transition step
   goToStep(6);
@@ -1531,13 +1566,13 @@ function setupWaitlistBindings() {
     }
     
     const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
-    const name = fanNameInput.value;
+    const name = fanNameInput ? fanNameInput.value : savedHandle;
     const email = fanEmailInput.value;
     const since = topTeam.fanSince || 'N/A';
     const prediction = topTeam.prediction || 'N/A';
     
-    if (!name || !email) {
-      alert("Please fill in all required fields.");
+    if (!email) {
+      alert("Please fill in your email address.");
       return;
     }
     
@@ -1646,7 +1681,8 @@ btnDownloadPng.addEventListener('click', () => {
     cardElement.style.transform = originalTransform;
     frontFace.style.boxShadow = originalBoxShadow;
     
-    const nameFormatted = fanNameInput.value ? fanNameInput.value.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'guest';
+    const nameVal = fanNameInput ? fanNameInput.value : savedHandle;
+    const nameFormatted = nameVal ? nameVal.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'guest';
     const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
     const topTeamFormatted = topTeam ? topTeam.id : 'fandom';
     const device = getDeviceDetails();

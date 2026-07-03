@@ -260,14 +260,25 @@ button, input, select {
   grid-template-areas: 
     "left right"
     "actions right";
-  grid-template-columns: 1.1fr 0.9fr;
+  grid-template-columns: 1.15fr 0.85fr;
   grid-template-rows: auto auto;
-  gap: 24px 60px;
-  max-width: 1200px;
+  gap: 24px 80px;
+  max-width: 1300px;
   width: 100%;
   margin: 0 auto;
-  padding: 80px 24px;
+  padding: 40px 24px;
   align-items: center;
+  min-height: calc(100vh - 180px);
+}
+
+@media (min-width: 1200px) {
+  .welcome-hero-right {
+    transform: scale(1.08);
+    transform-origin: center center;
+  }
+  .welcome-title {
+    font-size: 4.4rem;
+  }
 }
 
 .welcome-hero-left {
@@ -275,12 +286,14 @@ button, input, select {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  align-self: end;
 }
 
 .welcome-hero-actions {
   grid-area: actions;
   display: flex;
   width: 100%;
+  align-self: start;
 }
 
 .welcome-hero-right {
@@ -360,9 +373,11 @@ button, input, select {
   }
   .welcome-hero-left {
     align-items: center;
+    align-self: auto;
   }
   .welcome-hero-actions {
     justify-content: center;
+    align-self: auto;
   }
   .welcome-title {
     font-size: 3rem;
@@ -380,7 +395,7 @@ button, input, select {
 
 /* Step 2: Team Builder Layout */
 .builder-step-container {
-  max-width: 1100px;
+  max-width: 680px;
   margin: 0 auto;
   padding: 60px 24px;
 }
@@ -416,10 +431,9 @@ button, input, select {
 }
 
 .builder-flow-grid {
-  display: grid;
-  grid-template-columns: 1.2fr 0.8fr;
-  gap: 48px;
-  align-items: start;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
 .builder-inputs-panel {
@@ -1797,14 +1811,7 @@ button, input, select {
     font-size: 3rem;
   }
   
-  .builder-flow-grid {
-    grid-template-columns: 1fr;
-    gap: 32px;
-  }
-  
-  .builder-preview-panel {
-    position: static;
-  }
+
   
   .main-card-hero-row {
     grid-template-columns: 1fr;
@@ -2140,7 +2147,7 @@ button, input, select {
 
 /* Glassmorphism panel tint updates for more color */
 .builder-inputs-panel, 
-.quiz-questions-list, 
+.quiz-box-card, 
 .fcard-front, 
 .fcard-back,
 .waitlist-card {
@@ -2155,3 +2162,115 @@ button, input, select {
     margin-bottom: 36px;
   }
 }
+
+/* --------------------------------------------------------------------------
+   Demo Call to Action & iPhone Bezel Showcase Styles
+   -------------------------------------------------------------------------- */
+
+.demo-cta-container {
+  text-align: center;
+  margin: 3.5rem 0 1rem 0;
+}
+
+.demo-cta-text {
+  font-family: var(--font-main);
+  font-size: 1.5rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  background: linear-gradient(135deg, var(--team-primary) 0%, var(--team-secondary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  display: inline-block;
+  animation: pulse-glow 3s infinite ease-in-out;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.03);
+  }
+}
+
+/* iPhone 15 Bezel Wrapper */
+.iphone-device-bezel {
+  position: relative;
+  width: 414px; /* 390px + 24px padding */
+  height: 868px; /* 844px + 24px padding */
+  border-radius: 52px;
+  background: #08090c;
+  padding: 12px;
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-sizing: border-box;
+  margin: 2.5rem auto;
+  outline: 6px solid #1a1e29;
+  outline-offset: 4px;
+}
+
+/* Bezel Dynamic Island / Notch overlapping iframe */
+.iphone-device-bezel::before {
+  content: "";
+  position: absolute;
+  top: 28px; /* 12px padding + 16px offset */
+  left: 50%;
+  transform: translateX(-50%);
+  width: 110px;
+  height: 30px;
+  background: #000000;
+  border-radius: 9999px;
+  z-index: 10;
+  pointer-events: none;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 5px rgba(255, 255, 255, 0.2);
+}
+
+/* Bezel Home Indicator bar overlapping iframe bottom */
+.iphone-device-bezel::after {
+  content: "";
+  position: absolute;
+  bottom: 20px; /* 12px padding + 8px offset */
+  left: 50%;
+  transform: translateX(-50%);
+  width: 130px;
+  height: 5px;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 9999px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* Override iframe default styles to fit perfectly inside the bezel */
+.iphone-device-bezel #demo-mockup-iframe {
+  margin: 0 !important;
+  width: 390px !important;
+  height: 844px !important;
+  border-radius: 39px !important;
+  background: #ffffff;
+  position: relative;
+  z-index: 1;
+  display: block;
+}
+
+/* Responsive Bezel Scaling for Smaller Screens */
+@media (max-width: 480px) {
+  .iphone-device-bezel {
+    transform: scale(0.85);
+    transform-origin: top center;
+    margin-bottom: -110px;
+  }
+}
+
+@media (max-width: 390px) {
+  .iphone-device-bezel {
+    transform: scale(0.72);
+    transform-origin: top center;
+    margin-bottom: -220px;
+  }
+}
+
