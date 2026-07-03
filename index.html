@@ -50,7 +50,7 @@
               <label for="welcome-fan-name" class="welcome-input-label">Enter Fan Name or Handle</label>
               <input type="text" id="welcome-fan-name" placeholder="e.g. @Ethan" maxlength="15" required>
             </div>
-            <button id="btn-start-flow" class="btn btn-primary btn-lg" disabled>Generate Your Fandom Index</button>
+            <button id="btn-start-flow" class="btn btn-primary btn-lg" disabled>Generate Your FanLog Card</button>
           </div>
         </div>
 
@@ -154,6 +154,12 @@
                   </select>
                 </div>
               </div>
+              <!-- Inline Team Preview (Logo and Name) -->
+              <div id="builder-logo-preview" class="builder-logo-preview" style="display: none; align-items: center; gap: 12px; margin: 8px 0; background-color: var(--bg-tertiary); padding: 12px 16px; border: 1px dashed var(--border-color); border-radius: var(--border-radius-sm);">
+                <img id="builder-preview-logo-img" src="" alt="Team Logo" style="width: 36px; height: 36px; object-fit: contain;" crossorigin="anonymous">
+                <span id="builder-preview-team-name" style="font-weight: 700; font-size: 0.95rem; color: var(--text-main);"></span>
+              </div>
+
               <div class="form-group">
                 <label for="b-since-input">When did you start being a fan?</label>
                 <input type="number" id="b-since-input" class="theme-number-input" min="1900" max="2026" placeholder="e.g. 2003" required>
@@ -162,21 +168,6 @@
             
             <div class="builder-step-actions">
               <button id="btn-to-quiz" class="btn btn-primary btn-block" disabled>Continue to Fandom Quiz</button>
-            </div>
-          </div>
-          
-          <!-- Live Preview Visual Spotlight -->
-          <div class="builder-preview-panel">
-            <div class="builder-preview-info">
-              <h3>Live Brand Color</h3>
-              <p>Your top team's color palette adapts the card styling instantly.</p>
-              <div class="preview-team-spotlight" id="builder-spotlight">
-                <div class="spotlight-logo-holder">
-                  <span id="preview-spotlight-logo-fallback">🏟</span>
-                  <img id="preview-spotlight-logo" src="" alt="Team Logo" style="display: none;" crossorigin="anonymous">
-                </div>
-                <h4 id="preview-spotlight-name">Select a Team</h4>
-              </div>
             </div>
           </div>
         </div>
@@ -387,68 +378,19 @@
 
         </div>
 
+        <div class="demo-cta-container">
+          <p class="demo-cta-text">Try out the FanLog app below!</p>
+        </div>
+
         <!-- PRODUCT FEATURE SHOWCASE -->
         <section class="showcase-section" id="showcase-section">
           <div class="section-header">
-            <h2 class="section-title">The Fan Experience, Transformed</h2>
+            <h2 class="section-title">The fan experience transformed...</h2>
             <p class="section-subtitle">FanLog is a permanent, verified archive of your life as a sports fan. Look inside the app.</p>
           </div>
 
-          <div class="showcase-container">
-            
-            <!-- Showcase Row 1: Fandom Index Uniqueness -->
-            <div class="showcase-row">
-              <div class="showcase-content">
-                <div class="showcase-badge">Sports Identity</div>
-                <h3 class="showcase-title">Your Fandom, Quantified</h3>
-                <p class="showcase-description">Your fandom isn't a simple list of clubs—it is a visual, data-driven instrument custom-mapped to your personal devotion. The Fandom Index rates your team-by-team intensity mathematically, creating a balanced score. It is a completely unique, crisp representation of who you root for, instantly shareable on socials.</p>
-              </div>
-              <div class="showcase-visual card-highlight-box">
-                <div class="glow-accent-blob"></div>
-                <div class="showcase-card-mini">
-                  <span class="mini-icon">📊</span>
-                  <h4>Quantified Devotion</h4>
-                  <p>Every dynamic brand color, average metric, and custom archetype tagline is calculated from your real sports identity.</p>
-                </div>
-              </div>
-            </div>
-
-            <!-- Showcase Row 2: Game Logger (with mockup image) -->
-            <div class="showcase-row alternate">
-              <div class="showcase-content">
-                <div class="showcase-badge">The Game Log</div>
-                <h3 class="showcase-title">Log Every Moment Witnessed</h3>
-                <p class="showcase-description">Track how you actually watched the game. Log specific quarters, halves, or innings watched. Missed the third period? Log it honestly. Tag your entries with verified 'In Person' badges via location checks, and keep a searchable, permanent journal of your commentary on every matchup.</p>
-              </div>
-              <div class="showcase-visual">
-                <img src="game_logger_mockup.png" alt="FanLog Game Logger UI Mockup" class="showcase-img" crossorigin="anonymous">
-              </div>
-            </div>
-
-            <!-- Showcase Row 3: Live Chat Rooms (with mockup image) -->
-            <div class="showcase-row">
-              <div class="showcase-content">
-                <div class="showcase-badge">Live Chat Rooms</div>
-                <h3 class="showcase-title">Real-Time Banter, Certified Proof</h3>
-                <p class="showcase-description">Every game gets a live, active chat room. Talk banter and game analysis with thousands of fans in team-split layouts. Best of all, checking into the chat room during live game time acts as cryptographic proof of watch, certifying your log entry with a permanent verified badge.</p>
-              </div>
-              <div class="showcase-visual">
-                <img src="live_chat_mockup.png" alt="FanLog Live Chat UI Mockup" class="showcase-img" crossorigin="anonymous">
-              </div>
-            </div>
-
-            <!-- Showcase Row 4: Stats/Wrapped (with mockup image) -->
-            <div class="showcase-row alternate">
-              <div class="showcase-content">
-                <div class="showcase-badge">Fandom Wrapped</div>
-                <h3 class="showcase-title">Spotify Wrapped, for Sports Fans</h3>
-                <p class="showcase-description">Go beyond team statistics and track your own performance as a supporter. Discover your live watch streaks, win-loss records while watching, league splits, and team devotion ratios. Do you jinx your team when you watch? Our sports data engine will prove it.</p>
-              </div>
-              <div class="showcase-visual">
-                <img src="stats_wrapped_mockup.png" alt="FanLog Fandom Stats Wrapped UI Mockup" class="showcase-img" crossorigin="anonymous">
-              </div>
-            </div>
-
+          <div class="iphone-device-bezel">
+            <iframe id="demo-mockup-iframe" src="" style="width: 390px; height: 844px; border: none; border-radius: 39px; overflow: hidden; display: block; margin: 2rem auto;" scrolling="no"></iframe>
           </div>
         </section>
 
@@ -456,20 +398,14 @@
         <section class="waitlist-capture-section" id="waitlist-section">
           <div class="waitlist-section-header">
             <h2 class="waitlist-title">Join the FanLog Waitlist</h2>
-            <p class="waitlist-subtitle">Save your Fandom Index card, lock in your details, and claim early waitlist access.</p>
+            <p class="waitlist-subtitle">Join the waitlist and be notified when it drops!</p>
           </div>
           
           <div class="waitlist-form-container">
             <form id="fan-card-form" class="waitlist-form">
-              <div class="form-group-row">
-                <div class="form-group">
-                  <label for="fan-name">Fan Name or Handle</label>
-                  <input type="text" id="fan-name" maxlength="15" placeholder="e.g. @Ethan" required>
-                </div>
-                <div class="form-group">
-                  <label for="fan-email">Email Address</label>
-                  <input type="email" id="fan-email" placeholder="name@example.com" required>
-                </div>
+              <div class="form-group">
+                <label for="fan-email">Email Address</label>
+                <input type="email" id="fan-email" placeholder="name@example.com" required>
               </div>
               
               <button type="submit" class="btn btn-primary btn-block" id="submit-btn">
