@@ -1839,41 +1839,80 @@ button, input, select {
   .welcome-title {
     font-size: 2.25rem;
   }
-  
+
   .welcome-subtitle {
     font-size: 1rem;
   }
-  
+
   .form-group-row,
   .quiz-options-grid {
     grid-template-columns: 1fr;
     gap: 12px;
   }
-  
+
   .footer-container {
     flex-direction: column;
     gap: 24px;
     text-align: center;
     align-items: center;
   }
-  
+
   .footer-meta {
     align-items: center;
   }
-  
+
   .fcard-scene,
   .morphing-card-wrapper {
     width: 290px;
     height: 450px;
   }
-  
+
   .card-actions-grid {
     grid-template-columns: 1fr;
     gap: 12px;
   }
-  
+
   .social-share-horizontal {
     flex-wrap: wrap;
+  }
+
+  /* Final screen (step-main) small-screen fit */
+  .main-landing-container {
+    padding: 40px 16px;
+  }
+
+  .main-card-hero-row {
+    gap: 32px;
+    margin-bottom: 60px;
+  }
+
+  .main-card-actions-column {
+    align-items: center;
+    text-align: center;
+  }
+
+  .badge-status-pill {
+    align-self: center;
+  }
+
+  .main-reveal-title {
+    font-size: 2rem;
+    letter-spacing: -0.5px;
+  }
+
+  .main-reveal-desc {
+    font-size: 1rem;
+  }
+
+  .card-actions-grid,
+  .social-share-horizontal,
+  .restart-flow-box {
+    width: 100%;
+  }
+
+  .social-share-horizontal .social-btn {
+    padding: 14px 0;
+    min-height: 44px; /* comfortable tap target */
   }
 }
 
@@ -2198,6 +2237,33 @@ button, input, select {
 }
 
 /* iPhone 15 Bezel Wrapper */
+/* Wrapper centers the bezel, hosts the demo badge, and clips the layout
+   overflow left behind when the bezel is transform-scaled on small screens */
+.demo-bezel-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  overflow-x: clip;
+}
+
+.demo-badge {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 0.7rem;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 6px 14px;
+  border-radius: 100px;
+  background-color: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  margin-top: 2rem;
+  margin-bottom: -1rem;
+  z-index: 5;
+}
+
 .iphone-device-bezel {
   position: relative;
   width: 414px; /* 390px + 24px padding */
@@ -2257,20 +2323,30 @@ button, input, select {
   display: block;
 }
 
-/* Responsive Bezel Scaling for Smaller Screens */
+/* Responsive Bezel Scaling for Smaller Screens.
+   The negative margin-bottom reclaims the layout height the transform leaves
+   behind: roughly 868px * (1 - scale). */
 @media (max-width: 480px) {
   .iphone-device-bezel {
     transform: scale(0.85);
     transform-origin: top center;
-    margin-bottom: -110px;
+    margin-bottom: calc(-868px * 0.15 + 2rem);
   }
 }
 
 @media (max-width: 390px) {
   .iphone-device-bezel {
-    transform: scale(0.72);
+    transform: scale(0.78);
     transform-origin: top center;
-    margin-bottom: -220px;
+    margin-bottom: calc(-868px * 0.22 + 2rem);
+  }
+}
+
+@media (max-width: 340px) {
+  .iphone-device-bezel {
+    transform: scale(0.7);
+    transform-origin: top center;
+    margin-bottom: calc(-868px * 0.3 + 2rem);
   }
 }
 
