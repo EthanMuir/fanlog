@@ -1910,14 +1910,15 @@ button, input, select {
   }
 
   .card-actions-grid,
-  .social-share-horizontal,
   .restart-flow-box {
     width: 100%;
   }
 
-  .social-share-horizontal .social-btn {
-    padding: 14px 0;
-    min-height: 44px; /* comfortable tap target */
+  /* On phones the native share sheet covers every destination, so only
+     Share My Card + Download Image are offered */
+  #b-copy-link,
+  .social-share-horizontal {
+    display: none;
   }
 }
 
