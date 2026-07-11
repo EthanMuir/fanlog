@@ -334,6 +334,7 @@ const btnStartFlow = document.getElementById('btn-start-flow');
 const btnToQuiz = document.getElementById('btn-to-quiz');
 const btnQuizNext = document.getElementById('btn-quiz-next');
 const btnRestartFlow = document.getElementById('b-restart-flow');
+const btnShareCard = document.getElementById('b-share-card');
 const btnDownloadPng = document.getElementById('b-download-png');
 const btnCopyLink = document.getElementById('b-copy-link');
 const btnHeaderWaitlist = document.getElementById('btn-header-waitlist');
@@ -1836,20 +1837,18 @@ async function inlineCardImages(rootEl) {
   return () => restores.forEach(fn => fn());
 }
 
-// --- PNG EXPORT VIA HTML2CANVAS ---
-btnDownloadPng.addEventListener('click', async () => {
+// --- CARD CAPTURE (shared by Download and Share) ---
+// Renders the card front face to a canvas via html2canvas, temporarily
+// flattening transforms/shadows and the color-mix() border (html2canvas
+// can't parse color-mix, and the stylesheet applies it to .fcard-front with
+// !important, so the overrides must be inline !important too).
+async function captureCardCanvas() {
   const frontFace = document.getElementById('fcard-front-face');
   const cardElement = document.getElementById('final-card');
   if (!frontFace || !cardElement) {
-    console.error('PNG export: card elements not found');
-    alert("Could not generate card image. Please try again.");
-    return;
+    throw new Error('card elements not found');
   }
 
-  // Temporarily flatten transforms, shadows, and the color-mix() border to
-  // prevent glitching in the screenshot (html2canvas can't parse color-mix,
-  // and the stylesheet applies it to .fcard-front with !important, so the
-  // overrides must be inline !important too)
   const originalTransform = cardElement.style.transform;
   const originalFaceCss = frontFace.style.cssText;
 
@@ -1865,86 +1864,131 @@ btnDownloadPng.addEventListener('click', async () => {
     // Non-fatal: fall through and rely on useCORS
   }
 
-  html2canvas(frontFace, {
-    scale: 3,
-    backgroundColor: null,
-    useCORS: true,
-    logging: false
-  }).then(canvas => {
-    // Restore styling
+  try {
+    return await html2canvas(frontFace, {
+      scale: 3,
+      backgroundColor: null,
+      useCORS: true,
+      logging: false
+    });
+  } finally {
     cardElement.style.transform = originalTransform;
     frontFace.style.cssText = originalFaceCss;
     restoreImages();
+  }
+}
 
-    const nameVal = fanNameInput ? fanNameInput.value : savedHandle;
-    const nameFormatted = nameVal ? nameVal.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'guest';
-    const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
-    const topTeamFormatted = topTeam ? topTeam.id : 'fandom';
-    const device = getDeviceDetails();
-
-    HubSDK.track('card_downloaded', { teamId: topTeamFormatted });
-    
-    // Check if sharing files natively via Web Share is supported (perfect for mobile systems)
-    if (device.isMobile && navigator.canShare && navigator.canShare({ files: [new File([], 'test.png', { type: 'image/png' })] })) {
-      canvas.toBlob(blob => {
-        if (!blob) {
-          triggerFileDownload(canvas, topTeamFormatted, nameFormatted);
-          return;
-        }
-        const file = new File([blob], `fanlog_card_${nameFormatted}.png`, { type: 'image/png' });
-        navigator.share({
-          files: [file],
-          title: 'My FanLog Score Card',
-          text: 'Check out my verified FanLog sports profile!'
-        }).catch(() => {
-          // Fallback if they click cancel on sharing dialog
-          triggerFileDownload(canvas, topTeamFormatted, nameFormatted);
-        });
-      }, 'image/png');
-    } else {
-      triggerFileDownload(canvas, topTeamFormatted, nameFormatted);
-    }
-  }).catch(err => {
-    console.error("PNG render failed:", err);
-    alert("Could not generate card image. Please try again.");
-    cardElement.style.transform = originalTransform;
-    frontFace.style.cssText = originalFaceCss;
-    restoreImages();
+function canvasToBlob(canvas) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(blob => (blob ? resolve(blob) : reject(new Error('toBlob failed'))), 'image/png');
   });
-});
+}
 
-// --- SHARE ACTION HANDLERS ---
-btnCopyLink.addEventListener('click', () => {
+function getShareText() {
   const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
   const tagline = generateSportsIdentityTagline();
-  const shareText = `Just calculated my FanLog Score! Archetype: "${tagline}". Top Team: ${topTeam ? topTeam.name : 'sports'}. Calculate yours on FanLog: ${window.location.origin}`;
+  return `Just calculated my FanLog Score! Archetype: "${tagline}". Top Team: ${topTeam ? topTeam.name : 'sports'}. Calculate yours on FanLog: ${window.location.origin}`;
+}
 
-  HubSDK.track('card_shared', { platform: 'copy_link' });
-  const device = getDeviceDetails();
-  if (device.isMobile && navigator.share) {
-    navigator.share({
-      title: 'FanLog Score Card',
-      text: shareText,
-      url: window.location.origin
-    }).catch(() => {
-      copyToClipboardText(shareText);
-    });
-  } else {
-    copyToClipboardText(shareText);
+function getCardFileName() {
+  const nameVal = fanNameInput ? fanNameInput.value : savedHandle;
+  return nameVal ? nameVal.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'guest';
+}
+
+// --- DOWNLOAD: always saves the PNG file ---
+btnDownloadPng.addEventListener('click', async () => {
+  try {
+    const canvas = await captureCardCanvas();
+    const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
+    HubSDK.track('card_downloaded', { teamId: topTeam ? topTeam.id : 'fandom' });
+    triggerFileDownload(canvas, topTeam ? topTeam.id : 'fandom', getCardFileName());
+  } catch (err) {
+    console.error("PNG render failed:", err);
+    alert("Could not generate card image. Please try again.");
   }
 });
 
-function copyToClipboardText(shareText) {
+// --- SHARE: native share sheet with the card image where supported ---
+// On phones this opens the OS share panel (Messages, Instagram, WhatsApp,
+// AirDrop...) with the PNG attached. Falls back to text-only share, then to
+// downloading the image + copying the caption on desktop.
+const canShareFiles = () => {
+  try {
+    return !!(navigator.canShare && navigator.canShare({ files: [new File([], 'card.png', { type: 'image/png' })] }));
+  } catch {
+    return false;
+  }
+};
+
+if (btnShareCard) {
+  btnShareCard.addEventListener('click', async () => {
+    const shareText = getShareText();
+
+    // Best path: share the actual card image through the native sheet
+    if (canShareFiles()) {
+      try {
+        const canvas = await captureCardCanvas();
+        const blob = await canvasToBlob(canvas);
+        const file = new File([blob], `fanlog_card_${getCardFileName()}.png`, { type: 'image/png' });
+        await navigator.share({
+          files: [file],
+          title: 'My FanLog Score Card',
+          text: shareText
+        });
+        HubSDK.track('card_shared', { platform: 'native_share_image' });
+        return;
+      } catch (err) {
+        if (err && err.name === 'AbortError') return; // user closed the sheet - not an error
+        console.warn('Image share failed, falling back:', err);
+      }
+    }
+
+    // Next best: native sheet with text + link (older mobile browsers)
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'FanLog Score Card',
+          text: shareText,
+          url: window.location.origin
+        });
+        HubSDK.track('card_shared', { platform: 'native_share_text' });
+        return;
+      } catch (err) {
+        if (err && err.name === 'AbortError') return;
+      }
+    }
+
+    // Desktop fallback: download the image and copy the caption
+    HubSDK.track('card_shared', { platform: 'desktop_fallback' });
+    try {
+      const canvas = await captureCardCanvas();
+      const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
+      triggerFileDownload(canvas, topTeam ? topTeam.id : 'fandom', getCardFileName());
+    } catch {
+      // Image failed - still give them the caption
+    }
+    copyToClipboardText(shareText, btnShareCard, 'Image Saved + Caption Copied!');
+  });
+}
+
+// --- COPY LINK: always copies, no share sheet ---
+btnCopyLink.addEventListener('click', () => {
+  HubSDK.track('card_shared', { platform: 'copy_link' });
+  copyToClipboardText(getShareText());
+});
+
+function copyToClipboardText(shareText, feedbackBtn = btnCopyLink, feedbackLabel = 'Link Copied!') {
   navigator.clipboard.writeText(shareText).then(() => {
-    const originalText = btnCopyLink.innerHTML;
-    btnCopyLink.innerHTML = '<span>Link Copied!</span>';
-    btnCopyLink.style.borderColor = '#10b981';
-    btnCopyLink.style.color = '#10b981';
-    
+    if (!feedbackBtn) return;
+    const originalText = feedbackBtn.innerHTML;
+    feedbackBtn.innerHTML = `<span>${feedbackLabel}</span>`;
+    feedbackBtn.style.borderColor = '#10b981';
+    feedbackBtn.style.color = '#10b981';
+
     setTimeout(() => {
-      btnCopyLink.innerHTML = originalText;
-      btnCopyLink.style.borderColor = '';
-      btnCopyLink.style.color = '';
+      feedbackBtn.innerHTML = originalText;
+      feedbackBtn.style.borderColor = '';
+      feedbackBtn.style.color = '';
     }, 2000);
   }).catch(() => {
     alert("Here is your shareable link:\n\n" + shareText);
@@ -1969,7 +2013,13 @@ socialButtons.forEach(btn => {
       const smsUrl = `sms:&body=${encodeURIComponent(shareMessage + ' ' + window.location.origin)}`;
       window.location.href = smsUrl;
     } else if (platform === 'Instagram Stories') {
-      alert("Step 1: Download your card PNG image using the 'Download Card Image' button.\n\nStep 2: Open Instagram, go to post a Story, and select the downloaded card image from your gallery!");
+      // Instagram has no web share URL - route through the native share sheet
+      // when the browser can share files (the sheet includes Instagram)
+      if (canShareFiles() && btnShareCard) {
+        btnShareCard.click();
+      } else {
+        alert("Step 1: Save your card with the 'Download Image' button.\n\nStep 2: Open Instagram, start a Story, and pick the saved card from your gallery!");
+      }
     } else {
       alert(`Archetype: "${tagline}". Link copied: ${window.location.origin}`);
     }

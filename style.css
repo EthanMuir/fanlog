@@ -941,9 +941,14 @@ button, input, select {
 
 .card-actions-grid {
   display: grid;
-  grid-template-columns: 1.2fr 0.8fr;
+  grid-template-columns: 1fr 1fr;
   gap: 16px;
   margin-top: 12px;
+}
+
+/* Primary share CTA spans the full row above download/copy */
+.card-actions-grid .share-primary-btn {
+  grid-column: 1 / -1;
 }
 
 .social-share-horizontal {
