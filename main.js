@@ -1838,15 +1838,24 @@ async function inlineCardImages(rootEl) {
 
 // --- PNG EXPORT VIA HTML2CANVAS ---
 btnDownloadPng.addEventListener('click', async () => {
-  const frontFace = document.getElementById('f-card-front-face');
+  const frontFace = document.getElementById('fcard-front-face');
   const cardElement = document.getElementById('final-card');
+  if (!frontFace || !cardElement) {
+    console.error('PNG export: card elements not found');
+    alert("Could not generate card image. Please try again.");
+    return;
+  }
 
-  // Temporarily flatten transforms and shadows to prevent glitching in screenshot
+  // Temporarily flatten transforms, shadows, and the color-mix() border to
+  // prevent glitching in the screenshot (html2canvas can't parse color-mix,
+  // and the stylesheet applies it to .fcard-front with !important, so the
+  // overrides must be inline !important too)
   const originalTransform = cardElement.style.transform;
-  const originalBoxShadow = frontFace.style.boxShadow;
+  const originalFaceCss = frontFace.style.cssText;
 
   cardElement.style.transform = 'none';
-  frontFace.style.boxShadow = 'none';
+  frontFace.style.setProperty('box-shadow', 'none', 'important');
+  frontFace.style.setProperty('border', '1px solid rgba(255, 255, 255, 0.12)', 'important');
 
   // Inline all logos as data URLs so the export canvas can never be tainted
   let restoreImages = () => {};
@@ -1864,7 +1873,7 @@ btnDownloadPng.addEventListener('click', async () => {
   }).then(canvas => {
     // Restore styling
     cardElement.style.transform = originalTransform;
-    frontFace.style.boxShadow = originalBoxShadow;
+    frontFace.style.cssText = originalFaceCss;
     restoreImages();
 
     const nameVal = fanNameInput ? fanNameInput.value : savedHandle;
@@ -1899,7 +1908,7 @@ btnDownloadPng.addEventListener('click', async () => {
     console.error("PNG render failed:", err);
     alert("Could not generate card image. Please try again.");
     cardElement.style.transform = originalTransform;
-    frontFace.style.boxShadow = originalBoxShadow;
+    frontFace.style.cssText = originalFaceCss;
     restoreImages();
   });
 });
