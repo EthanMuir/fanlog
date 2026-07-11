@@ -1331,7 +1331,7 @@ function runRevealSequence() {
 }
 
 // --- STEP 5: MAIN LANDING CARD INITIAL RENDER ---
-function setupStep5MainPage(finalScore) {
+function setupStep5MainPage(finalScore, { skipTracking = false } = {}) {
   const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
   const tagline = generateSportsIdentityTagline();
   
@@ -1361,11 +1361,13 @@ function setupStep5MainPage(finalScore) {
   // Render card
   updateCardDOM(document.getElementById('final-card'), userProfile, true);
 
-  HubSDK.track('card_generated', {
-    overallScore: finalScore,
-    teamCount: selectedTeams.length,
-    archetype: tagline
-  });
+  if (!skipTracking) {
+    HubSDK.track('card_generated', {
+      overallScore: finalScore,
+      teamCount: selectedTeams.length,
+      archetype: tagline
+    });
+  }
   
   // Helper to load or refresh the demo iframe with current user state
   function updateDemoIframe() {
@@ -2117,7 +2119,7 @@ adminClearBtn.addEventListener('click', () => {
 });
 
 function escapeHTML(str) {
-  return str.replace(/[&<>'"]/g, 
+  return str.replace(/[&<>'"]/g,
     tag => ({
       '&': '&amp;',
       '<': '&lt;',
@@ -2126,4 +2128,68 @@ function escapeHTML(str) {
       '"': '&quot;'
     }[tag] || tag)
   );
+}
+
+// --- DEV-ONLY: INSTANT TEST CARD ---
+// Skips the whole onboarding flow and jumps straight to the final card with
+// 3 random fully-quizzed teams. Vite statically strips this entire block from
+// production builds (import.meta.env.DEV === false in `vite build`), so the
+// button only exists on the dev server.
+if (import.meta.env.DEV) {
+  const devBtn = document.createElement('button');
+  devBtn.id = 'dev-test-card-btn';
+  devBtn.type = 'button';
+  devBtn.textContent = '⚡ DEV: Test Card';
+  devBtn.title = 'Dev only - jump to the final card with random test data (stripped from production builds)';
+  devBtn.style.cssText = [
+    'position: fixed', 'bottom: 16px', 'left: 16px', 'z-index: 9999',
+    'padding: 10px 14px', 'background: #f59e0b', 'color: #000',
+    'font-weight: 700', 'font-size: 12px', 'border: none',
+    'border-radius: 8px', 'cursor: pointer',
+    'box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4)'
+  ].join(';');
+
+  devBtn.addEventListener('click', () => {
+    const allTeams = [];
+    for (const league in sportsData) {
+      sportsData[league].teams.forEach(t => allTeams.push({ team: t, league }));
+    }
+
+    const picks = [];
+    while (picks.length < 3) {
+      const candidate = allTeams[Math.floor(Math.random() * allTeams.length)];
+      if (!picks.some(p => p.team.id === candidate.team.id)) picks.push(candidate);
+    }
+
+    selectedTeams = picks.map(({ team, league }, i) => ({
+      id: team.id,
+      name: team.name,
+      short: team.short,
+      logo: team.logo,
+      city: team.city,
+      status: team.status,
+      primaryColor: team.primary,
+      secondaryColor: team.secondary,
+      isTop: i === 0,
+      league: league.toUpperCase(),
+      score: [92, 74, 55][i],
+      fanSince: String(1995 + Math.floor(Math.random() * 25)),
+      prediction: String(2026 + Math.floor(Math.random() * 10)),
+      quizQuestions: getRandomQuizQuestions(4)
+    }));
+
+    if (!savedHandle) savedHandle = '@TestFan';
+    userQuizAnswers = {};
+    recalculateTopTeam();
+
+    const topTeam = selectedTeams.find(t => t.isTop);
+    const others = selectedTeams.filter(t => !t.isTop);
+    const avgOthers = others.reduce((sum, t) => sum + t.score, 0) / others.length;
+    const finalScore = Math.round(topTeam.score * 0.6 + avgOthers * 0.4);
+
+    // skipTracking: don't pollute the xdesk funnel with dev shortcuts
+    setupStep5MainPage(finalScore, { skipTracking: true });
+  });
+
+  document.body.appendChild(devBtn);
 }
