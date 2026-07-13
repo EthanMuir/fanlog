@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>FanLog - Your Sports Identity</title>
-  <meta name="description" content="Map your teams, rate your devotion, calculate your Fandom Index, and join the waitlist.">
+  <meta name="description" content="Map your teams, rate your devotion, calculate your FanLog Score, and join the waitlist.">
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -219,7 +219,7 @@
           
           <div class="hub-actions-grid">
             <button id="btn-hub-add-team" class="btn btn-secondary btn-block">Add Another Team</button>
-            <button id="btn-hub-finish" class="btn btn-primary btn-block">Calculate Fandom Index</button>
+            <button id="btn-hub-finish" class="btn btn-primary btn-block">Calculate My FanLog Score</button>
           </div>
         </div>
       </div>
@@ -229,7 +229,7 @@
     <!-- STEP 4: REVEAL / CALCULATING ANIMATION -->
     <section id="step-reveal" class="onboarding-step">
       <div class="reveal-step-container">
-        <h2 class="reveal-loading-title">Calculating Fandom Index...</h2>
+        <h2 class="reveal-loading-title">Calculating FanLog Score...</h2>
         <div class="reveal-progress-container">
           <div class="reveal-progress-track">
             <div id="reveal-progress-fill" class="reveal-progress-fill"></div>
@@ -354,14 +354,17 @@
           <div class="main-card-actions-column">
             <div class="badge-status-pill" id="page-status-badge">Waitlist Open</div>
             <h2 class="main-reveal-title">Your Sports Identity is Ready.</h2>
-            <p class="main-reveal-desc">This is your Fandom Index — a data-driven score of your sports devotion. Save it, share it, and sign up below to claim your permanent handle.</p>
+            <p class="main-reveal-desc">This is your FanLog Score — a data-driven measure of your sports devotion. Save it, share it, and sign up below to claim your permanent handle.</p>
             
             <div class="card-actions-grid">
-              <button id="b-download-png" class="btn btn-primary btn-block">
-                <span>Download Card Image</span>
+              <button id="b-share-card" class="btn btn-primary btn-block share-primary-btn">
+                <span>Share My Card</span>
+              </button>
+              <button id="b-download-png" class="btn btn-secondary btn-block">
+                <span>Download Image</span>
               </button>
               <button id="b-copy-link" class="btn btn-secondary btn-block">
-                <span>Copy Shareable Link</span>
+                <span>Copy Link</span>
               </button>
             </div>
             
@@ -379,18 +382,21 @@
         </div>
 
         <div class="demo-cta-container">
-          <p class="demo-cta-text">Try out the FanLog app below!</p>
+          <p class="demo-cta-text">Curious what the full app will feel like? Try the interactive demo below.</p>
         </div>
 
         <!-- PRODUCT FEATURE SHOWCASE -->
         <section class="showcase-section" id="showcase-section">
           <div class="section-header">
             <h2 class="section-title">The fan experience transformed...</h2>
-            <p class="section-subtitle">FanLog is a permanent, verified archive of your life as a sports fan. Look inside the app.</p>
+            <p class="section-subtitle">FanLog will be a permanent, verified archive of your life as a sports fan. This is a working demo of the app, pre-loaded with your picks — tap around and explore.</p>
           </div>
 
-          <div class="iphone-device-bezel">
-            <iframe id="demo-mockup-iframe" src="" style="width: 390px; height: 844px; border: none; border-radius: 39px; overflow: hidden; display: block; margin: 2rem auto;" scrolling="no"></iframe>
+          <div class="demo-bezel-wrapper">
+            <div class="demo-badge" aria-hidden="true">INTERACTIVE DEMO &mdash; SAMPLE DATA</div>
+            <div class="iphone-device-bezel">
+              <iframe id="demo-mockup-iframe" src="" title="FanLog app interactive demo" style="width: 390px; height: 844px; border: none; border-radius: 39px; overflow: hidden; display: block; margin: 2rem auto;" scrolling="no"></iframe>
+            </div>
           </div>
         </section>
 

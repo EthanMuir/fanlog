@@ -219,6 +219,106 @@ const quizQuestionsDatabase = [
       { text: 'Yes, for any playoff/rivalry matchup', score: 18 },
       { text: 'Yes, my schedule revolves around game day', score: 25 }
     ]
+  },
+  {
+    key: 'social',
+    text: 'How plugged in are you to the team online?',
+    options: [
+      { text: 'I don\'t follow them on socials', score: 5 },
+      { text: 'Follow the official team account', score: 12 },
+      { text: 'Follow beat reporters & fan pages too', score: 18 },
+      { text: 'In the group chats, forums, and reply sections daily', score: 25 }
+    ]
+  },
+  {
+    key: 'travel',
+    text: 'How far have you traveled to see them play?',
+    options: [
+      { text: 'Never traveled for a game', score: 5 },
+      { text: 'Crossed town for a home game', score: 12 },
+      { text: 'Road-tripped to an away game', score: 18 },
+      { text: 'Flown / crossed borders to follow them', score: 25 }
+    ]
+  },
+  {
+    key: 'watchStyle',
+    text: 'What does watching a game actually look like for you?',
+    options: [
+      { text: 'On in the background while I do other things', score: 5 },
+      { text: 'Watching, but casually', score: 12 },
+      { text: 'Locked in, phone down, every play matters', score: 18 },
+      { text: 'Pacing, yelling at refs, living every possession', score: 25 }
+    ]
+  },
+  {
+    key: 'trades',
+    text: 'How do you react when the team trades a fan favorite?',
+    options: [
+      { text: 'Barely notice', score: 5 },
+      { text: 'A little sad, then move on', score: 12 },
+      { text: 'Rant to friends and question the front office', score: 18 },
+      { text: 'Personal betrayal. I remember it for years', score: 25 }
+    ]
+  },
+  {
+    key: 'memory',
+    text: 'How vivid is your earliest memory of this team?',
+    options: [
+      { text: 'Honestly can\'t remember one', score: 5 },
+      { text: 'A vague highlight or two', score: 12 },
+      { text: 'I remember the game and who I watched it with', score: 18 },
+      { text: 'I can replay the exact moment play-by-play', score: 25 }
+    ]
+  },
+  {
+    key: 'evangelism',
+    text: 'How hard do you recruit new fans to the team?',
+    options: [
+      { text: 'Never bring it up', score: 5 },
+      { text: 'Mention them if sports come up', score: 12 },
+      { text: 'Actively pitch them to friends & partners', score: 18 },
+      { text: 'I\'ve converted people. There are photos in jerseys', score: 25 }
+    ]
+  },
+  {
+    key: 'fantasy',
+    text: 'How deep are you into the stats side of fandom?',
+    options: [
+      { text: 'I just watch the games', score: 5 },
+      { text: 'Check standings and box scores', score: 12 },
+      { text: 'Play fantasy / follow advanced stats', score: 18 },
+      { text: 'Spreadsheets, projections, salary cap knowledge', score: 25 }
+    ]
+  },
+  {
+    key: 'offseason',
+    text: 'What happens to your fandom in the offseason?',
+    options: [
+      { text: 'I forget about them until opening day', score: 5 },
+      { text: 'Check in around the draft / free agency', score: 12 },
+      { text: 'Follow every signing and rumor', score: 18 },
+      { text: 'There is no offseason. Mock drafts in my sleep', score: 25 }
+    ]
+  },
+  {
+    key: 'identity',
+    text: 'How much is this team part of who you are?',
+    options: [
+      { text: 'It\'s just entertainment', score: 5 },
+      { text: 'A fun part of my life', score: 12 },
+      { text: 'It\'s in my bio / people associate me with them', score: 18 },
+      { text: 'It\'s family heritage. Non-negotiable', score: 25 }
+    ]
+  },
+  {
+    key: 'weather',
+    text: 'Would you sit through brutal weather or a blowout loss live?',
+    options: [
+      { text: 'I\'d leave early / stay home', score: 5 },
+      { text: 'Stay if it\'s not too bad', score: 12 },
+      { text: 'Stay to the final whistle, always', score: 18 },
+      { text: 'Rain, snow, 40-point deficit — I\'m not moving', score: 25 }
+    ]
   }
 ];
 
@@ -234,6 +334,7 @@ const btnStartFlow = document.getElementById('btn-start-flow');
 const btnToQuiz = document.getElementById('btn-to-quiz');
 const btnQuizNext = document.getElementById('btn-quiz-next');
 const btnRestartFlow = document.getElementById('b-restart-flow');
+const btnShareCard = document.getElementById('b-share-card');
 const btnDownloadPng = document.getElementById('b-download-png');
 const btnCopyLink = document.getElementById('b-copy-link');
 const btnHeaderWaitlist = document.getElementById('btn-header-waitlist');
@@ -368,7 +469,10 @@ function goToStep(stepIndex) {
 }
 
 // Bind CTAs
-btnStartFlow.addEventListener('click', () => goToStep(2));
+btnStartFlow.addEventListener('click', () => {
+  HubSDK.track('flow_started');
+  goToStep(2);
+});
 btnHeaderWaitlist.addEventListener('click', () => {
   const target = document.getElementById('waitlist-section');
   if (target) {
@@ -427,19 +531,19 @@ function getTeamDatabaseColors(teamName) {
 }
 
 // --- HELPER: ADAPT COLOR FOR CONTRAST ON DARK BACKGROUNDS ---
+function getLuminance(hex) {
+  if (!hex) return 0;
+  let c = hex.replace('#', '');
+  if (c.length === 3) {
+    c = c[0] + c[0] + c[1] + c[1] + c[2] + c[2];
+  }
+  const r = parseInt(c.substring(0, 2), 16);
+  const g = parseInt(c.substring(2, 4), 16);
+  const b = parseInt(c.substring(4, 6), 16);
+  return (r * 299 + g * 587 + b * 114) / 1000;
+}
+
 function getContrastAdaptedColor(primaryHex, secondaryHex) {
-  const getLuminance = (hex) => {
-    if (!hex) return 0;
-    let c = hex.replace('#', '');
-    if (c.length === 3) {
-      c = c[0] + c[0] + c[1] + c[1] + c[2] + c[2];
-    }
-    const r = parseInt(c.substring(0, 2), 16);
-    const g = parseInt(c.substring(2, 4), 16);
-    const b = parseInt(c.substring(4, 6), 16);
-    return (r * 299 + g * 587 + b * 114) / 1000;
-  };
-  
   const brightness = getLuminance(primaryHex);
   // If brightness is below 45 (out of 255) and secondary is brighter, use secondary color
   if (brightness < 45 && secondaryHex) {
@@ -449,6 +553,24 @@ function getContrastAdaptedColor(primaryHex, secondaryHex) {
     }
   }
   return primaryHex;
+}
+
+// --- HELPER: APPLY TEAM THEME GLOBALLY ---
+// Single entry point for setting the page accent colors. Guarantees the accent
+// is never black/near-black (teams like the Raiders, Nets, or LAFC would
+// otherwise theme the whole dark UI black).
+function applyTeamTheme(primaryHex, secondaryHex) {
+  let accent = getContrastAdaptedColor(primaryHex, secondaryHex);
+  if (getLuminance(accent) < 45) {
+    accent = '#64748b'; // both team colors too dark - neutral slate fallback
+  }
+  document.documentElement.style.setProperty('--team-primary', accent);
+  document.documentElement.style.setProperty('--team-secondary', secondaryHex || accent);
+  const glowBlob = document.querySelector('.glow-accent-blob');
+  if (glowBlob) {
+    glowBlob.style.backgroundColor = accent;
+  }
+  return accent;
 }
 
 // --- INITIALIZE RAINBOW SVG ---
@@ -700,8 +822,8 @@ function updateCardDOM(cardEl, profile, transition = false) {
     return b.score - a.score;
   });
   
-  // Set card border glow instantly to prevent layout jump
-  cardEl.style.borderColor = profile.primaryColor;
+  // Set card border glow instantly to prevent layout jump (contrast-safe)
+  cardEl.style.borderColor = getContrastAdaptedColor(profile.primaryColor, profile.secondaryColor);
 
   const applyUpdates = () => {
     if (archetypeEl) archetypeEl.textContent = profile.tagline.toUpperCase();
@@ -755,16 +877,9 @@ function updateCardDOM(cardEl, profile, transition = false) {
     
     // Update dynamic chips legend
     updateLegendChips(legendContainer, sortedTeams);
-    
-    // Update theme colors
-    document.documentElement.style.setProperty('--team-primary', profile.primaryColor);
-    document.documentElement.style.setProperty('--team-secondary', profile.secondaryColor);
-    
-    // Set glow container helper
-    const glowBlob = document.querySelector('.glow-accent-blob');
-    if (glowBlob) {
-      glowBlob.style.backgroundColor = profile.primaryColor;
-    }
+
+    // Update theme colors (contrast-safe)
+    applyTeamTheme(profile.primaryColor, profile.secondaryColor);
   };
 
   if (transition) {
@@ -872,14 +987,12 @@ function updateSpotlight(teamId, league) {
     if (previewTeamName) {
       previewTeamName.textContent = team.name;
     }
+    // Shift accents dynamically (contrast-safe)
+    const accent = applyTeamTheme(team.primary, team.secondary);
     if (previewContainer) {
       previewContainer.style.display = 'flex';
-      previewContainer.style.borderColor = team.primary;
+      previewContainer.style.borderColor = accent;
     }
-    
-    // Shift accents dynamically
-    document.documentElement.style.setProperty('--team-primary', team.primary);
-    document.documentElement.style.setProperty('--team-secondary', team.secondary);
   } else {
     if (previewContainer) previewContainer.style.display = 'none';
   }
@@ -923,6 +1036,7 @@ btnToQuiz.addEventListener('click', () => {
   
   selectedTeams.push(newTeam);
   currentQuizTeamIndex = selectedTeams.length - 1;
+  HubSDK.track('team_added', { teamId: newTeam.id, league: newTeam.league });
   
   // Reset fields
   bSportSelect.value = "";
@@ -945,9 +1059,8 @@ function renderQuizForCurrentTeam() {
   quizProgressText.textContent = `TEAM QUIZ`;
   quizTeamName.textContent = team.name;
   
-  // Set primary team theme color for quiz elements
-  document.documentElement.style.setProperty('--team-primary', team.primaryColor);
-  document.documentElement.style.setProperty('--team-secondary', team.secondaryColor);
+  // Set primary team theme color for quiz elements (contrast-safe)
+  applyTeamTheme(team.primaryColor, team.secondaryColor);
   
   // Update progress bar
   quizProgressBarFill.style.width = `100%`;
@@ -1008,7 +1121,7 @@ function renderQuizForCurrentTeam() {
   
   const inputContainer = document.createElement('div');
   inputContainer.className = 'prediction-input-container';
-  
+
   const predInput = document.createElement('input');
   predInput.type = 'number';
   predInput.id = 'quiz-prediction-input';
@@ -1017,15 +1130,15 @@ function renderQuizForCurrentTeam() {
   predInput.max = '2050';
   predInput.placeholder = 'e.g. 2027';
   predInput.required = true;
-  
+
   if (team.prediction) {
     predInput.value = team.prediction;
   }
-  
+
   inputContainer.appendChild(predInput);
   predItem.appendChild(inputContainer);
   quizQuestionsList.appendChild(predItem);
-  
+
   predInput.addEventListener('input', checkQuizAnswersStatus);
 }
 
@@ -1036,11 +1149,11 @@ function checkQuizAnswersStatus() {
     const answerKey = `${team.id}_${q.key}`;
     return typeof userQuizAnswers[answerKey] === 'number';
   });
-  
+
   const predInput = document.getElementById('quiz-prediction-input');
   const predVal = predInput ? parseInt(predInput.value) : NaN;
   const predValid = !isNaN(predVal) && predVal >= 2026 && predVal <= 2050;
-  
+
   if (allAnswered && predValid) {
     btnQuizNext.removeAttribute('disabled');
   } else {
@@ -1065,7 +1178,8 @@ btnQuizNext.addEventListener('click', () => {
   if (predInput) {
     team.prediction = predInput.value;
   }
-  
+
+  HubSDK.track('quiz_completed', { teamId: team.id, score: team.score });
   recalculateTopTeam();
   goToStep(4); // Go to Step 4 Fandom Hub
 });
@@ -1122,11 +1236,10 @@ function renderHubUI() {
     hubAddedTeamsList.appendChild(card);
   });
   
-  // Set theme to matching top team
+  // Set theme to matching top team (contrast-safe)
   const topTeam = selectedTeams.find(t => t.isTop);
   if (topTeam) {
-    document.documentElement.style.setProperty('--team-primary', topTeam.primaryColor);
-    document.documentElement.style.setProperty('--team-secondary', topTeam.secondaryColor);
+    applyTeamTheme(topTeam.primaryColor, topTeam.secondaryColor);
   }
 }
 
@@ -1156,9 +1269,8 @@ if (btnHubFinish) {
 // --- STEP 4: REVEAL SEQUENCE ---
 function runRevealSequence() {
   const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
-  document.documentElement.style.setProperty('--team-primary', topTeam.primaryColor);
-  document.documentElement.style.setProperty('--team-secondary', topTeam.secondaryColor);
-  
+  applyTeamTheme(topTeam.primaryColor, topTeam.secondaryColor);
+
   revealProgressFill.style.width = '0%';
   revealTicker.textContent = '00';
   
@@ -1198,7 +1310,7 @@ function runRevealSequence() {
           particleCount: 70,
           spread: 60,
           origin: { y: 0.75 },
-          colors: [topTeam.primaryColor, topTeam.secondaryColor, '#ffffff']
+          colors: [getContrastAdaptedColor(topTeam.primaryColor, topTeam.secondaryColor), topTeam.secondaryColor, '#ffffff']
         });
         
         // Go to main page containing the card
@@ -1219,7 +1331,7 @@ function runRevealSequence() {
 }
 
 // --- STEP 5: MAIN LANDING CARD INITIAL RENDER ---
-function setupStep5MainPage(finalScore) {
+function setupStep5MainPage(finalScore, { skipTracking = false } = {}) {
   const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
   const tagline = generateSportsIdentityTagline();
   
@@ -1248,6 +1360,14 @@ function setupStep5MainPage(finalScore) {
   
   // Render card
   updateCardDOM(document.getElementById('final-card'), userProfile, true);
+
+  if (!skipTracking) {
+    HubSDK.track('card_generated', {
+      overallScore: finalScore,
+      teamCount: selectedTeams.length,
+      archetype: tagline
+    });
+  }
   
   // Helper to load or refresh the demo iframe with current user state
   function updateDemoIframe() {
@@ -1587,9 +1707,20 @@ function setupWaitlistBindings() {
       prediction: `${topTeam.short} champion in ${prediction}`
     };
     
+    // Source of truth for aggregate signups is the xdesk backend (events table);
+    // localStorage is only a local mirror for the built-in admin panel.
+    HubSDK.setUser(email);
+    HubSDK.track('waitlist_signup', {
+      name,
+      email,
+      teams: teamsFormat,
+      prediction: waitlistEntry.prediction,
+      overallScore: parseInt(document.getElementById('f-card-score').textContent) || 0
+    });
+
     let currentWaitlist = JSON.parse(localStorage.getItem('fanlog_waitlist') || '[]');
     const emailExists = currentWaitlist.some(entry => entry.email.toLowerCase() === email.toLowerCase());
-    
+
     if (!emailExists) {
       currentWaitlist.push(waitlistEntry);
       localStorage.setItem('fanlog_waitlist', JSON.stringify(currentWaitlist));
@@ -1612,7 +1743,7 @@ function setupWaitlistBindings() {
       particleCount: 120,
       spread: 70,
       origin: { y: 0.6 },
-      colors: [topTeam.primaryColor, topTeam.secondaryColor, '#ffffff']
+      colors: [getContrastAdaptedColor(topTeam.primaryColor, topTeam.secondaryColor), topTeam.secondaryColor, '#ffffff']
     });
     
     // Flip card around
@@ -1637,7 +1768,7 @@ btnRestartFlow.addEventListener('click', () => {
   
   // Clear any inputs in Step 2
   if (bSinceInput) bSinceInput.value = "";
-  
+
   goToStep(2);
 });
 
@@ -1654,98 +1785,212 @@ function getDeviceDetails() {
 function triggerFileDownload(canvas, topTeamFormatted, nameFormatted) {
   const nameFormattedClean = nameFormatted ? nameFormatted.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'guest';
   const link = document.createElement('a');
-  link.download = `fanlog_index_${topTeamFormatted}_card_${nameFormattedClean}.png`;
+  link.download = `fanlog_${topTeamFormatted}_card_${nameFormattedClean}.png`;
   link.href = canvas.toDataURL('image/png');
   link.click();
 }
 
-// --- PNG EXPORT VIA HTML2CANVAS ---
-btnDownloadPng.addEventListener('click', () => {
-  const frontFace = document.getElementById('f-card-front-face');
-  const cardElement = document.getElementById('final-card');
-  
-  // Temporarily flatten transforms and shadows to prevent glitching in screenshot
-  const originalTransform = cardElement.style.transform;
-  const originalBoxShadow = frontFace.style.boxShadow;
-  
-  cardElement.style.transform = 'none';
-  frontFace.style.boxShadow = 'none';
-  
-  html2canvas(frontFace, {
-    scale: 3,
-    backgroundColor: null,
-    useCORS: true,
-    logging: false
-  }).then(canvas => {
-    // Restore styling
-    cardElement.style.transform = originalTransform;
-    frontFace.style.boxShadow = originalBoxShadow;
-    
-    const nameVal = fanNameInput ? fanNameInput.value : savedHandle;
-    const nameFormatted = nameVal ? nameVal.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'guest';
-    const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
-    const topTeamFormatted = topTeam ? topTeam.id : 'fandom';
-    const device = getDeviceDetails();
-    
-    // Check if sharing files natively via Web Share is supported (perfect for mobile systems)
-    if (device.isMobile && navigator.canShare && navigator.canShare({ files: [new File([], 'test.png', { type: 'image/png' })] })) {
-      canvas.toBlob(blob => {
-        if (!blob) {
-          triggerFileDownload(canvas, topTeamFormatted, nameFormatted);
-          return;
-        }
-        const file = new File([blob], `fanlog_card_${nameFormatted}.png`, { type: 'image/png' });
-        navigator.share({
-          files: [file],
-          title: 'My FanLog Fandom Index Card',
-          text: 'Check out my verified FanLog sports profile!'
-        }).catch(() => {
-          // Fallback if they click cancel on sharing dialog
-          triggerFileDownload(canvas, topTeamFormatted, nameFormatted);
-        });
-      }, 'image/png');
-    } else {
-      triggerFileDownload(canvas, topTeamFormatted, nameFormatted);
-    }
-  }).catch(err => {
-    console.error("PNG render failed:", err);
-    alert("Could not generate card image. Please try again.");
-    cardElement.style.transform = originalTransform;
-    frontFace.style.boxShadow = originalBoxShadow;
-  });
-});
+// --- LOGO INLINING FOR EXPORT ---
+// Cross-origin ESPN logos can taint the export canvas (e.g. when the browser
+// serves a cached non-CORS response), which silently breaks toDataURL/toBlob.
+// Swapping every logo to a same-origin data URL before capture guarantees a
+// clean canvas. Restores the original URLs afterwards.
+const logoDataUrlCache = new Map();
 
-// --- SHARE ACTION HANDLERS ---
-btnCopyLink.addEventListener('click', () => {
+async function fetchAsDataURL(url) {
+  if (logoDataUrlCache.has(url)) return logoDataUrlCache.get(url);
+  const res = await fetch(url, { mode: 'cors' });
+  if (!res.ok) throw new Error(`Logo fetch failed: ${res.status}`);
+  const blob = await res.blob();
+  const dataUrl = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+  logoDataUrlCache.set(url, dataUrl);
+  return dataUrl;
+}
+
+async function inlineCardImages(rootEl) {
+  const elements = [
+    ...rootEl.querySelectorAll('img'),
+    ...rootEl.querySelectorAll('image') // SVG <image> logos in the rainbow chart
+  ];
+  const restores = [];
+
+  await Promise.all(elements.map(async el => {
+    const isSvgImage = el.tagName.toLowerCase() === 'image';
+    const src = isSvgImage ? el.getAttribute('href') : el.getAttribute('src');
+    if (!src || src.startsWith('data:')) return;
+    try {
+      const dataUrl = await fetchAsDataURL(src);
+      restores.push(() => {
+        if (isSvgImage) el.setAttribute('href', src);
+        else el.setAttribute('src', src);
+      });
+      if (isSvgImage) el.setAttribute('href', dataUrl);
+      else el.setAttribute('src', dataUrl);
+    } catch {
+      // Leave the original URL; html2canvas useCORS may still handle it
+    }
+  }));
+
+  return () => restores.forEach(fn => fn());
+}
+
+// --- CARD CAPTURE (shared by Download and Share) ---
+// Renders the card front face to a canvas via html2canvas, temporarily
+// flattening transforms/shadows and the color-mix() border (html2canvas
+// can't parse color-mix, and the stylesheet applies it to .fcard-front with
+// !important, so the overrides must be inline !important too).
+async function captureCardCanvas() {
+  const frontFace = document.getElementById('fcard-front-face');
+  const cardElement = document.getElementById('final-card');
+  if (!frontFace || !cardElement) {
+    throw new Error('card elements not found');
+  }
+
+  const originalTransform = cardElement.style.transform;
+  const originalFaceCss = frontFace.style.cssText;
+
+  cardElement.style.transform = 'none';
+  frontFace.style.setProperty('box-shadow', 'none', 'important');
+  frontFace.style.setProperty('border', '1px solid rgba(255, 255, 255, 0.12)', 'important');
+
+  // Inline all logos as data URLs so the export canvas can never be tainted
+  let restoreImages = () => {};
+  try {
+    restoreImages = await inlineCardImages(frontFace);
+  } catch {
+    // Non-fatal: fall through and rely on useCORS
+  }
+
+  try {
+    return await html2canvas(frontFace, {
+      scale: 3,
+      backgroundColor: null,
+      useCORS: true,
+      logging: false
+    });
+  } finally {
+    cardElement.style.transform = originalTransform;
+    frontFace.style.cssText = originalFaceCss;
+    restoreImages();
+  }
+}
+
+function canvasToBlob(canvas) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(blob => (blob ? resolve(blob) : reject(new Error('toBlob failed'))), 'image/png');
+  });
+}
+
+function getShareText() {
   const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
   const tagline = generateSportsIdentityTagline();
-  const shareText = `Just calculated my Fandom Index! Archetype: "${tagline}". Top Team: ${topTeam ? topTeam.name : 'sports'}. Calculate yours on FanLog: ${window.location.origin}`;
-  
-  const device = getDeviceDetails();
-  if (device.isMobile && navigator.share) {
-    navigator.share({
-      title: 'FanLog Fandom Index Card',
-      text: shareText,
-      url: window.location.origin
-    }).catch(() => {
-      copyToClipboardText(shareText);
-    });
-  } else {
-    copyToClipboardText(shareText);
+  return `Just calculated my FanLog Score! Archetype: "${tagline}". Top Team: ${topTeam ? topTeam.name : 'sports'}. Calculate yours on FanLog: ${window.location.origin}`;
+}
+
+function getCardFileName() {
+  const nameVal = fanNameInput ? fanNameInput.value : savedHandle;
+  return nameVal ? nameVal.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'guest';
+}
+
+// --- DOWNLOAD: always saves the PNG file ---
+btnDownloadPng.addEventListener('click', async () => {
+  try {
+    const canvas = await captureCardCanvas();
+    const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
+    HubSDK.track('card_downloaded', { teamId: topTeam ? topTeam.id : 'fandom' });
+    triggerFileDownload(canvas, topTeam ? topTeam.id : 'fandom', getCardFileName());
+  } catch (err) {
+    console.error("PNG render failed:", err);
+    alert("Could not generate card image. Please try again.");
   }
 });
 
-function copyToClipboardText(shareText) {
+// --- SHARE: native share sheet with the card image where supported ---
+// On phones this opens the OS share panel (Messages, Instagram, WhatsApp,
+// AirDrop...) with the PNG attached. Falls back to text-only share, then to
+// downloading the image + copying the caption on desktop.
+const canShareFiles = () => {
+  try {
+    return !!(navigator.canShare && navigator.canShare({ files: [new File([], 'card.png', { type: 'image/png' })] }));
+  } catch {
+    return false;
+  }
+};
+
+if (btnShareCard) {
+  btnShareCard.addEventListener('click', async () => {
+    const shareText = getShareText();
+
+    // Best path: share the actual card image through the native sheet
+    if (canShareFiles()) {
+      try {
+        const canvas = await captureCardCanvas();
+        const blob = await canvasToBlob(canvas);
+        const file = new File([blob], `fanlog_card_${getCardFileName()}.png`, { type: 'image/png' });
+        await navigator.share({
+          files: [file],
+          title: 'My FanLog Score Card',
+          text: shareText
+        });
+        HubSDK.track('card_shared', { platform: 'native_share_image' });
+        return;
+      } catch (err) {
+        if (err && err.name === 'AbortError') return; // user closed the sheet - not an error
+        console.warn('Image share failed, falling back:', err);
+      }
+    }
+
+    // Next best: native sheet with text + link (older mobile browsers)
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'FanLog Score Card',
+          text: shareText,
+          url: window.location.origin
+        });
+        HubSDK.track('card_shared', { platform: 'native_share_text' });
+        return;
+      } catch (err) {
+        if (err && err.name === 'AbortError') return;
+      }
+    }
+
+    // Desktop fallback: download the image and copy the caption
+    HubSDK.track('card_shared', { platform: 'desktop_fallback' });
+    try {
+      const canvas = await captureCardCanvas();
+      const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
+      triggerFileDownload(canvas, topTeam ? topTeam.id : 'fandom', getCardFileName());
+    } catch {
+      // Image failed - still give them the caption
+    }
+    copyToClipboardText(shareText, btnShareCard, 'Image Saved + Caption Copied!');
+  });
+}
+
+// --- COPY LINK: always copies, no share sheet ---
+btnCopyLink.addEventListener('click', () => {
+  HubSDK.track('card_shared', { platform: 'copy_link' });
+  copyToClipboardText(getShareText());
+});
+
+function copyToClipboardText(shareText, feedbackBtn = btnCopyLink, feedbackLabel = 'Link Copied!') {
   navigator.clipboard.writeText(shareText).then(() => {
-    const originalText = btnCopyLink.innerHTML;
-    btnCopyLink.innerHTML = '<span>Link Copied!</span>';
-    btnCopyLink.style.borderColor = '#10b981';
-    btnCopyLink.style.color = '#10b981';
-    
+    if (!feedbackBtn) return;
+    const originalText = feedbackBtn.innerHTML;
+    feedbackBtn.innerHTML = `<span>${feedbackLabel}</span>`;
+    feedbackBtn.style.borderColor = '#10b981';
+    feedbackBtn.style.color = '#10b981';
+
     setTimeout(() => {
-      btnCopyLink.innerHTML = originalText;
-      btnCopyLink.style.borderColor = '';
-      btnCopyLink.style.color = '';
+      feedbackBtn.innerHTML = originalText;
+      feedbackBtn.style.borderColor = '';
+      feedbackBtn.style.color = '';
     }, 2000);
   }).catch(() => {
     alert("Here is your shareable link:\n\n" + shareText);
@@ -1757,10 +2002,11 @@ const socialButtons = document.querySelectorAll('.social-share-horizontal .socia
 socialButtons.forEach(btn => {
   btn.addEventListener('click', () => {
     const platform = btn.getAttribute('data-platform');
+    HubSDK.track('card_shared', { platform });
     const tagline = generateSportsIdentityTagline();
     const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
     const teamName = topTeam ? topTeam.name : 'my teams';
-    const shareMessage = `Fandom Index Archetype: "${tagline}" supporting ${teamName}. Mapped my teams on FanLog:`;
+    const shareMessage = `My FanLog archetype: "${tagline}" supporting ${teamName}. Mapped my teams on FanLog:`;
     
     if (platform === 'X / Twitter') {
       const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareMessage)}&url=${encodeURIComponent(window.location.origin)}`;
@@ -1769,7 +2015,13 @@ socialButtons.forEach(btn => {
       const smsUrl = `sms:&body=${encodeURIComponent(shareMessage + ' ' + window.location.origin)}`;
       window.location.href = smsUrl;
     } else if (platform === 'Instagram Stories') {
-      alert("Step 1: Download your card PNG image using the 'Download Card Image' button.\n\nStep 2: Open Instagram, go to post a Story, and select the downloaded card image from your gallery!");
+      // Instagram has no web share URL - route through the native share sheet
+      // when the browser can share files (the sheet includes Instagram)
+      if (canShareFiles() && btnShareCard) {
+        btnShareCard.click();
+      } else {
+        alert("Step 1: Save your card with the 'Download Image' button.\n\nStep 2: Open Instagram, start a Story, and pick the saved card from your gallery!");
+      }
     } else {
       alert(`Archetype: "${tagline}". Link copied: ${window.location.origin}`);
     }
@@ -1867,7 +2119,7 @@ adminClearBtn.addEventListener('click', () => {
 });
 
 function escapeHTML(str) {
-  return str.replace(/[&<>'"]/g, 
+  return str.replace(/[&<>'"]/g,
     tag => ({
       '&': '&amp;',
       '<': '&lt;',
@@ -1876,4 +2128,68 @@ function escapeHTML(str) {
       '"': '&quot;'
     }[tag] || tag)
   );
+}
+
+// --- DEV-ONLY: INSTANT TEST CARD ---
+// Skips the whole onboarding flow and jumps straight to the final card with
+// 3 random fully-quizzed teams. Vite statically strips this entire block from
+// production builds (import.meta.env.DEV === false in `vite build`), so the
+// button only exists on the dev server.
+if (import.meta.env.DEV) {
+  const devBtn = document.createElement('button');
+  devBtn.id = 'dev-test-card-btn';
+  devBtn.type = 'button';
+  devBtn.textContent = '⚡ DEV: Test Card';
+  devBtn.title = 'Dev only - jump to the final card with random test data (stripped from production builds)';
+  devBtn.style.cssText = [
+    'position: fixed', 'bottom: 16px', 'left: 16px', 'z-index: 9999',
+    'padding: 10px 14px', 'background: #f59e0b', 'color: #000',
+    'font-weight: 700', 'font-size: 12px', 'border: none',
+    'border-radius: 8px', 'cursor: pointer',
+    'box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4)'
+  ].join(';');
+
+  devBtn.addEventListener('click', () => {
+    const allTeams = [];
+    for (const league in sportsData) {
+      sportsData[league].teams.forEach(t => allTeams.push({ team: t, league }));
+    }
+
+    const picks = [];
+    while (picks.length < 3) {
+      const candidate = allTeams[Math.floor(Math.random() * allTeams.length)];
+      if (!picks.some(p => p.team.id === candidate.team.id)) picks.push(candidate);
+    }
+
+    selectedTeams = picks.map(({ team, league }, i) => ({
+      id: team.id,
+      name: team.name,
+      short: team.short,
+      logo: team.logo,
+      city: team.city,
+      status: team.status,
+      primaryColor: team.primary,
+      secondaryColor: team.secondary,
+      isTop: i === 0,
+      league: league.toUpperCase(),
+      score: [92, 74, 55][i],
+      fanSince: String(1995 + Math.floor(Math.random() * 25)),
+      prediction: String(2026 + Math.floor(Math.random() * 10)),
+      quizQuestions: getRandomQuizQuestions(4)
+    }));
+
+    if (!savedHandle) savedHandle = '@TestFan';
+    userQuizAnswers = {};
+    recalculateTopTeam();
+
+    const topTeam = selectedTeams.find(t => t.isTop);
+    const others = selectedTeams.filter(t => !t.isTop);
+    const avgOthers = others.reduce((sum, t) => sum + t.score, 0) / others.length;
+    const finalScore = Math.round(topTeam.score * 0.6 + avgOthers * 0.4);
+
+    // skipTracking: don't pollute the xdesk funnel with dev shortcuts
+    setupStep5MainPage(finalScore, { skipTracking: true });
+  });
+
+  document.body.appendChild(devBtn);
 }

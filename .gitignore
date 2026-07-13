@@ -22,3 +22,4 @@ Thumbs.db
 *.ntvs@
 
 .env.local
+.gstack/
