@@ -2,6 +2,7 @@ import { sportsData } from './teams.js';
 import confetti from 'canvas-confetti';
 import html2canvas from 'html2canvas';
 import { HubSDK } from '@ethanhodge7373/hub-sdk';
+import { saveWaitlistEntry } from './waitlist.js';
 
 HubSDK.init({
   appSlug: 'fanlog',
@@ -1676,6 +1677,18 @@ function generateSportsIdentityTagline(teams = selectedTeams) {
 }
 
 // --- WAITLIST DATA AND FORM SUBMISSION ENGINE ---
+// Safe read of the localStorage mirror. A corrupted value must never throw
+// mid-submit (that would break the success animation even though the signup
+// already reached xdesk + Supabase).
+function readWaitlist() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem('fanlog_waitlist') || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 function setupWaitlistBindings() {
   waitlistForm.addEventListener('submit', (e) => {
     e.preventDefault();
@@ -1709,16 +1722,33 @@ function setupWaitlistBindings() {
     
     // Source of truth for aggregate signups is the xdesk backend (events table);
     // localStorage is only a local mirror for the built-in admin panel.
+    const overallScore = parseInt(document.getElementById('f-card-score').textContent) || 0;
+
     HubSDK.setUser(email);
     HubSDK.track('waitlist_signup', {
       name,
       email,
       teams: teamsFormat,
       prediction: waitlistEntry.prediction,
-      overallScore: parseInt(document.getElementById('f-card-score').textContent) || 0
+      overallScore
     });
 
-    let currentWaitlist = JSON.parse(localStorage.getItem('fanlog_waitlist') || '[]');
+    // Durable, structured store in Supabase (public.waitlist). Fire-and-forget:
+    // non-throwing and must not block the success UX below.
+    saveWaitlistEntry({
+      name,
+      handle: name && name.startsWith('@') ? name : `@${name}`,
+      email,
+      topTeam: topTeam ? topTeam.name : null,
+      teams: selectedTeams.map(t => ({
+        id: t.id, name: t.name, league: t.league, score: t.score, isTop: !!t.isTop
+      })),
+      prediction: waitlistEntry.prediction,
+      overallScore,
+      archetype: generateSportsIdentityTagline()
+    });
+
+    let currentWaitlist = readWaitlist();
     const emailExists = currentWaitlist.some(entry => entry.email.toLowerCase() === email.toLowerCase());
 
     if (!emailExists) {
@@ -2053,7 +2083,7 @@ adminLoginBtn.addEventListener('click', () => {
 });
 
 function renderAdminDashboard() {
-  const waitlist = JSON.parse(localStorage.getItem('fanlog_waitlist') || '[]');
+  const waitlist = readWaitlist();
   adminSignupCount.textContent = waitlist.length;
   
   adminTableBody.innerHTML = '';
@@ -2080,7 +2110,7 @@ function renderAdminDashboard() {
 }
 
 adminExportBtn.addEventListener('click', () => {
-  const waitlist = JSON.parse(localStorage.getItem('fanlog_waitlist') || '[]');
+  const waitlist = readWaitlist();
   if (waitlist.length === 0) {
     alert("No data available to export.");
     return;

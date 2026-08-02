@@ -23,3 +23,6 @@ Thumbs.db
 
 .env.local
 .gstack/
+
+# Supabase CLI scratch
+supabase/.temp/
