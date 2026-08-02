@@ -1686,9 +1686,15 @@ function renderTurnstile() {
   if (turnstileWidgetId !== null) return; // already rendered
   const el = document.getElementById('turnstile-container');
   if (!el || !window.turnstile) return; // script not ready yet
+  const sitekey = import.meta.env.VITE_TURNSTILE_SITEKEY;
+  if (!sitekey) {
+    // Fail loud, not silent: no sitekey means the env var is missing in this
+    // environment. Better a visibly-broken widget than a silent always-pass.
+    console.warn('[turnstile] VITE_TURNSTILE_SITEKEY is not set — captcha will not render');
+    return;
+  }
   turnstileWidgetId = window.turnstile.render(el, {
-    // Test key (always passes) until a real Turnstile widget is created.
-    sitekey: import.meta.env.VITE_TURNSTILE_SITEKEY || '1x00000000000000000000AA',
+    sitekey, // real sitekey lives in env only (.env.local locally, Vercel in prod)
     theme: 'dark',
   });
 }
