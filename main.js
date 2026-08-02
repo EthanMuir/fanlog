@@ -464,6 +464,7 @@ function goToStep(stepIndex) {
   const headerCta = document.getElementById('header-cta-container');
   if (stepIndex === 6) {
     headerCta.style.display = 'block';
+    ensureTurnstile(); // build the captcha widget now that the form is visible
   } else {
     headerCta.style.display = 'none';
   }
@@ -1676,6 +1677,38 @@ function generateSportsIdentityTagline(teams = selectedTeams) {
   return "Fandom Connoisseur";
 }
 
+// --- CLOUDFLARE TURNSTILE (spam gate) ---
+// Explicit-render mode: the widget is built when the waitlist step first
+// becomes visible. The token it produces is sent to the waitlist-signup edge
+// function, which verifies it server-side before writing to the DB.
+let turnstileWidgetId = null;
+function renderTurnstile() {
+  if (turnstileWidgetId !== null) return; // already rendered
+  const el = document.getElementById('turnstile-container');
+  if (!el || !window.turnstile) return; // script not ready yet
+  turnstileWidgetId = window.turnstile.render(el, {
+    // Test key (always passes) until a real Turnstile widget is created.
+    sitekey: import.meta.env.VITE_TURNSTILE_SITEKEY || '1x00000000000000000000AA',
+    theme: 'dark',
+  });
+}
+// Retry until the async Turnstile script has loaded (up to ~5s).
+function ensureTurnstile(retries = 20) {
+  if (turnstileWidgetId !== null) return;
+  if (window.turnstile) {
+    renderTurnstile();
+    return;
+  }
+  if (retries > 0) setTimeout(() => ensureTurnstile(retries - 1), 250);
+}
+function getTurnstileToken() {
+  if (!window.turnstile || turnstileWidgetId === null) return '';
+  return window.turnstile.getResponse(turnstileWidgetId) || '';
+}
+function resetTurnstile() {
+  if (window.turnstile && turnstileWidgetId !== null) window.turnstile.reset(turnstileWidgetId);
+}
+
 // --- WAITLIST DATA AND FORM SUBMISSION ENGINE ---
 // Safe read of the localStorage mirror. A corrupted value must never throw
 // mid-submit (that would break the success animation even though the signup
@@ -1733,8 +1766,10 @@ function setupWaitlistBindings() {
       overallScore
     });
 
-    // Durable, structured store in Supabase (public.waitlist). Fire-and-forget:
-    // non-throwing and must not block the success UX below.
+    // Durable, structured store via the captcha-gated edge function.
+    // Fire-and-forget: non-throwing and must not block the success UX below.
+    // The Turnstile token is single-use, so reset the widget afterward.
+    const captchaToken = getTurnstileToken();
     saveWaitlistEntry({
       name,
       handle: name && name.startsWith('@') ? name : `@${name}`,
@@ -1746,7 +1781,7 @@ function setupWaitlistBindings() {
       prediction: waitlistEntry.prediction,
       overallScore,
       archetype: generateSportsIdentityTagline()
-    });
+    }, captchaToken).finally(resetTurnstile);
 
     let currentWaitlist = readWaitlist();
     const emailExists = currentWaitlist.some(entry => entry.email.toLowerCase() === email.toLowerCase());
