@@ -1983,7 +1983,6 @@ function setupWaitlistBindings() {
     if (shareEmailSuccess) shareEmailSuccess.style.display = 'block';
     
     // Confetti
-    const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
     if (topTeam) {
       confetti({
         particleCount: 120,
