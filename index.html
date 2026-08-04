@@ -353,6 +353,7 @@
                   <input type="email" id="fan-email" placeholder="Enter your email" required>
                   <button type="submit" class="btn btn-primary" id="submit-btn">Share My Sports Circle</button>
                 </div>
+                <div id="turnstile-container" style="margin-top: 10px; margin-bottom: 10px;"></div>
                 <p class="share-email-note">You'll be added to the Fanlog list automatically.</p>
               </form>
               <div id="share-email-success" style="display:none;">
@@ -414,7 +415,6 @@
           <div class="iphone-device-bezel">
             <iframe id="demo-mockup-iframe" src="" style="width: 390px; height: 844px; border: none; border-radius: 39px; overflow: hidden; display: block; margin: 2rem auto;" scrolling="no" sandbox="allow-scripts allow-same-origin allow-forms allow-popups-to-escape-sandbox"></iframe>
           </div>
-
           <div class="showcase-closing-text">
             <p>Your teams. Your history. Your identity.</p>
             <strong>Welcome to the future of sports fandom.</strong>
@@ -501,6 +501,8 @@
     </div>
   </footer>
 
+  <!-- Cloudflare Turnstile (explicit render mode; widget built in main.js) -->
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
   <!-- Scripts -->
   <script type="module" src="main.js"></script>
 </body>
