@@ -413,7 +413,12 @@
                 <label for="fan-email">Email Address</label>
                 <input type="email" id="fan-email" placeholder="name@example.com" required>
               </div>
-              
+
+              <!-- Cloudflare Turnstile (spam gate). Rendered explicitly in main.js
+                   when this step becomes visible; sitekey comes from
+                   VITE_TURNSTILE_SITEKEY (test key by default). -->
+              <div id="turnstile-container" style="margin-bottom: 12px;"></div>
+
               <button type="submit" class="btn btn-primary btn-block" id="submit-btn">
                 <span>Finalize Card & Join Waitlist</span>
               </button>
@@ -493,6 +498,8 @@
     </div>
   </footer>
 
+  <!-- Cloudflare Turnstile (explicit render mode; widget built in main.js) -->
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
   <!-- Scripts -->
   <script type="module" src="main.js"></script>
 </body>
