@@ -334,7 +334,6 @@ const btnStartFlow = document.getElementById('btn-start-flow');
 const btnToQuiz = document.getElementById('btn-to-quiz');
 const btnQuizNext = document.getElementById('btn-quiz-next');
 const btnRestartFlow = document.getElementById('b-restart-flow');
-const btnShareCard = document.getElementById('b-share-card');
 const btnDownloadPng = document.getElementById('b-download-png');
 const btnCopyLink = document.getElementById('b-copy-link');
 const btnHeaderWaitlist = document.getElementById('btn-header-waitlist');
@@ -359,64 +358,16 @@ const btnHubFinish = document.getElementById('btn-hub-finish');
 const revealProgressFill = document.getElementById('reveal-progress-fill');
 const revealTicker = document.getElementById('reveal-ticker');
 
-// Step 5 Main Profile / Waitlist Inputs
-const waitlistForm = document.getElementById('fan-card-form');
-const fanNameInput = document.getElementById('fan-name');
-const fanEmailInput = document.getElementById('fan-email');
-
-// Admin Panel Modal Elements
-const adminTrigger = document.getElementById('admin-trigger');
-const adminModal = document.getElementById('admin-modal');
-const adminCloseBtn = document.getElementById('admin-close-btn');
-const adminPasswordInput = document.getElementById('admin-password');
-const adminLoginBtn = document.getElementById('admin-login-btn');
-const adminLoginError = document.getElementById('admin-login-error');
-const adminLoginArea = document.getElementById('admin-login-area');
-const adminDashboardArea = document.getElementById('admin-dashboard-area');
-const adminSignupCount = document.getElementById('admin-signup-count');
-const adminExportBtn = document.getElementById('admin-export-btn');
-const adminClearBtn = document.getElementById('admin-clear-btn');
-const adminTableBody = document.getElementById('admin-table-body');
-
-// Card Back elements
-const fCardSerialBack = document.getElementById('f-card-serial-back');
-const backValName = document.getElementById('back-val-name');
-const backValScore = document.getElementById('back-val-score');
+// (Card-back elements removed - flow no longer flips card)
 
 // --- WAKE UP ROUTINES ---
 document.addEventListener('DOMContentLoaded', () => {
   goToStep(1);
   setupWaitlistBindings();
-  setupWelcomeInputBindings();
+  setupNotifyMeBinding();
+  initYearPickers();
 });
 
-function setupWelcomeInputBindings() {
-  const welcomeInput = document.getElementById('welcome-fan-name');
-  const btnStartFlow = document.getElementById('btn-start-flow');
-  if (welcomeInput) {
-    welcomeInput.addEventListener('input', (e) => {
-      const val = e.target.value.trim();
-      savedHandle = val;
-      
-      const nameVal = val ? (val.startsWith('@') ? val : `@${val}`) : '@GUEST';
-      
-      // Update welcome card name instantly
-      const wCardName = document.getElementById('w-card-name');
-      if (wCardName) {
-        wCardName.textContent = nameVal;
-      }
-      
-      // Enable/disable start button based on validation
-      if (btnStartFlow) {
-        if (val.length > 0) {
-          btnStartFlow.removeAttribute('disabled');
-        } else {
-          btnStartFlow.setAttribute('disabled', 'true');
-        }
-      }
-    });
-  }
-}
 
 // --- STEP VISIBILITY CONTROLLER ---
 function goToStep(stepIndex) {
@@ -474,7 +425,8 @@ btnStartFlow.addEventListener('click', () => {
   goToStep(2);
 });
 btnHeaderWaitlist.addEventListener('click', () => {
-  const target = document.getElementById('waitlist-section');
+  // Scroll to notify section
+  const target = document.getElementById('notify-section') || document.getElementById('share-email-area');
   if (target) {
     target.scrollIntoView({ behavior: 'smooth' });
   }
@@ -566,6 +518,9 @@ function applyTeamTheme(primaryHex, secondaryHex) {
   }
   document.documentElement.style.setProperty('--team-primary', accent);
   document.documentElement.style.setProperty('--team-secondary', secondaryHex || accent);
+  // Determine whether button text should be dark or light for contrast
+  const btnTextColor = getLuminance(accent) > 155 ? '#0a0a0a' : '#ffffff';
+  document.documentElement.style.setProperty('--btn-text', btnTextColor);
   const glowBlob = document.querySelector('.glow-accent-blob');
   if (glowBlob) {
     glowBlob.style.backgroundColor = accent;
@@ -809,7 +764,6 @@ function updateCardDOM(cardEl, profile, transition = false) {
   const nameEl = cardEl.querySelector('#' + cardEl.id.charAt(0) + '-card-name');
   const sinceEl = cardEl.querySelector('#' + cardEl.id.charAt(0) + '-card-since');
   const predictionEl = cardEl.querySelector('#' + cardEl.id.charAt(0) + '-card-prediction');
-  const tierEl = cardEl.querySelector('#' + cardEl.id.charAt(0) + '-card-tier');
   
   const sinceLabelEl = cardEl.querySelector('#' + cardEl.id.charAt(0) + '-card-since-label');
   const predictionLabelEl = cardEl.querySelector('#' + cardEl.id.charAt(0) + '-card-prediction-label');
@@ -843,20 +797,6 @@ function updateCardDOM(cardEl, profile, transition = false) {
       if (sinceLabelEl) sinceLabelEl.textContent = "FAN SINCE";
       if (predictionLabelEl) predictionLabelEl.textContent = "PREDICTION";
     }
-    
-    if (tierEl) {
-      const tierVal = getDevotionTier(profile.overallScore);
-      tierEl.textContent = tierVal;
-      if (tierVal === 'MYTHIC') {
-        tierEl.style.color = '#a855f7';
-      } else if (tierVal === 'ALL-STAR') {
-        tierEl.style.color = '#3b82f6';
-      } else if (tierVal === 'PRO') {
-        tierEl.style.color = '#10b981';
-      } else {
-        tierEl.style.color = 'var(--text-muted)';
-      }
-    }
 
     const verifiedBadge = cardEl.querySelector('#' + cardEl.id.charAt(0) + '-card-verified-badge');
     if (verifiedBadge) {
@@ -883,7 +823,7 @@ function updateCardDOM(cardEl, profile, transition = false) {
   };
 
   if (transition) {
-    const fadeEls = [archetypeEl, nameEl, sinceEl, predictionEl, tierEl, scoreEl, legendContainer, sinceLabelEl, predictionLabelEl].filter(Boolean);
+    const fadeEls = [archetypeEl, nameEl, sinceEl, predictionEl, scoreEl, legendContainer, sinceLabelEl, predictionLabelEl].filter(Boolean);
     
     // Trigger fade out
     fadeEls.forEach(el => el.classList.add('fading'));
@@ -928,13 +868,181 @@ function checkBuilderInputsStatus() {
   const league = bSportSelect.value;
   const teamId = bTeamSelect.value;
   const sinceVal = bSinceInput ? parseInt(bSinceInput.value) : NaN;
-  const sinceValid = !isNaN(sinceVal) && sinceVal >= 1900 && sinceVal <= 2026;
+  const sinceMin = bSinceInput && bSinceInput.min ? parseInt(bSinceInput.min) : 1900;
+  const sinceValid = !isNaN(sinceVal) && sinceVal >= sinceMin && sinceVal <= 2026;
 
   if (league && teamId && sinceValid) {
     btnToQuiz.removeAttribute('disabled');
   } else {
     btnToQuiz.setAttribute('disabled', 'true');
   }
+}
+
+// --- iOS-STYLE YEAR PICKER CLASS ---
+class YearPickerWidget {
+  constructor({ triggerId, hiddenInputId, displayId, minYear, maxYear, defaultYear, onSelect }) {
+    this.trigger = document.getElementById(triggerId);
+    this.hiddenInput = document.getElementById(hiddenInputId);
+    this.displayEl = document.getElementById(displayId);
+    this.minYear = minYear;
+    this.maxYear = maxYear;
+    this.defaultYear = defaultYear || maxYear;
+    this.onSelect = onSelect || (() => {});
+    this.selectedYear = null;
+
+    this._buildUI();
+    this._bindEvents();
+  }
+
+  _buildUI() {
+    // Backdrop
+    this.backdrop = document.createElement('div');
+    this.backdrop.className = 'year-picker-backdrop';
+    document.body.appendChild(this.backdrop);
+
+    // Sheet
+    this.sheet = document.createElement('div');
+    this.sheet.className = 'year-picker-sheet';
+    this.sheet.innerHTML = `
+      <div class="year-picker-sheet-header">
+        <span class="year-picker-sheet-title">Select Year</span>
+        <button class="year-picker-sheet-done" type="button">Done</button>
+      </div>
+      <div class="year-picker-scroll-body">
+        <div class="year-picker-selection-band"></div>
+        <div class="year-picker-scroll-list"></div>
+      </div>
+    `;
+    document.body.appendChild(this.sheet);
+
+    this.scrollList = this.sheet.querySelector('.year-picker-scroll-list');
+    this.doneBtn = this.sheet.querySelector('.year-picker-sheet-done');
+    this.selectionBand = this.sheet.querySelector('.year-picker-selection-band');
+
+    // Build year items — newest first so scrolling down goes to older years
+    for (let y = this.maxYear; y >= this.minYear; y--) {
+      const item = document.createElement('div');
+      item.className = 'year-picker-item';
+      item.textContent = y;
+      item.dataset.year = y;
+      this.scrollList.appendChild(item);
+    }
+  }
+
+  _bindEvents() {
+    if (this.trigger) {
+      this.trigger.addEventListener('click', () => this.open());
+    }
+    this.backdrop.addEventListener('click', () => this.close(false));
+    this.doneBtn.addEventListener('click', () => this.close(true));
+
+    // Highlight item nearest center while scrolling
+    this.scrollList.addEventListener('scroll', () => this._updateHighlight(), { passive: true });
+
+    // Click on item scrolls it to center
+    this.scrollList.addEventListener('click', (e) => {
+      const item = e.target.closest('.year-picker-item');
+      if (!item) return;
+      item.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  }
+
+  _getCenterItem() {
+    const listRect = this.scrollList.getBoundingClientRect();
+    const centerY = listRect.top + listRect.height / 2;
+    let closest = null;
+    let closestDist = Infinity;
+    this.scrollList.querySelectorAll('.year-picker-item').forEach(item => {
+      const rect = item.getBoundingClientRect();
+      const itemCenter = rect.top + rect.height / 2;
+      const dist = Math.abs(itemCenter - centerY);
+      if (dist < closestDist) {
+        closestDist = dist;
+        closest = item;
+      }
+    });
+    return closest;
+  }
+
+  _updateHighlight() {
+    const center = this._getCenterItem();
+    this.scrollList.querySelectorAll('.year-picker-item').forEach(item => {
+      item.classList.toggle('selected', item === center);
+    });
+  }
+
+  setMinYear(minYear) {
+    this.minYear = minYear;
+    // Re-populate items
+    this.scrollList.innerHTML = '';
+    for (let y = this.maxYear; y >= this.minYear; y--) {
+      const item = document.createElement('div');
+      item.className = 'year-picker-item';
+      item.textContent = y;
+      item.dataset.year = y;
+      this.scrollList.appendChild(item);
+    }
+    // If selected year is now out of range, clear it
+    if (this.selectedYear && this.selectedYear < this.minYear) {
+      this.selectedYear = null;
+      this.hiddenInput.value = '';
+      if (this.displayEl) {
+        this.displayEl.textContent = 'Select Year';
+        this.trigger && this.trigger.classList.remove('has-value');
+      }
+    }
+  }
+
+  open() {
+    this.backdrop.classList.add('visible');
+    this.sheet.classList.add('visible');
+    this.trigger && this.trigger.classList.add('open');
+
+    // Scroll to currently selected year or default
+    const targetYear = this.selectedYear || this.defaultYear;
+    requestAnimationFrame(() => {
+      const targetItem = this.scrollList.querySelector(`[data-year="${targetYear}"]`);
+      if (targetItem) {
+        targetItem.scrollIntoView({ behavior: 'instant', block: 'center' });
+      }
+      this._updateHighlight();
+    });
+  }
+
+  close(commit) {
+    if (commit) {
+      const center = this._getCenterItem();
+      if (center) {
+        const year = parseInt(center.dataset.year);
+        this.selectedYear = year;
+        this.hiddenInput.value = year;
+        if (this.displayEl) {
+          this.displayEl.textContent = year;
+        }
+        if (this.trigger) {
+          this.trigger.classList.add('has-value');
+        }
+        this.onSelect(year);
+      }
+    }
+    this.backdrop.classList.remove('visible');
+    this.sheet.classList.remove('visible');
+    this.trigger && this.trigger.classList.remove('open');
+  }
+}
+
+let sincePickerWidget = null;
+
+function initYearPickers() {
+  sincePickerWidget = new YearPickerWidget({
+    triggerId: 'b-since-trigger',
+    hiddenInputId: 'b-since-input',
+    displayId: 'b-since-display',
+    minYear: 1900,
+    maxYear: 2026,
+    defaultYear: 2010,
+    onSelect: () => checkBuilderInputsStatus()
+  });
 }
 
 bSportSelect.addEventListener('change', (e) => {
@@ -962,12 +1070,21 @@ bTeamSelect.addEventListener('change', (e) => {
   const league = bSportSelect.value;
   const teamId = e.target.value;
   updateSpotlight(teamId, league);
+  
+  // Update the min year for "fan since" picker based on team founding year
+  if (league && teamId) {
+    const team = sportsData[league]?.teams.find(t => t.id === teamId);
+    if (team && team.founded && sincePickerWidget) {
+      sincePickerWidget.setMinYear(team.founded);
+    } else if (sincePickerWidget) {
+      sincePickerWidget.setMinYear(1900);
+    }
+  }
+  
   checkBuilderInputsStatus();
 });
 
-if (bSinceInput) {
-  bSinceInput.addEventListener('input', checkBuilderInputsStatus);
-}
+// b-since-input is now hidden (driven by year picker), no direct listener needed
 
 function updateSpotlight(teamId, league) {
   const previewContainer = document.getElementById('builder-logo-preview');
@@ -1042,7 +1159,15 @@ btnToQuiz.addEventListener('click', () => {
   bSportSelect.value = "";
   bTeamSelect.innerHTML = '<option value="" disabled selected>Select Team</option>';
   bTeamSelect.setAttribute('disabled', 'true');
-  if (bSinceInput) bSinceInput.value = "";
+  // Reset the since picker
+  if (sincePickerWidget) {
+    sincePickerWidget.selectedYear = null;
+    sincePickerWidget.hiddenInput.value = '';
+    const displayEl = document.getElementById('b-since-display');
+    if (displayEl) displayEl.textContent = 'Select Year';
+    const trigger = document.getElementById('b-since-trigger');
+    if (trigger) trigger.classList.remove('has-value');
+  }
   updateSpotlight(null, null);
   checkBuilderInputsStatus();
   
@@ -1119,27 +1244,62 @@ function renderQuizForCurrentTeam() {
   predText.textContent = 'When do you predict they will win their next championship/title?';
   predItem.appendChild(predText);
   
-  const inputContainer = document.createElement('div');
-  inputContainer.className = 'prediction-input-container';
-
   const predInput = document.createElement('input');
-  predInput.type = 'number';
+  predInput.type = 'hidden';
   predInput.id = 'quiz-prediction-input';
-  predInput.className = 'theme-number-input';
   predInput.min = '2026';
   predInput.max = '2050';
-  predInput.placeholder = 'e.g. 2027';
   predInput.required = true;
 
   if (team.prediction) {
     predInput.value = team.prediction;
   }
 
-  inputContainer.appendChild(predInput);
-  predItem.appendChild(inputContainer);
+  // Build year picker trigger for prediction
+  const predPickerWrapper = document.createElement('div');
+  predPickerWrapper.className = 'year-picker-wrapper';
+  const predTrigger = document.createElement('button');
+  predTrigger.type = 'button';
+  predTrigger.className = 'year-picker-trigger' + (team.prediction ? ' has-value' : '');
+  predTrigger.id = `pred-trigger-${team.id}`;
+  const predDisplay = document.createElement('span');
+  predDisplay.className = 'year-picker-value';
+  predDisplay.textContent = team.prediction || 'Select Year';
+  const predChevron = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  predChevron.setAttribute('class', 'year-picker-chevron');
+  predChevron.setAttribute('viewBox', '0 0 24 24');
+  predChevron.setAttribute('fill', 'none');
+  predChevron.setAttribute('stroke', 'currentColor');
+  predChevron.setAttribute('stroke-width', '2');
+  const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+  polyline.setAttribute('points', '6 9 12 15 18 9');
+  predChevron.appendChild(polyline);
+  predTrigger.appendChild(predDisplay);
+  predTrigger.appendChild(predChevron);
+  predPickerWrapper.appendChild(predTrigger);
+  predPickerWrapper.appendChild(predInput); // hidden input stays
+  predItem.appendChild(predPickerWrapper);
   quizQuestionsList.appendChild(predItem);
 
-  predInput.addEventListener('input', checkQuizAnswersStatus);
+  // Create picker widget for this prediction input
+  new YearPickerWidget({
+    triggerId: `pred-trigger-${team.id}`,
+    hiddenInputId: 'quiz-prediction-input',
+    displayId: null,
+    minYear: 2026,
+    maxYear: 2050,
+    defaultYear: 2028,
+    onSelect: (year) => {
+      predDisplay.textContent = year;
+      predTrigger.classList.add('has-value');
+      checkQuizAnswersStatus();
+    }
+  });
+
+  if (team.prediction) {
+    predInput.value = team.prediction;
+    checkQuizAnswersStatus();
+  }
 }
 
 function checkQuizAnswersStatus() {
@@ -1274,15 +1434,17 @@ function runRevealSequence() {
   revealProgressFill.style.width = '0%';
   revealTicker.textContent = '00';
   
-  // Calculate finished average overall score
+  // Calculate finished average overall score — lean higher (multiply raw score * 1.15, floor at reasonable max)
   const otherTeams = selectedTeams.filter(t => !t.isTop);
-  let finalScore = 0;
+  let rawScore = 0;
   if (otherTeams.length === 0) {
-    finalScore = topTeam.score;
+    rawScore = topTeam.score;
   } else {
     const avgOthers = otherTeams.reduce((sum, t) => sum + t.score, 0) / otherTeams.length;
-    finalScore = Math.round(topTeam.score * 0.6 + avgOthers * 0.4);
+    rawScore = Math.round(topTeam.score * 0.6 + avgOthers * 0.4);
   }
+  // Boost: lean the score higher so it's more shareable
+  const finalScore = Math.min(100, Math.round(rawScore * 1.18 + 6));
   
   const startRevealTime = performance.now();
   const revealDuration = 1800; // ms
@@ -1331,10 +1493,11 @@ function runRevealSequence() {
 }
 
 // --- STEP 5: MAIN LANDING CARD INITIAL RENDER ---
-function setupStep5MainPage(finalScore, { skipTracking = false } = {}) {
+function setupStep5MainPage(finalScore) {
   const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
   const tagline = generateSportsIdentityTagline();
   
+  // Fan ID defaults to @GUEST, will be updated from email prefix once user enters email
   const displayHandle = savedHandle ? (savedHandle.startsWith('@') ? savedHandle : `@${savedHandle}`) : "@GUEST";
   
   // Form profile object
@@ -1350,24 +1513,11 @@ function setupStep5MainPage(finalScore, { skipTracking = false } = {}) {
     teams: selectedTeams
   };
   
-  // Reset Form
-  waitlistForm.reset();
-  
-  // Pre-fill name input
-  if (fanNameInput) {
-    fanNameInput.value = savedHandle;
-  }
-  
   // Render card
   updateCardDOM(document.getElementById('final-card'), userProfile, true);
-
-  if (!skipTracking) {
-    HubSDK.track('card_generated', {
-      overallScore: finalScore,
-      teamCount: selectedTeams.length,
-      archetype: tagline
-    });
-  }
+  
+  // Setup editable Fan ID on the card
+  setupEditableFanId();
   
   // Helper to load or refresh the demo iframe with current user state
   function updateDemoIframe() {
@@ -1398,23 +1548,47 @@ function setupStep5MainPage(finalScore, { skipTracking = false } = {}) {
   // Load the iframe initially
   updateDemoIframe();
   
-  // Sync form modifications to live card front
-  if (fanNameInput) {
-    fanNameInput.addEventListener('input', (e) => {
-      const val = e.target.value.trim();
-      savedHandle = val;
-      const nameVal = val ? (val.startsWith('@') ? val : `@${val}`) : '@GUEST';
-      document.getElementById('f-card-name').textContent = nameVal;
-    });
-
-    // Reload iframe on blur to apply modified name/handle without lag while typing
-    fanNameInput.addEventListener('blur', () => {
-      updateDemoIframe();
-    });
-  }
-  
   // Transition step
   goToStep(6);
+}
+
+// --- SETUP EDITABLE FAN ID ON CARD ---
+function setupEditableFanId() {
+  const fanIdEl = document.getElementById('f-card-name');
+  if (!fanIdEl) return;
+  
+  // Make it visually clickable
+  fanIdEl.style.cursor = 'pointer';
+  
+  fanIdEl.addEventListener('click', () => {
+    if (fanIdEl.getAttribute('contenteditable') === 'true') return; // already editing
+    fanIdEl.setAttribute('contenteditable', 'true');
+    fanIdEl.classList.add('fan-id-editing');
+    // Select all text
+    const range = document.createRange();
+    range.selectNodeContents(fanIdEl);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    fanIdEl.focus();
+  });
+  
+  fanIdEl.addEventListener('blur', () => {
+    fanIdEl.setAttribute('contenteditable', 'false');
+    fanIdEl.classList.remove('fan-id-editing');
+    // Sanitize: ensure @ prefix
+    let val = fanIdEl.textContent.trim();
+    if (!val.startsWith('@')) val = '@' + val;
+    fanIdEl.textContent = val;
+    savedHandle = val.slice(1); // strip @ for savedHandle
+  });
+  
+  fanIdEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      fanIdEl.blur();
+    }
+  });
 }
 
 // --- DYNAMIC SPORTS IDENTITY TAGLINE ENGINE ---
@@ -1675,83 +1849,84 @@ function generateSportsIdentityTagline(teams = selectedTeams) {
   return "Fandom Connoisseur";
 }
 
-// --- WAITLIST DATA AND FORM SUBMISSION ENGINE ---
+// --- SHARE EMAIL FORM (Step 5) ---
 function setupWaitlistBindings() {
-  waitlistForm.addEventListener('submit', (e) => {
+  const shareEmailForm = document.getElementById('share-email-form');
+  const fanEmailInput = document.getElementById('fan-email');
+  const shareEmailSuccess = document.getElementById('share-email-success');
+  const submitBtn = document.getElementById('submit-btn');
+  
+  if (!shareEmailForm) return;
+  
+  shareEmailForm.addEventListener('submit', (e) => {
     e.preventDefault();
     
-    if (selectedTeams.length === 0) {
-      alert("Please add at least one team before completing your card.");
-      return;
+    const email = fanEmailInput ? fanEmailInput.value.trim() : '';
+    if (!email) return;
+    
+    // Derive fan ID from email prefix (before @)
+    const emailPrefix = email.split('@')[0];
+    const fanIdEl = document.getElementById('f-card-name');
+    if (fanIdEl) {
+      const newId = '@' + emailPrefix;
+      fanIdEl.textContent = newId;
+      savedHandle = emailPrefix;
     }
     
-    const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
-    const name = fanNameInput ? fanNameInput.value : savedHandle;
-    const email = fanEmailInput.value;
-    const since = topTeam.fanSince || 'N/A';
-    const prediction = topTeam.prediction || 'N/A';
-    
-    if (!email) {
-      alert("Please fill in your email address.");
-      return;
+    // Save to local storage
+    if (selectedTeams.length > 0) {
+      const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
+      const teamsFormat = selectedTeams.map(t => `${t.name} (${t.league}) [Score: ${t.score}/100]${t.isTop ? ' *TOP*' : ''}`).join(', ');
+      const waitlistEntry = {
+        timestamp: new Date().toISOString(),
+        name: '@' + emailPrefix,
+        email,
+        teams: teamsFormat,
+        prediction: `${topTeam.short} champion in ${topTeam.prediction}`
+      };
+      
+      let currentWaitlist = JSON.parse(localStorage.getItem('fanlog_waitlist') || '[]');
+      const emailExists = currentWaitlist.some(entry => entry.email.toLowerCase() === email.toLowerCase());
+      if (!emailExists) {
+        currentWaitlist.push(waitlistEntry);
+        localStorage.setItem('fanlog_waitlist', JSON.stringify(currentWaitlist));
+      }
     }
     
-    // Construct database listing
-    const teamsFormat = selectedTeams.map(t => `${t.name} (${t.league}) [Score: ${t.score}/100]${t.isTop ? ' *TOP*' : ''}`).join(', ');
-    
-    const waitlistEntry = {
-      timestamp: new Date().toISOString(),
-      name,
-      email,
-      teams: teamsFormat,
-      prediction: `${topTeam.short} champion in ${prediction}`
-    };
-    
-    // Source of truth for aggregate signups is the xdesk backend (events table);
-    // localStorage is only a local mirror for the built-in admin panel.
-    HubSDK.setUser(email);
-    HubSDK.track('waitlist_signup', {
-      name,
-      email,
-      teams: teamsFormat,
-      prediction: waitlistEntry.prediction,
-      overallScore: parseInt(document.getElementById('f-card-score').textContent) || 0
-    });
-
-    let currentWaitlist = JSON.parse(localStorage.getItem('fanlog_waitlist') || '[]');
-    const emailExists = currentWaitlist.some(entry => entry.email.toLowerCase() === email.toLowerCase());
-
-    if (!emailExists) {
-      currentWaitlist.push(waitlistEntry);
-      localStorage.setItem('fanlog_waitlist', JSON.stringify(currentWaitlist));
-    }
-    
-    // Show verified checkmark next to name
+    // Show verified checkmark and hide form, show share button
     const verifiedBadge = document.getElementById('f-card-verified-badge');
-    if (verifiedBadge) {
-      verifiedBadge.style.display = 'inline-block';
-    }
+    if (verifiedBadge) verifiedBadge.style.display = 'inline-block';
     
-    // Setup Card back fields
-    const randomRegCode = Math.floor(1000 + Math.random() * 9000);
-    fCardSerialBack.textContent = `FL-2026-WAIT-${randomRegCode}`;
-    backValName.textContent = name.startsWith('@') ? name : `@${name}`;
-    backValScore.textContent = document.getElementById('f-card-score').textContent;
+    if (shareEmailForm) shareEmailForm.style.display = 'none';
+    if (shareEmailSuccess) shareEmailSuccess.style.display = 'block';
     
-    // Animate beautiful payoff
-    confetti({
-      particleCount: 120,
-      spread: 70,
-      origin: { y: 0.6 },
-      colors: [getContrastAdaptedColor(topTeam.primaryColor, topTeam.secondaryColor), topTeam.secondaryColor, '#ffffff']
-    });
-    
-    // Flip card around
-    const cardScene = document.querySelector('.fcard-scene');
-    if (cardScene) {
-      cardScene.classList.add('flipped');
+    // Confetti
+    const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
+    if (topTeam) {
+      confetti({
+        particleCount: 120,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: [topTeam.primaryColor, topTeam.secondaryColor, '#ffffff']
+      });
     }
   });
+  
+  // Share My Sports Circle button (shown after email submitted)
+  const shareSportsCircleBtn = document.getElementById('b-share-sports-circle');
+  if (shareSportsCircleBtn) {
+    shareSportsCircleBtn.addEventListener('click', () => {
+      const tagline = generateSportsIdentityTagline();
+      const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
+      const shareMessage = `My Sports Circle™: "${tagline}" — powered by Fanlog. Build yours:`;
+      const device = getDeviceDetails();
+      if (device.isMobile && navigator.share) {
+        navigator.share({ title: 'My Fanlog Sports Circle', text: shareMessage, url: window.location.origin }).catch(() => copyToClipboardText(shareMessage));
+      } else {
+        copyToClipboardText(shareMessage + ' ' + window.location.origin);
+      }
+    });
+  }
 }
 
 // Restart button
@@ -1759,18 +1934,43 @@ btnRestartFlow.addEventListener('click', () => {
   selectedTeams = [];
   userQuizAnswers = {};
   currentQuizTeamIndex = 0;
+  savedHandle = '';
   
-  // Unflip card
-  const cardScene = document.querySelector('.fcard-scene');
-  if (cardScene) {
-    cardScene.classList.remove('flipped');
+  // Reset share email form
+  const shareEmailForm = document.getElementById('share-email-form');
+  const shareEmailSuccess = document.getElementById('share-email-success');
+  if (shareEmailForm) shareEmailForm.style.display = '';
+  if (shareEmailSuccess) shareEmailSuccess.style.display = 'none';
+  
+  // Reset since picker
+  if (sincePickerWidget) {
+    sincePickerWidget.selectedYear = null;
+    sincePickerWidget.hiddenInput.value = '';
+    const displayEl = document.getElementById('b-since-display');
+    if (displayEl) displayEl.textContent = 'Select Year';
+    const trigger = document.getElementById('b-since-trigger');
+    if (trigger) trigger.classList.remove('has-value');
   }
   
-  // Clear any inputs in Step 2
-  if (bSinceInput) bSinceInput.value = "";
-
   goToStep(2);
 });
+
+// --- NOTIFY ME BUTTON ---
+function setupNotifyMeBinding() {
+  const notifyBtn = document.getElementById('btn-notify-me');
+  if (!notifyBtn) return;
+  notifyBtn.addEventListener('click', () => {
+    const email = prompt('Enter your email to be notified when new features are added:');
+    if (!email || !email.includes('@')) return;
+    let notifyList = JSON.parse(localStorage.getItem('fanlog_notify') || '[]');
+    if (!notifyList.includes(email.toLowerCase())) {
+      notifyList.push(email.toLowerCase());
+      localStorage.setItem('fanlog_notify', JSON.stringify(notifyList));
+    }
+    notifyBtn.textContent = 'You\'re on the list!';
+    notifyBtn.disabled = true;
+  });
+}
 
 // --- DEVICE DETECTION UTILITY ---
 function getDeviceDetails() {
@@ -1922,6 +2122,8 @@ const canShareFiles = () => {
   }
 };
 
+const btnShareCard = document.getElementById('b-share-card');
+
 if (btnShareCard) {
   btnShareCard.addEventListener('click', async () => {
     const shareText = getShareText();
@@ -2029,6 +2231,19 @@ socialButtons.forEach(btn => {
 });
 
 // --- EASTER EGG ADMIN PANEL MODAL ---
+const adminTrigger = document.getElementById('admin-trigger');
+const adminModal = document.getElementById('admin-modal');
+const adminCloseBtn = document.getElementById('admin-close-btn');
+const adminPasswordInput = document.getElementById('admin-password');
+const adminLoginBtn = document.getElementById('admin-login-btn');
+const adminLoginError = document.getElementById('admin-login-error');
+const adminLoginArea = document.getElementById('admin-login-area');
+const adminDashboardArea = document.getElementById('admin-dashboard-area');
+const adminSignupCount = document.getElementById('admin-signup-count');
+const adminExportBtn = document.getElementById('admin-export-btn');
+const adminClearBtn = document.getElementById('admin-clear-btn');
+const adminTableBody = document.getElementById('admin-table-body');
+
 adminTrigger.addEventListener('dblclick', () => {
   adminModal.classList.add('active');
   adminPasswordInput.focus();
@@ -2187,8 +2402,7 @@ if (import.meta.env.DEV) {
     const avgOthers = others.reduce((sum, t) => sum + t.score, 0) / others.length;
     const finalScore = Math.round(topTeam.score * 0.6 + avgOthers * 0.4);
 
-    // skipTracking: don't pollute the xdesk funnel with dev shortcuts
-    setupStep5MainPage(finalScore, { skipTracking: true });
+    setupStep5MainPage(finalScore);
   });
 
   document.body.appendChild(devBtn);

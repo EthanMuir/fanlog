@@ -112,7 +112,7 @@ button, input, select {
 
 .btn-primary {
   background: var(--team-primary);
-  color: var(--team-text);
+  color: var(--btn-text, #ffffff);
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
@@ -231,6 +231,18 @@ button, input, select {
   font-weight: 700;
   font-size: 1.3rem;
   letter-spacing: -0.5px;
+}
+
+.logo-beta {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 1px;
+  margin-left: 4px;
+  align-self: center;
+  opacity: 0.65;
+  text-transform: lowercase;
 }
 
 /* --------------------------------------------------------------------------
@@ -475,26 +487,29 @@ button, input, select {
 
 .theme-select {
   width: 100%;
-  padding: 14px 16px;
+  padding: 14px 20px;
   background-color: var(--bg-tertiary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius-sm);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--border-radius-md);
   color: var(--text-main);
   font-size: 0.95rem;
+  font-weight: 500;
   cursor: pointer;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='white'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='rgba(255,255,255,0.5)'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 16px center;
-  background-size: 14px;
-  padding-right: 40px;
+  background-size: 16px;
+  padding-right: 44px;
   transition: var(--transition-smooth);
+  letter-spacing: 0.01em;
 }
 
 .theme-select:focus {
   outline: none;
   border-color: var(--team-primary);
-  box-shadow: 0 0 0 3px rgba(var(--team-primary), 0.15);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--team-primary) 20%, transparent);
+  background-color: var(--bg-secondary);
 }
 
 .theme-select option {
@@ -2355,4 +2370,473 @@ button, input, select {
     margin-bottom: calc(-868px * 0.3 + 2rem);
   }
 }
+
+/* ==========================================================================
+   Sports Circle Card Redesign Styles
+   ========================================================================== */
+
+/* Sports Circle header: just the large archetype, centered */
+.fcard-header-sports-circle {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+/* Large archetype label across the top of the Sports Circle card */
+.fcard-archetype-large {
+  font-family: var(--font-main);
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: var(--text-main);
+  background-color: rgba(255,255,255,0.06);
+  padding: 6px 16px;
+  border-radius: 100px;
+  border: 1px solid rgba(255,255,255,0.08);
+  text-transform: uppercase;
+  text-align: center;
+  max-width: 100%;
+  word-break: break-word;
+  white-space: normal;
+  transition: opacity 0.4s ease, filter 0.4s ease;
+}
+
+/* Sports Circle card footer: logo + serial */
+.fcard-footer-sports-circle {
+  margin-top: auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 12px;
+}
+
+.fcard-footer-logo-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fcard-footer-logo {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  opacity: 0.7;
+}
+
+.fcard-footer-brand-name {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+
+/* Editable Fan ID styles */
+.fcard-fan-id-editable {
+  cursor: pointer;
+  border-radius: 4px;
+  outline: none;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+  min-width: 60px;
+  text-align: center;
+}
+
+.fcard-fan-id-editable:hover {
+  background-color: rgba(255,255,255,0.06);
+}
+
+.fcard-fan-id-editable.fan-id-editing {
+  background-color: rgba(255,255,255,0.08);
+  box-shadow: 0 0 0 2px var(--team-primary);
+  cursor: text;
+}
+
+/* ==========================================================================
+   Share Email Capture (Step 5) Styles
+   ========================================================================== */
+
+.share-email-capture {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  padding: 20px;
+}
+
+.share-email-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.share-email-input-row {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.share-email-input-row input[type="email"] {
+  flex: 1;
+  padding: 12px 14px;
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  color: var(--text-main);
+  font-size: 0.9rem;
+  font-family: var(--font-main);
+  transition: var(--transition-smooth);
+  outline: none;
+}
+
+.share-email-input-row input[type="email"]:focus {
+  border-color: var(--team-primary);
+}
+
+.share-email-input-row .btn {
+  white-space: nowrap;
+  flex-shrink: 0;
+  padding: 12px 18px;
+  font-size: 0.9rem;
+}
+
+.share-email-note {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+@media (max-width: 520px) {
+  .share-email-input-row {
+    flex-direction: column;
+  }
+}
+
+/* ==========================================================================
+   Notify Me Section
+   ========================================================================== */
+
+.notify-capture-section {
+  padding: 48px 24px;
+  border-top: 1px solid var(--border-color);
+  text-align: center;
+}
+
+.notify-section-inner {
+  max-width: 480px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.notify-text {
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* ==========================================================================
+   Showcase Section Redesign Styles
+   ========================================================================== */
+
+.section-subtitle-beta {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  max-width: 680px;
+  margin: 8px auto 0;
+  line-height: 1.6;
+  opacity: 0.75;
+}
+
+.showcase-features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  max-width: 1000px;
+  margin: 48px auto 60px;
+  padding: 0 24px;
+}
+
+@media (max-width: 768px) {
+  .showcase-features-grid {
+    grid-template-columns: 1fr;
+    max-width: 480px;
+  }
+}
+
+.showcase-feature-card {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: var(--transition-smooth);
+}
+
+.showcase-feature-card:hover {
+  border-color: var(--border-focus);
+  transform: translateY(-2px);
+}
+
+.showcase-feature-icon {
+  font-size: 2rem;
+  line-height: 1;
+}
+
+.showcase-feature-card h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.showcase-feature-card p {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.showcase-closing-text {
+  text-align: center;
+  padding: 48px 24px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.showcase-closing-text p {
+  font-size: 1.1rem;
+  color: var(--text-muted);
+}
+
+.showcase-closing-text strong {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+/* Demo CTA text style fix */
+.demo-cta-text {
+  font-family: var(--font-main);
+  font-size: 1.05rem;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* ==========================================================================
+   iOS-Style Year Picker
+   ========================================================================== */
+
+.year-picker-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.year-picker-trigger {
+  width: 100%;
+  padding: 14px 20px;
+  background-color: var(--bg-tertiary);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  color: var(--text-main);
+  font-size: 0.95rem;
+  font-weight: 500;
+  font-family: var(--font-main);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: var(--transition-smooth);
+  text-align: left;
+}
+
+.year-picker-trigger:hover,
+.year-picker-trigger:focus {
+  outline: none;
+  border-color: var(--team-primary);
+  background-color: var(--bg-secondary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--team-primary) 20%, transparent);
+}
+
+.year-picker-trigger.has-value .year-picker-value {
+  color: var(--text-main);
+  font-weight: 600;
+}
+
+.year-picker-value {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.year-picker-chevron {
+  width: 16px;
+  height: 16px;
+  opacity: 0.5;
+  flex-shrink: 0;
+  transition: transform 0.3s ease;
+}
+
+.year-picker-trigger.open .year-picker-chevron {
+  transform: rotate(180deg);
+}
+
+/* Backdrop overlay */
+.year-picker-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+
+.year-picker-backdrop.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Picker sheet */
+.year-picker-sheet {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%) translateY(100%);
+  z-index: 501;
+  width: min(440px, 100vw);
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+  box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.6);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+.year-picker-sheet.visible {
+  transform: translateX(-50%) translateY(0);
+}
+
+.year-picker-sheet-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.year-picker-sheet-title {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.year-picker-sheet-done {
+  font-family: var(--font-main);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--team-primary);
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: var(--transition-smooth);
+}
+
+.year-picker-sheet-done:hover {
+  background: color-mix(in srgb, var(--team-primary) 15%, transparent);
+}
+
+/* The drum-roll scroll column */
+.year-picker-scroll-body {
+  position: relative;
+  height: 250px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Fade top & bottom */
+.year-picker-scroll-body::before,
+.year-picker-scroll-body::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 80px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.year-picker-scroll-body::before {
+  top: 0;
+  background: linear-gradient(to bottom, var(--bg-secondary) 0%, transparent 100%);
+}
+
+.year-picker-scroll-body::after {
+  bottom: 0;
+  background: linear-gradient(to top, var(--bg-secondary) 0%, transparent 100%);
+}
+
+/* Selection highlight band */
+.year-picker-selection-band {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 50px;
+  background: color-mix(in srgb, var(--team-primary) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--team-primary) 30%, transparent);
+  border-radius: var(--border-radius-sm);
+  z-index: 1;
+  pointer-events: none;
+  transition: background 0.5s ease, border-color 0.5s ease;
+}
+
+.year-picker-scroll-list {
+  flex: 1;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  padding: 100px 0; /* centers items: (250 - 50) / 2 */
+}
+
+.year-picker-scroll-list::-webkit-scrollbar {
+  display: none;
+}
+
+.year-picker-item {
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  scroll-snap-align: center;
+  font-family: var(--font-mono);
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.15s ease, font-size 0.15s ease;
+  user-select: none;
+  letter-spacing: 1px;
+}
+
+.year-picker-item.selected {
+  color: var(--text-main);
+  font-size: 1.55rem;
+}
+
+.year-picker-item:hover {
+  color: var(--text-main);
+}
+
 
