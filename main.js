@@ -97,9 +97,9 @@ function generateRandomMorphProfile() {
   });
   
   const topTeam = chosen[0];
-  const otherTeams = chosen.slice(1);
-  const avgOthers = otherTeams.reduce((sum, t) => sum + t.score, 0) / otherTeams.length;
-  const overallScore = Math.round(topTeam.score * 0.6 + avgOthers * 0.4);
+  const overallScore = Math.round(
+    chosen.reduce((sum, t) => sum + t.score, 0) / chosen.length
+  );
   
   const welcomeInput = document.getElementById('welcome-fan-name');
   let name = "";
@@ -346,7 +346,6 @@ const btnRestartFlow = document.getElementById('b-restart-flow');
 const btnDownloadPng = document.getElementById('b-download-png');
 const btnCopyLink = document.getElementById('b-copy-link');
 const btnHeaderWaitlist = document.getElementById('btn-header-waitlist');
-const btnHeaderPreview = document.getElementById('btn-header-preview');
 
 // Step 2 Team Builder Inputs
 const bSportSelect = document.getElementById('b-sport-select');
@@ -439,6 +438,48 @@ btnStartFlow.addEventListener('click', () => {
   HubSDK.track('flow_started');
   goToStep(2);
 });
+
+// Logo click: go back to step 1 (home)
+document.getElementById('admin-trigger')?.addEventListener('click', (e) => {
+  // Only handle single clicks (double click is handled separately for admin)
+  // If already on step 1, do nothing
+  const welcomeStep = document.getElementById('step-welcome');
+  if (welcomeStep && welcomeStep.classList.contains('active')) return;
+  HubSDK.track('logo_home_clicked');
+  goToStep(1);
+});
+
+// Helper: launch the demo (used by both header and hero buttons)
+function launchTryDemo() {
+  HubSDK.track('try_demo_clicked');
+  const randomProfile = generateRandomMorphProfile();
+
+  // Build selectedTeams from the random profile teams
+  selectedTeams = randomProfile.teams.map((t, i) => ({
+    ...t,
+    isTop: i === 0,
+    fanSince: String(Math.floor(1980 + Math.random() * 40)),
+    prediction: String(Math.floor(2026 + Math.random() * 15)),
+    quizQuestions: getRandomQuizQuestions(4)
+  }));
+  recalculateTopTeam();
+  savedHandle = '';
+
+  setupStep5MainPage(randomProfile.overallScore);
+
+  // Scroll to demo anchor after the step transition
+  setTimeout(() => {
+    const anchor = document.getElementById('demo-anchor');
+    if (anchor) anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 600);
+}
+
+// Try the App Demo button (hero, on welcome step)
+document.getElementById('btn-try-demo')?.addEventListener('click', launchTryDemo);
+
+// Try the App Demo button (header ribbon)
+document.getElementById('btn-header-try-demo')?.addEventListener('click', launchTryDemo);
+
 btnHeaderWaitlist.addEventListener('click', () => {
   // Scroll to notify section
   const target = document.getElementById('notify-section') || document.getElementById('share-email-area');
@@ -446,12 +487,6 @@ btnHeaderWaitlist.addEventListener('click', () => {
     target.scrollIntoView({ behavior: 'smooth' });
   }
 });
-if (btnHeaderPreview) {
-  btnHeaderPreview.addEventListener('click', () => {
-    const target = document.getElementById('showcase-section');
-    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  });
-}
 
 // --- HELPER: ANIMATE NUMERIC TICKERS ---
 function animateNumberTicker(element, start, end) {
@@ -727,6 +762,13 @@ function updateRainbowSVG(svgEl, sortedTeams) {
 function updateLegendChips(legendContainer, sortedTeams) {
   if (!legendContainer) return;
   legendContainer.innerHTML = '';
+  
+  // Switch to 2×2 grid layout when there are 4 teams
+  if (sortedTeams.length >= 4) {
+    legendContainer.classList.add('legend-grid-4');
+  } else {
+    legendContainer.classList.remove('legend-grid-4');
+  }
   
   sortedTeams.forEach(team => {
     // Resolve colors
@@ -1410,7 +1452,7 @@ function renderHubUI() {
       </div>
       <div class="hub-team-actions">
         <span class="hub-team-score-badge" style="color: ${adaptedColor}">Score: ${team.score}</span>
-        ${team.isTop ? `<span class="hub-top-badge" style="background-color: ${adaptedColor}; color: #fff; padding: 3px 8px; border-radius: 4px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase;">Top Team</span>` : ''}
+        ${team.isTop ? `<span class="hub-top-badge" style="background-color: ${adaptedColor}; color: ${getLuminance(adaptedColor) > 155 ? '#0a0a0a' : '#ffffff'}; padding: 3px 8px; border-radius: 4px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase;">Top Team</span>` : ''}
         <span class="builder-remove-btn" onclick="window.removeHubTeam('${team.id}')" title="Remove Team">&times;</span>
       </div>
     `;
@@ -1455,17 +1497,10 @@ function runRevealSequence() {
   revealProgressFill.style.width = '0%';
   revealTicker.textContent = '00';
   
-  // Calculate finished average overall score — lean higher (multiply raw score * 1.15, floor at reasonable max)
-  const otherTeams = selectedTeams.filter(t => !t.isTop);
-  let rawScore = 0;
-  if (otherTeams.length === 0) {
-    rawScore = topTeam.score;
-  } else {
-    const avgOthers = otherTeams.reduce((sum, t) => sum + t.score, 0) / otherTeams.length;
-    rawScore = Math.round(topTeam.score * 0.6 + avgOthers * 0.4);
-  }
-  // Boost: lean the score higher so it's more shareable
-  const finalScore = Math.min(100, Math.round(rawScore * 1.18 + 6));
+  // Calculate finished average overall score as a simple average of all team scores
+  const finalScore = Math.min(100, Math.round(
+    selectedTeams.reduce((sum, t) => sum + t.score, 0) / selectedTeams.length
+  ));
   
   const startRevealTime = performance.now();
   const revealDuration = 1800; // ms
@@ -1555,10 +1590,12 @@ function setupStep5MainPage(finalScore) {
     }
 
     const teamIds = selectedTeams.map(t => t.id).join(',');
+    // Pass scores alongside team IDs so the React app can mirror the exact same arc values
+    const scores = selectedTeams.map(t => t.score).join(',');
     const userName = encodeURIComponent(finalName);
     const userHandle = encodeURIComponent(finalHandle);
     
-    const demoUrl = `./app/?name=${userName}&handle=${userHandle}&favorites=${teamIds}`;
+    const demoUrl = `./app/?name=${userName}&handle=${userHandle}&favorites=${teamIds}&scores=${scores}`;
     
     const demoIframe = document.getElementById('demo-mockup-iframe');
     if (demoIframe) {
@@ -2578,15 +2615,6 @@ function generateRandomCard() {
   const finalScore = Math.round(topTeam.score * 0.6 + avgOthers * 0.4);
 
   setupStep5MainPage(finalScore);
-}
-
-// User-facing "Surprise Me" random card generator on the welcome step.
-const btnRandomCard = document.getElementById('btn-random-card');
-if (btnRandomCard) {
-  btnRandomCard.addEventListener('click', () => {
-    HubSDK.track('random_card_generated');
-    generateRandomCard();
-  });
 }
 
 if (import.meta.env.DEV) {
