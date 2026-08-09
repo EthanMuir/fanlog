@@ -10,6 +10,14 @@ HubSDK.init({
   supabaseKey: import.meta.env.VITE_SUPABASE_ANON_KEY,
 });
 
+// --- REFERRAL ATTRIBUTION ---
+// Visitors arriving from a shared Sports Circle carry ?ref=<sharer handle>
+// (see getShareUrl). Capture it once on load so we can measure referral →
+// conversion: fire a landing event now, then stamp `referredBy` onto the
+// downstream conversion events (circle_created, waitlist_signup).
+const referredBy = new URLSearchParams(window.location.search).get('ref') || null;
+if (referredBy) HubSDK.track('referral_landing', { ref: referredBy });
+
 // --- STATE MANAGEMENT ---
 let selectedTeams = [];
 let currentQuizTeamIndex = 0;
@@ -1564,6 +1572,17 @@ function setupStep5MainPage(finalScore) {
   // Transition step
   goToStep(6);
 
+  // Reaching the final card = a completed Sports Circle. This is the key
+  // conversion event: the numerator for visitor→circle and the denominator
+  // for share rate. `referredBy` attributes it to a sharer when present.
+  const topTeamForTrack = selectedTeams.find(t => t.isTop) || selectedTeams[0];
+  HubSDK.track('circle_created', {
+    teamCount: selectedTeams.length,
+    topLeague: topTeamForTrack ? topTeamForTrack.league : null,
+    score: finalScore,
+    referredBy
+  });
+
   // Pre-render the share image so iOS can open the native share sheet
   // synchronously on tap (see prepareShareFile). Fire-and-forget.
   prepareShareFile();
@@ -1997,7 +2016,8 @@ function setupWaitlistBindings() {
       email,
       teams: teamsFormat,
       prediction: waitlistEntry.prediction,
-      overallScore
+      overallScore,
+      referredBy
     });
 
     // Durable, structured store via the captcha-gated edge function.
@@ -2055,9 +2075,9 @@ function setupWaitlistBindings() {
       const shareMessage = `My Sports Circle™: "${tagline}" — powered by Fanlog. Build yours:`;
       const device = getDeviceDetails();
       if (device.isMobile && navigator.share) {
-        navigator.share({ title: 'My Fanlog Sports Circle', text: shareMessage, url: window.location.origin }).catch(() => copyToClipboardText(shareMessage));
+        navigator.share({ title: 'My Fanlog Sports Circle', text: shareMessage, url: getShareUrl() }).catch(() => copyToClipboardText(shareMessage));
       } else {
-        copyToClipboardText(shareMessage + ' ' + window.location.origin);
+        copyToClipboardText(shareMessage + ' ' + getShareUrl());
       }
     });
   }
@@ -2237,10 +2257,19 @@ async function prepareShareFile() {
   }
 }
 
+// Shared Sports Circle links carry the sharer's handle as a referral code so
+// we can measure referral → conversion (see referredBy on load). Falls back to
+// 'anon' before the user has set a handle. utm_source lets xdesk segment share
+// traffic from organic visits.
+function getShareUrl() {
+  const ref = encodeURIComponent(savedHandle || 'anon');
+  return `${window.location.origin}/?ref=${ref}&utm_source=fanlog_share`;
+}
+
 function getShareText() {
   const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
   const tagline = generateSportsIdentityTagline();
-  return `Just calculated my FanLog Score! Archetype: "${tagline}". Top Team: ${topTeam ? topTeam.name : 'sports'}. Calculate yours on FanLog: ${window.location.origin}`;
+  return `Just calculated my FanLog Score! Archetype: "${tagline}". Top Team: ${topTeam ? topTeam.name : 'sports'}. Calculate yours on FanLog: ${getShareUrl()}`;
 }
 
 function getCardFileName() {
@@ -2284,7 +2313,7 @@ if (btnShareCard) {
         await navigator.share({
           title: 'FanLog Score Card',
           text: shareText,
-          url: window.location.origin
+          url: getShareUrl()
         });
         HubSDK.track('card_shared', { platform: 'native_share_text' });
         return;
@@ -2368,10 +2397,10 @@ socialButtons.forEach(btn => {
     const shareMessage = `My FanLog archetype: "${tagline}" supporting ${teamName}. Mapped my teams on FanLog:`;
     
     if (platform === 'X / Twitter') {
-      const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareMessage)}&url=${encodeURIComponent(window.location.origin)}`;
+      const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareMessage)}&url=${encodeURIComponent(getShareUrl())}`;
       window.open(xUrl, '_blank');
     } else if (platform === 'iMessage') {
-      const smsUrl = `sms:&body=${encodeURIComponent(shareMessage + ' ' + window.location.origin)}`;
+      const smsUrl = `sms:&body=${encodeURIComponent(shareMessage + ' ' + getShareUrl())}`;
       window.location.href = smsUrl;
     } else if (platform === 'Instagram Stories') {
       // Instagram has no web share URL - route through the native share sheet
@@ -2382,7 +2411,7 @@ socialButtons.forEach(btn => {
         alert("Step 1: Save your card with the 'Download Image' button.\n\nStep 2: Open Instagram, start a Story, and pick the saved card from your gallery!");
       }
     } else {
-      alert(`Archetype: "${tagline}". Link copied: ${window.location.origin}`);
+      alert(`Archetype: "${tagline}". Link copied: ${getShareUrl()}`);
     }
   });
 });
