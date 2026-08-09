@@ -245,6 +245,17 @@ button, input, select {
   text-transform: lowercase;
 }
 
+.logo-area:hover .logo-text,
+.logo-area:hover .logo-beta {
+  opacity: 0.8;
+}
+
+.header-cta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 /* --------------------------------------------------------------------------
    Onboarding Flow & Step Transitions
    -------------------------------------------------------------------------- */
@@ -1183,7 +1194,7 @@ button, input, select {
 
 .rainbow-score-box .fcard-score-value {
   font-family: var(--font-mono), monospace;
-  font-size: 3.5rem;
+  font-size: 2.4rem;
   font-weight: 800;
   line-height: 0.95;
   color: var(--text-main);
@@ -2257,6 +2268,14 @@ button, input, select {
   }
 }
 
+.demo-cta-subtext {
+  font-family: var(--font-main);
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-top: 0.5rem;
+}
+
 /* iPhone 15 Bezel Wrapper */
 /* Wrapper centers the bezel, hosts the demo badge, and clips the layout
    overflow left behind when the bezel is transform-scaled on small screens */
@@ -2839,4 +2858,85 @@ button, input, select {
   color: var(--text-main);
 }
 
+/* ==========================================================================
+   Welcome CTA Row (side-by-side buttons)
+   ========================================================================== */
+
+.welcome-cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+@media (max-width: 992px) {
+  .welcome-cta-row {
+    justify-content: center;
+  }
+}
+
+/* ==========================================================================
+   Section Header (Showcase: "Fan Experience Transformed")
+   ========================================================================== */
+
+.section-header {
+  text-align: center;
+  max-width: 720px;
+  margin: 0 auto 48px;
+  padding: 0 24px;
+}
+
+.section-title {
+  font-size: 2.5rem;
+  font-weight: 900;
+  letter-spacing: -1px;
+  line-height: 1.1;
+  margin-bottom: 16px;
+}
+
+.section-subtitle {
+  font-size: 1.05rem;
+  color: var(--text-muted);
+  line-height: 1.65;
+  margin-bottom: 8px;
+}
+
+@media (max-width: 576px) {
+  .section-title {
+    font-size: 1.75rem;
+  }
+}
+
+/* ==========================================================================
+   Legend Grid: 2×2 layout for 4 teams
+   ========================================================================== */
+
+.fcard-legend-container.legend-grid-4 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  margin-top: 8px;
+  margin-bottom: 12px;
+}
+
+.fcard-legend-container.legend-grid-4 .legend-chip {
+  font-size: 0.64rem;
+  padding: 4px 8px;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.fcard-legend-container.legend-grid-4 .legend-chip-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fcard-legend-container.legend-grid-4 .legend-chip-logo {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+}
 

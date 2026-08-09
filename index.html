@@ -26,6 +26,7 @@
         <span class="logo-text">Fanlog</span><span class="logo-beta">beta</span>
       </div>
       <div class="header-cta" id="header-cta-container">
+        <button id="btn-header-try-demo" class="btn btn-secondary btn-sm">Try the App Demo</button>
         <button id="btn-header-waitlist" class="btn btn-secondary btn-sm">Share My Sports Circle</button>
       </div>
     </div>
@@ -46,7 +47,10 @@
         <!-- Onboarding Actions (Left Side, below subtitle on desktop, below card on mobile) -->
         <div class="welcome-hero-actions">
           <div class="welcome-actions">
-            <button id="btn-start-flow" class="btn btn-primary btn-lg">Create My Sports Circle</button>
+            <div class="welcome-cta-row">
+              <button id="btn-start-flow" class="btn btn-primary btn-lg">Create My Sports Circle</button>
+              <button id="btn-try-demo" class="btn btn-secondary btn-lg">Try the App Demo</button>
+            </div>
           </div>
         </div>
 
@@ -382,8 +386,13 @@
           </div>
         </div>
 
-        <div class="demo-cta-container">
-          <p class="demo-cta-text">Curious what the full app will feel like? Try the interactive demo below.</p>
+        <!-- APP DEMO BEZEL -->
+        <div class="demo-cta-container" id="demo-anchor">
+          <p class="demo-cta-text">Curious what the full app will feel like?</p>
+          <p class="demo-cta-subtext">Try the interactive demo below.</p>
+        </div>
+        <div class="iphone-device-bezel">
+          <iframe id="demo-mockup-iframe" src="" style="width: 390px; height: 844px; border: none; border-radius: 39px; overflow: hidden; display: block; margin: 2rem auto;" scrolling="no" sandbox="allow-scripts allow-same-origin allow-forms allow-popups-to-escape-sandbox"></iframe>
         </div>
 
         <!-- PRODUCT FEATURE SHOWCASE -->
@@ -412,9 +421,6 @@
             </div>
           </div>
 
-          <div class="iphone-device-bezel">
-            <iframe id="demo-mockup-iframe" src="" style="width: 390px; height: 844px; border: none; border-radius: 39px; overflow: hidden; display: block; margin: 2rem auto;" scrolling="no" sandbox="allow-scripts allow-same-origin allow-forms allow-popups-to-escape-sandbox"></iframe>
-          </div>
           <div class="showcase-closing-text">
             <p>Your teams. Your history. Your identity.</p>
             <strong>Welcome to the future of sports fandom.</strong>
