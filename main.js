@@ -338,6 +338,7 @@ const btnRestartFlow = document.getElementById('b-restart-flow');
 const btnDownloadPng = document.getElementById('b-download-png');
 const btnCopyLink = document.getElementById('b-copy-link');
 const btnHeaderWaitlist = document.getElementById('btn-header-waitlist');
+const btnHeaderPreview = document.getElementById('btn-header-preview');
 
 // Step 2 Team Builder Inputs
 const bSportSelect = document.getElementById('b-sport-select');
@@ -390,8 +391,12 @@ function goToStep(stepIndex) {
   const targetStep = steps[stepIndex - 1];
   if (targetStep) {
     targetStep.classList.add('active');
-    // Scroll to top of step
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Only pull the page up when the user has actually scrolled down past the
+    // header, so advancing a step doesn't "snap" to the top when we're already
+    // there. Lets the step's fade/slide-in transition carry the motion instead.
+    if (window.scrollY > 80) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   }
 
   // Manage morph loop based on step
@@ -433,6 +438,12 @@ btnHeaderWaitlist.addEventListener('click', () => {
     target.scrollIntoView({ behavior: 'smooth' });
   }
 });
+if (btnHeaderPreview) {
+  btnHeaderPreview.addEventListener('click', () => {
+    const target = document.getElementById('showcase-section');
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+}
 
 // --- HELPER: ANIMATE NUMERIC TICKERS ---
 function animateNumberTicker(element, start, end) {
@@ -1549,9 +1560,13 @@ function setupStep5MainPage(finalScore) {
 
   // Load the iframe initially
   updateDemoIframe();
-  
+
   // Transition step
   goToStep(6);
+
+  // Pre-render the share image so iOS can open the native share sheet
+  // synchronously on tap (see prepareShareFile). Fire-and-forget.
+  prepareShareFile();
 }
 
 // --- SETUP EDITABLE FAN ID ON CARD ---
@@ -1771,8 +1786,11 @@ function generateSportsIdentityTagline(teams = selectedTeams) {
     }
   }
 
-  // 6. Highly Specific Team-Specific Tagline Matcher
-  if (topTeam && teamSpecificPhrases[topTeam.id]) {
+  // 6. Highly Specific Team-Specific Tagline Matcher — solo circles only.
+  // For multi-team circles we fall through to the circle-level archetypes below,
+  // so a fan's other teams aren't erased by their single top team's phrase
+  // (e.g. a Leafs + Canucks fan shouldn't just read "Leafs Nation Martyr").
+  if (count === 1 && topTeam && teamSpecificPhrases[topTeam.id]) {
     const phrase = teamSpecificPhrases[topTeam.id];
     if (topTeam.score >= 85) {
       return phrase.high;
@@ -1856,6 +1874,9 @@ function generateSportsIdentityTagline(teams = selectedTeams) {
 // becomes visible. The token it produces is sent to the waitlist-signup edge
 // function, which verifies it server-side before writing to the DB.
 let turnstileWidgetId = null;
+// One signup per page load (see setupWaitlistBindings). Module-scoped so the
+// restart flow can re-arm the form for a fresh Sports Circle.
+let waitlistSubmitted = false;
 function renderTurnstile() {
   if (turnstileWidgetId !== null) return; // already rendered
   const el = document.getElementById('turnstile-container');
@@ -1888,6 +1909,27 @@ function getTurnstileToken() {
 function resetTurnstile() {
   if (window.turnstile && turnstileWidgetId !== null) window.turnstile.reset(turnstileWidgetId);
 }
+// Tear the captcha widget down entirely and hide its container — used after a
+// successful signup so the form/widget closes (one signup per page load).
+function closeTurnstile() {
+  const el = document.getElementById('turnstile-container');
+  if (window.turnstile && turnstileWidgetId !== null) {
+    try { window.turnstile.remove(turnstileWidgetId); } catch { /* ignore */ }
+    turnstileWidgetId = null;
+  }
+  if (el) el.style.display = 'none';
+}
+// Re-arm the waitlist form after a flow restart: allow a new signup, re-enable
+// the submit button, and rebuild the captcha widget that closeTurnstile removed.
+function rearmWaitlistForm() {
+  waitlistSubmitted = false;
+  const submitBtn = document.getElementById('submit-btn');
+  if (submitBtn) submitBtn.removeAttribute('disabled');
+  const el = document.getElementById('turnstile-container');
+  if (el) el.style.display = '';
+  turnstileWidgetId = null; // force a fresh render
+  ensureTurnstile();
+}
 
 // --- WAITLIST DATA AND FORM SUBMISSION ENGINE ---
 // Safe read of the localStorage mirror. A corrupted value must never throw
@@ -1909,13 +1951,19 @@ function setupWaitlistBindings() {
   const submitBtn = document.getElementById('submit-btn');
   
   if (!shareEmailForm) return;
-  
+
+  // One signup per page load (module-scoped waitlistSubmitted): once submitted,
+  // the form/widget closes and further submits are ignored until refresh or an
+  // explicit flow restart (which re-arms via rearmWaitlistForm).
   shareEmailForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    
+
     const email = fanEmailInput ? fanEmailInput.value.trim() : '';
     if (!email) return;
-    
+    if (waitlistSubmitted) return; // already signed up this session
+    waitlistSubmitted = true;
+    if (submitBtn) submitBtn.setAttribute('disabled', 'true');
+
     // Derive fan ID from email prefix (before @)
     const emailPrefix = email.split('@')[0];
     const fanIdEl = document.getElementById('f-card-name');
@@ -1923,6 +1971,8 @@ function setupWaitlistBindings() {
       const newId = '@' + emailPrefix;
       fanIdEl.textContent = newId;
       savedHandle = emailPrefix;
+      // Card handle just changed — refresh the pre-rendered share image.
+      prepareShareFile();
     }
     
     const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
@@ -1981,7 +2031,10 @@ function setupWaitlistBindings() {
     
     if (shareEmailForm) shareEmailForm.style.display = 'none';
     if (shareEmailSuccess) shareEmailSuccess.style.display = 'block';
-    
+
+    // Close the captcha widget now that signup is done.
+    closeTurnstile();
+
     // Confetti
     if (topTeam) {
       confetti({
@@ -2017,11 +2070,12 @@ btnRestartFlow.addEventListener('click', () => {
   currentQuizTeamIndex = 0;
   savedHandle = '';
   
-  // Reset share email form
+  // Reset share email form (re-arm for a fresh signup + rebuild the captcha)
   const shareEmailForm = document.getElementById('share-email-form');
   const shareEmailSuccess = document.getElementById('share-email-success');
   if (shareEmailForm) shareEmailForm.style.display = '';
   if (shareEmailSuccess) shareEmailSuccess.style.display = 'none';
+  rearmWaitlistForm();
   
   // Reset since picker
   if (sincePickerWidget) {
@@ -2167,6 +2221,22 @@ function canvasToBlob(canvas) {
   });
 }
 
+// iOS Safari requires navigator.share() to be called synchronously inside the
+// user gesture — awaiting html2canvas first drops the transient activation and
+// the share sheet never opens (it silently fell back to a download). So we
+// pre-render the card PNG whenever the card is (re)drawn and cache the File,
+// letting the click handler call share() immediately with no awaits before it.
+let preparedShareFile = null;
+async function prepareShareFile() {
+  try {
+    const canvas = await captureCardCanvas();
+    const blob = await canvasToBlob(canvas);
+    preparedShareFile = new File([blob], `fanlog_card_${getCardFileName()}.png`, { type: 'image/png' });
+  } catch {
+    preparedShareFile = null; // fall back to on-demand capture at share time
+  }
+}
+
 function getShareText() {
   const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
   const tagline = generateSportsIdentityTagline();
@@ -2206,28 +2276,8 @@ const canShareFiles = () => {
 const btnShareCard = document.getElementById('b-share-card');
 
 if (btnShareCard) {
-  btnShareCard.addEventListener('click', async () => {
-    const shareText = getShareText();
-
-    // Best path: share the actual card image through the native sheet
-    if (canShareFiles()) {
-      try {
-        const canvas = await captureCardCanvas();
-        const blob = await canvasToBlob(canvas);
-        const file = new File([blob], `fanlog_card_${getCardFileName()}.png`, { type: 'image/png' });
-        await navigator.share({
-          files: [file],
-          title: 'My FanLog Score Card',
-          text: shareText
-        });
-        HubSDK.track('card_shared', { platform: 'native_share_image' });
-        return;
-      } catch (err) {
-        if (err && err.name === 'AbortError') return; // user closed the sheet - not an error
-        console.warn('Image share failed, falling back:', err);
-      }
-    }
-
+  // Text + download fallback for when we can't open a native file-share sheet.
+  async function shareTextOrDownload(shareText) {
     // Next best: native sheet with text + link (older mobile browsers)
     if (navigator.share) {
       try {
@@ -2253,6 +2303,32 @@ if (btnShareCard) {
       // Image failed - still give them the caption
     }
     copyToClipboardText(shareText, btnShareCard, 'Image Saved + Caption Copied!');
+  }
+
+  btnShareCard.addEventListener('click', () => {
+    const shareText = getShareText();
+
+    // Best path: share the actual card image through the native sheet. This MUST
+    // be called synchronously in the click (no awaits before it) or iOS Safari
+    // drops the user activation and refuses to open the sheet — which is why the
+    // old await-then-share path silently fell back to a download on iPhone.
+    if (canShareFiles() && preparedShareFile) {
+      navigator.share({
+        files: [preparedShareFile],
+        title: 'My FanLog Score Card',
+        text: shareText
+      })
+        .then(() => HubSDK.track('card_shared', { platform: 'native_share_image' }))
+        .catch((err) => {
+          if (err && err.name === 'AbortError') return; // user closed the sheet
+          console.warn('Image share failed, falling back:', err);
+          shareTextOrDownload(shareText);
+        });
+      return;
+    }
+
+    // No prepared image yet (or files unsupported): text share / download.
+    shareTextOrDownload(shareText);
   });
 }
 
@@ -2431,6 +2507,59 @@ function escapeHTML(str) {
 // 3 random fully-quizzed teams. Vite statically strips this entire block from
 // production builds (import.meta.env.DEV === false in `vite build`), so the
 // button only exists on the dev server.
+// Build a fully-populated random Sports Circle (3 quizzed teams) and jump
+// straight to the final card. Shared by the user-facing "Surprise Me" button
+// and the DEV shortcut below.
+function generateRandomCard() {
+  const allTeams = [];
+  for (const league in sportsData) {
+    sportsData[league].teams.forEach(t => allTeams.push({ team: t, league }));
+  }
+
+  const picks = [];
+  while (picks.length < 3) {
+    const candidate = allTeams[Math.floor(Math.random() * allTeams.length)];
+    if (!picks.some(p => p.team.id === candidate.team.id)) picks.push(candidate);
+  }
+
+  selectedTeams = picks.map(({ team, league }, i) => ({
+    id: team.id,
+    name: team.name,
+    short: team.short,
+    logo: team.logo,
+    city: team.city,
+    status: team.status,
+    primaryColor: team.primary,
+    secondaryColor: team.secondary,
+    isTop: i === 0,
+    league: league.toUpperCase(),
+    score: [92, 74, 55][i],
+    fanSince: String(1995 + Math.floor(Math.random() * 25)),
+    prediction: String(2026 + Math.floor(Math.random() * 10)),
+    quizQuestions: getRandomQuizQuestions(4)
+  }));
+
+  if (!savedHandle) savedHandle = sampleHandles[Math.floor(Math.random() * sampleHandles.length)];
+  userQuizAnswers = {};
+  recalculateTopTeam();
+
+  const topTeam = selectedTeams.find(t => t.isTop);
+  const others = selectedTeams.filter(t => !t.isTop);
+  const avgOthers = others.reduce((sum, t) => sum + t.score, 0) / others.length;
+  const finalScore = Math.round(topTeam.score * 0.6 + avgOthers * 0.4);
+
+  setupStep5MainPage(finalScore);
+}
+
+// User-facing "Surprise Me" random card generator on the welcome step.
+const btnRandomCard = document.getElementById('btn-random-card');
+if (btnRandomCard) {
+  btnRandomCard.addEventListener('click', () => {
+    HubSDK.track('random_card_generated');
+    generateRandomCard();
+  });
+}
+
 if (import.meta.env.DEV) {
   const devBtn = document.createElement('button');
   devBtn.id = 'dev-test-card-btn';
@@ -2445,46 +2574,7 @@ if (import.meta.env.DEV) {
     'box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4)'
   ].join(';');
 
-  devBtn.addEventListener('click', () => {
-    const allTeams = [];
-    for (const league in sportsData) {
-      sportsData[league].teams.forEach(t => allTeams.push({ team: t, league }));
-    }
-
-    const picks = [];
-    while (picks.length < 3) {
-      const candidate = allTeams[Math.floor(Math.random() * allTeams.length)];
-      if (!picks.some(p => p.team.id === candidate.team.id)) picks.push(candidate);
-    }
-
-    selectedTeams = picks.map(({ team, league }, i) => ({
-      id: team.id,
-      name: team.name,
-      short: team.short,
-      logo: team.logo,
-      city: team.city,
-      status: team.status,
-      primaryColor: team.primary,
-      secondaryColor: team.secondary,
-      isTop: i === 0,
-      league: league.toUpperCase(),
-      score: [92, 74, 55][i],
-      fanSince: String(1995 + Math.floor(Math.random() * 25)),
-      prediction: String(2026 + Math.floor(Math.random() * 10)),
-      quizQuestions: getRandomQuizQuestions(4)
-    }));
-
-    if (!savedHandle) savedHandle = '@TestFan';
-    userQuizAnswers = {};
-    recalculateTopTeam();
-
-    const topTeam = selectedTeams.find(t => t.isTop);
-    const others = selectedTeams.filter(t => !t.isTop);
-    const avgOthers = others.reduce((sum, t) => sum + t.score, 0) / others.length;
-    const finalScore = Math.round(topTeam.score * 0.6 + avgOthers * 0.4);
-
-    setupStep5MainPage(finalScore);
-  });
+  devBtn.addEventListener('click', generateRandomCard);
 
   document.body.appendChild(devBtn);
 }
