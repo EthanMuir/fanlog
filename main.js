@@ -2570,12 +2570,17 @@ async function prepareShareFile() {
   }
 }
 
-// Encode the current circle (teams + scores + handle) into a compact URL-safe
-// base64 token so a shared link can reopen the sharer's exact Loyalty Card.
+// Encode the current circle into a compact URL-safe base64 token so a shared
+// link can (a) reopen the sharer's exact Loyalty Card in the app and (b) let the
+// /api/og function render a per-card share thumbnail without recomputing — hence
+// the archetype (a) and final score (sc) are baked in alongside the teams.
 function encodeCircle() {
   try {
+    const scoreEl = document.getElementById('f-card-score');
     const payload = {
       h: savedHandle || '',
+      a: generateSportsIdentityTagline(),
+      sc: scoreEl ? (parseInt(scoreEl.textContent, 10) || 0) : 0,
       t: selectedTeams.map(t => ({ i: t.id, s: t.score, y: t.fanSince, p: t.prediction, top: t.isTop ? 1 : 0 }))
     };
     return btoa(unescape(encodeURIComponent(JSON.stringify(payload))))
@@ -2585,17 +2590,19 @@ function encodeCircle() {
   }
 }
 
-// Shared Loyalty Card links carry: the encoded circle (?c=) so the link opens
-// the sharer's actual card; the sharer's handle (?ref=) so we can measure
-// referral → conversion (see referredBy on load); and utm_source so xdesk can
-// segment share traffic from organic visits.
+// Shared Loyalty Card links point at the /share route (not the app root) so that
+// link-unfurling crawlers get per-card Open Graph tags + a rendered thumbnail
+// (see api/share + api/og); /share then redirects real users into the app at
+// /?c=… . The link carries: the encoded circle (?c=) so it opens the sharer's
+// actual card; the sharer's handle (?ref=) for referral → conversion tracking;
+// and utm_source so xdesk can segment share traffic from organic visits.
 function getShareUrl() {
   const params = new URLSearchParams();
   params.set('ref', savedHandle || 'anon');
   params.set('utm_source', 'fanlog_share');
   const circle = encodeCircle();
   if (circle) params.set('c', circle);
-  return `${window.location.origin}/?${params.toString()}`;
+  return `${window.location.origin}/share?${params.toString()}`;
 }
 
 function getShareText() {
