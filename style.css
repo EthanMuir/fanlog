@@ -27,6 +27,7 @@
   --border-radius-sm: 8px;
   --border-radius-md: 16px;
   --border-radius-lg: 24px;
+  --border-radius-pill: 100px; /* fully-rounded chips, badges, pills */
 }
 
 /* Reset & Base Styles */
@@ -266,6 +267,79 @@ button, input, select {
   gap: 10px;
 }
 
+.header-menu {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Hamburger toggle — hidden on desktop, shown on mobile (see media query). */
+.header-menu-toggle {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  width: 42px;
+  height: 42px;
+  padding: 0 10px;
+  background-color: var(--bg-tertiary);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  cursor: pointer;
+}
+
+.header-menu-toggle span {
+  display: block;
+  height: 2px;
+  width: 100%;
+  background-color: var(--text-main);
+  border-radius: 2px;
+  transition: transform 0.25s ease, opacity 0.2s ease;
+}
+
+/* Animate to an X when open. */
+.header-menu-toggle[aria-expanded="true"] span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.header-menu-toggle[aria-expanded="true"] span:nth-child(2) { opacity: 0; }
+.header-menu-toggle[aria-expanded="true"] span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+@media (max-width: 640px) {
+  .header-menu-toggle {
+    display: flex;
+  }
+  /* Collapse the actions into a dropdown anchored under the header. */
+  .header-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: max(16px, env(safe-area-inset-right));
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    min-width: 200px;
+    padding: 10px;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    /* Hidden until toggled. */
+    opacity: 0;
+    transform: translateY(-8px);
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    z-index: 200;
+  }
+  .header-menu.open {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+  .header-menu .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 /* --------------------------------------------------------------------------
    Onboarding Flow & Step Transitions
    -------------------------------------------------------------------------- */
@@ -344,7 +418,7 @@ button, input, select {
   padding: 6px 14px;
   background-color: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--border-color);
-  border-radius: 100px;
+  border-radius: var(--border-radius-pill);
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 1.5px;
@@ -512,7 +586,8 @@ button, input, select {
   padding: 15px 22px;
   background-color: var(--bg-tertiary);
   border: 1.5px solid var(--border-color);
-  border-radius: var(--border-radius-lg);
+  /* Match the other form controls (buttons, inputs) at --border-radius-sm. */
+  border-radius: var(--border-radius-sm);
   color: var(--text-main);
   font-size: 16px; /* >=16px so iOS Safari doesn't auto-zoom on focus */
   font-weight: 500;
@@ -984,7 +1059,7 @@ button, input, select {
   text-transform: uppercase;
   letter-spacing: 1px;
   padding: 4px 10px;
-  border-radius: 100px;
+  border-radius: var(--border-radius-pill);
   background-color: rgba(16, 185, 129, 0.1);
   color: #10b981;
   border: 1px solid rgba(16, 185, 129, 0.2);
@@ -995,6 +1070,15 @@ button, input, select {
   font-weight: 900;
   letter-spacing: -1.5px;
   line-height: 1.1;
+}
+
+.main-reveal-fanid {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 1.2rem;
+  letter-spacing: 0.5px;
+  color: var(--team-primary);
+  margin: 10px 0 0;
 }
 
 .main-reveal-desc {
@@ -1269,7 +1353,7 @@ button, input, select {
   gap: 6px;
   background-color: rgba(255, 255, 255, 0.02);
   border: 1px solid var(--border-color);
-  border-radius: 100px;
+  border-radius: var(--border-radius-pill);
   padding: 4px 10px;
   font-size: 0.7rem;
   font-weight: 700;
@@ -1411,7 +1495,7 @@ button, input, select {
   background-color: rgba(16, 185, 129, 0.1);
   color: #10b981;
   border: 1px solid rgba(16, 185, 129, 0.2);
-  border-radius: 100px;
+  border-radius: var(--border-radius-pill);
   padding: 4px 12px;
   font-size: 0.7rem;
   font-weight: 700;
@@ -2339,7 +2423,7 @@ button, input, select {
   letter-spacing: 1.5px;
   text-transform: uppercase;
   padding: 6px 14px;
-  border-radius: 100px;
+  border-radius: var(--border-radius-pill);
   background-color: rgba(245, 158, 11, 0.1);
   color: #f59e0b;
   border: 1px solid rgba(245, 158, 11, 0.3);
@@ -2359,11 +2443,15 @@ button, input, select {
   box-shadow: 0 30px 70px rgba(0, 0, 0, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.05);
   box-sizing: border-box;
-  transform: scale(var(--bezel-scale));
+  /* Center with left:50% + translateX(-50%) instead of margin:auto so the phone
+     stays centered even when its fixed 414px box is wider than the viewport on
+     mobile (margin:auto would shove it left and overflow the right edge). */
+  left: 50%;
+  transform: translateX(-50%) scale(var(--bezel-scale));
   transform-origin: top center;
-  /* Layer the phone up over the section heading (negative top margin) for a hero
-     feel; the bottom margin reclaims the height the scale transform leaves. */
-  margin: -2.5rem auto calc(2.5rem - 868px * (1 - var(--bezel-scale)));
+  /* The bottom margin reclaims the height the scale transform leaves behind
+     (~868px * (1 - scale)) so the phone doesn't leave a large gap below it. */
+  margin: 2rem 0 calc(2rem - 868px * (1 - var(--bezel-scale)));
   position: relative;
   z-index: 3;
   outline: 6px solid #1a1e29;
@@ -2386,7 +2474,7 @@ button, input, select {
   width: 110px;
   height: 30px;
   background: #000000;
-  border-radius: 9999px;
+  border-radius: var(--border-radius-pill);
   z-index: 10;
   pointer-events: none;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -2403,7 +2491,7 @@ button, input, select {
   width: 130px;
   height: 5px;
   background: rgba(0, 0, 0, 0.45);
-  border-radius: 9999px;
+  border-radius: var(--border-radius-pill);
   z-index: 10;
   pointer-events: none;
 }
@@ -2462,7 +2550,7 @@ button, input, select {
   color: var(--text-main);
   background-color: rgba(255,255,255,0.06);
   padding: 6px 16px;
-  border-radius: 100px;
+  border-radius: var(--border-radius-pill);
   border: 1px solid rgba(255,255,255,0.08);
   text-transform: uppercase;
   text-align: center;
@@ -2711,7 +2799,8 @@ button, input, select {
   padding: 14px 20px;
   background-color: var(--bg-tertiary);
   border: 1.5px solid var(--border-color);
-  border-radius: var(--border-radius-md);
+  /* Match the League/Team selects and buttons (form controls share --sm). */
+  border-radius: var(--border-radius-sm);
   color: var(--text-main);
   font-size: 0.95rem;
   font-weight: 500;

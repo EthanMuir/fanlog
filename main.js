@@ -11,7 +11,7 @@ HubSDK.init({
 });
 
 // --- REFERRAL ATTRIBUTION ---
-// Visitors arriving from a shared Sports Circle carry ?ref=<sharer handle>
+// Visitors arriving from a shared Loyalty Card carry ?ref=<sharer handle>
 // (see getShareUrl). Capture it once on load so we can measure referral →
 // conversion: fire a landing event now, then stamp `referredBy` onto the
 // downstream conversion events (circle_created, waitlist_signup).
@@ -328,6 +328,166 @@ const quizQuestionsDatabase = [
       { text: 'Stay to the final whistle, always', score: 18 },
       { text: 'Rain, snow, 40-point deficit — I\'m not moving', score: 25 }
     ]
+  },
+  {
+    key: 'rivalry',
+    text: 'How do you feel about their biggest rival?',
+    options: [
+      { text: 'No strong feelings either way', score: 5 },
+      { text: 'Prefer my team, but respect them', score: 12 },
+      { text: 'Actively root against them every week', score: 18 },
+      { text: 'Pure hatred. I celebrate their losses', score: 25 }
+    ]
+  },
+  {
+    key: 'scoreCheck',
+    text: 'When they play, when do you check the score?',
+    options: [
+      { text: 'Whenever I happen to see it', score: 5 },
+      { text: 'Sometime after the game ends', score: 12 },
+      { text: 'Refreshing throughout the game', score: 18 },
+      { text: 'First thing I look at, every single day', score: 25 }
+    ]
+  },
+  {
+    key: 'anthem',
+    text: 'How do intros, anthems, or big moments hit you?',
+    options: [
+      { text: 'I tune them out', score: 5 },
+      { text: 'Nice, but no big deal', score: 12 },
+      { text: 'Chills in the big moments', score: 18 },
+      { text: 'Full goosebumps, sometimes teary', score: 25 }
+    ]
+  },
+  {
+    key: 'nicknames',
+    text: 'How well do you know the players and their nicknames?',
+    options: [
+      { text: 'The superstars only', score: 5 },
+      { text: 'Most of the starters', score: 12 },
+      { text: 'Starters, bench, and nicknames', score: 18 },
+      { text: 'Down to the practice squad and prospects', score: 25 }
+    ]
+  },
+  {
+    key: 'venue',
+    text: 'What is your relationship with their home venue?',
+    options: [
+      { text: 'Never been / not fussed', score: 5 },
+      { text: 'Been once, it was fun', score: 12 },
+      { text: 'Go when I can, know the spot', score: 18 },
+      { text: 'It\'s hallowed ground to me', score: 25 }
+    ]
+  },
+  {
+    key: 'media',
+    text: 'How much team-specific media do you consume?',
+    options: [
+      { text: 'None, just the games', score: 5 },
+      { text: 'The odd article or clip', score: 12 },
+      { text: 'Regular podcasts / beat writers', score: 18 },
+      { text: 'Every podcast, pod, and postgame show', score: 25 }
+    ]
+  },
+  {
+    key: 'partner',
+    text: 'How much does your fandom show up in your relationships?',
+    options: [
+      { text: 'It doesn\'t really come up', score: 5 },
+      { text: 'People know I casually like them', score: 12 },
+      { text: 'Loved ones plan around game day', score: 18 },
+      { text: 'It\'s basically a dealbreaker to mock them', score: 25 }
+    ]
+  },
+  {
+    key: 'draftNight',
+    text: 'How do you treat the draft or signing period?',
+    options: [
+      { text: 'Don\'t follow it', score: 5 },
+      { text: 'Catch the headlines after', score: 12 },
+      { text: 'Watch the big picks live', score: 18 },
+      { text: 'Appointment viewing with my own big board', score: 25 }
+    ]
+  },
+  {
+    key: 'collectibles',
+    text: 'Do you collect anything tied to the team?',
+    options: [
+      { text: 'Nothing at all', score: 5 },
+      { text: 'A ticket stub or two', score: 12 },
+      { text: 'Cards, pennants, or signed items', score: 18 },
+      { text: 'A curated collection I\'d insure', score: 25 }
+    ]
+  },
+  {
+    key: 'badSeasons',
+    text: 'What do you do during a rebuild or losing season?',
+    options: [
+      { text: 'Check out until they\'re good again', score: 5 },
+      { text: 'Watch a bit less', score: 12 },
+      { text: 'Same as always, win or lose', score: 18 },
+      { text: 'Losing seasons are when I show up hardest', score: 25 }
+    ]
+  },
+  {
+    key: 'hometown',
+    text: 'How tied is this team to your sense of home or identity?',
+    options: [
+      { text: 'Not connected to it', score: 5 },
+      { text: 'A little local pride', score: 12 },
+      { text: 'A real part of where I\'m from', score: 18 },
+      { text: 'They ARE my city to me', score: 25 }
+    ]
+  },
+  {
+    key: 'trashTalk',
+    text: 'How active are you talking them up (or down others) online?',
+    options: [
+      { text: 'I stay out of it', score: 5 },
+      { text: 'A like or repost here and there', score: 12 },
+      { text: 'I\'ll jump into the replies', score: 18 },
+      { text: 'I run the group chat and the timeline', score: 25 }
+    ]
+  },
+  {
+    key: 'championship',
+    text: 'How would you react if they won it all?',
+    options: [
+      { text: 'Say "nice" and move on', score: 5 },
+      { text: 'Celebrate for the night', score: 12 },
+      { text: 'Cry, call people, book the parade', score: 18 },
+      { text: 'Best day of my life, no question', score: 25 }
+    ]
+  },
+  {
+    key: 'gameDayPlans',
+    text: 'How does game day shape your schedule?',
+    options: [
+      { text: 'It doesn\'t', score: 5 },
+      { text: 'I\'ll catch it if I\'m free', score: 12 },
+      { text: 'I block off the time', score: 18 },
+      { text: 'Everything else moves around it', score: 25 }
+    ]
+  },
+  {
+    key: 'legacyFan',
+    text: 'How did you become a fan of this team?',
+    options: [
+      { text: 'Recently picked them up', score: 5 },
+      { text: 'Jumped on during a good run', score: 12 },
+      { text: 'Been with them for years', score: 18 },
+      { text: 'Born into it — lifelong, passed down', score: 25 }
+    ]
+  },
+  {
+    key: 'sacrifice',
+    text: 'What would you give up for them to win a title?',
+    options: [
+      { text: 'Nothing, it\'s just sports', score: 5 },
+      { text: 'A weekend or some cash', score: 12 },
+      { text: 'A pricey trip and some dignity', score: 18 },
+      { text: 'Almost anything — name the price', score: 25 }
+    ]
   }
 ];
 
@@ -380,6 +540,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // --- STEP VISIBILITY CONTROLLER ---
 function goToStep(stepIndex) {
+  // Changing steps hides the builder section, but the year-picker sheet lives on
+  // <body> — close it so it can't linger fixed at the bottom of the screen.
+  if (sincePickerWidget) sincePickerWidget.close(false);
+
   const steps = [
     document.getElementById('step-welcome'), // 1
     document.getElementById('step-builder'), // 2
@@ -467,26 +631,81 @@ function launchTryDemo() {
 
   setupStep5MainPage(randomProfile.overallScore);
 
-  // Scroll to demo anchor after the step transition
-  setTimeout(() => {
-    const anchor = document.getElementById('demo-anchor');
-    if (anchor) anchor.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, 600);
+  // Glide to the demo once the step transition has settled.
+  setTimeout(scrollToDemo, 650);
 }
 
-// Try the App Demo button (hero, on welcome step)
+// Gentle eased scroll to an element (native 'smooth' is too abrupt for the
+// short hop to the phone demo). easeInOutQuad over ~1.1s.
+function smoothScrollTo(target, duration = 1100) {
+  const el = typeof target === 'string' ? document.getElementById(target) : target;
+  if (!el) return;
+  const startY = window.scrollY;
+  const dist = el.getBoundingClientRect().top;
+  const startT = performance.now();
+  const ease = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
+  function step(now) {
+    const p = Math.min((now - startT) / duration, 1);
+    window.scrollTo(0, startY + dist * ease(p));
+    if (p < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+function scrollToDemo() {
+  smoothScrollTo('demo-anchor');
+}
+
+// Try the App Demo button (hero, on welcome step) — randomizes a demo profile.
 document.getElementById('btn-try-demo')?.addEventListener('click', launchTryDemo);
 
-// Try the App Demo button (header ribbon)
-document.getElementById('btn-header-try-demo')?.addEventListener('click', launchTryDemo);
-
-btnHeaderWaitlist.addEventListener('click', () => {
-  // Scroll to notify section
-  const target = document.getElementById('notify-section') || document.getElementById('share-email-area');
-  if (target) {
-    target.scrollIntoView({ behavior: 'smooth' });
+// Try the App Demo button (header) — by now the user is on their own card, so
+// DON'T wipe it with a random profile: if a circle already exists, just glide to
+// the live demo of *their* card; only randomize as a fallback when none exists.
+document.getElementById('btn-header-try-demo')?.addEventListener('click', () => {
+  if (selectedTeams.length > 0) {
+    scrollToDemo();
+  } else {
+    launchTryDemo();
   }
 });
+
+btnHeaderWaitlist.addEventListener('click', () => {
+  const jumpToWaitlist = () => {
+    smoothScrollTo('share-email-area', 900);
+    const email = document.getElementById('fan-email');
+    if (email) setTimeout(() => email.focus({ preventScroll: true }), 900);
+  };
+  const form = document.getElementById('share-email-area');
+  // The waitlist form lives on the final card screen. If we're not there yet
+  // (no circle built), spin up a quick Surprise Circle so there's a form to
+  // jump to, then scroll once it has rendered.
+  if (form && form.offsetParent !== null) {
+    jumpToWaitlist();
+  } else {
+    generateRandomCard();
+    setTimeout(jumpToWaitlist, 700);
+  }
+});
+
+// Mobile header dropdown: the two CTAs collapse behind a hamburger on phones.
+const headerMenu = document.getElementById('header-menu');
+const headerMenuToggle = document.getElementById('header-menu-toggle');
+if (headerMenu && headerMenuToggle) {
+  const setMenu = (open) => {
+    headerMenu.classList.toggle('open', open);
+    headerMenuToggle.setAttribute('aria-expanded', String(open));
+  };
+  headerMenuToggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    setMenu(!headerMenu.classList.contains('open'));
+  });
+  // Close after tapping an action, or when tapping anywhere outside the menu.
+  headerMenu.addEventListener('click', () => setMenu(false));
+  document.addEventListener('click', (e) => {
+    if (!headerMenu.contains(e.target) && e.target !== headerMenuToggle) setMenu(false);
+  });
+}
 
 // --- HELPER: ANIMATE NUMERIC TICKERS ---
 function animateNumberTicker(element, start, end) {
@@ -998,6 +1217,10 @@ class YearPickerWidget {
     }
     this.backdrop.addEventListener('click', () => this.close(false));
     this.doneBtn.addEventListener('click', () => this.close(true));
+    // Escape always dismisses, so the sheet can never get stuck open.
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && this.sheet.classList.contains('visible')) this.close(false);
+    });
 
     // Highlight item nearest center while scrolling
     this.scrollList.addEventListener('scroll', () => this._updateHighlight(), { passive: true });
@@ -1060,6 +1283,10 @@ class YearPickerWidget {
     this.backdrop.classList.add('visible');
     this.sheet.classList.add('visible');
     this.trigger && this.trigger.classList.add('open');
+    // Lock the page behind the sheet. Without this the background can scroll
+    // under the fixed sheet on mobile, which is how it ends up "stuck" at the
+    // bottom of the screen with no way to line up the Done button.
+    document.body.style.overflow = 'hidden';
 
     // Scroll to currently selected year or default
     const targetYear = this.selectedYear || this.defaultYear;
@@ -1091,6 +1318,7 @@ class YearPickerWidget {
     this.backdrop.classList.remove('visible');
     this.sheet.classList.remove('visible');
     this.trigger && this.trigger.classList.remove('open');
+    document.body.style.overflow = '';
   }
 }
 
@@ -1549,6 +1777,16 @@ function runRevealSequence() {
 }
 
 // --- STEP 5: MAIN LANDING CARD INITIAL RENDER ---
+// Mirror the current Fan ID into the "Your Loyalty Card Is Ready" heading area.
+// Hidden while the handle is still the @GUEST default.
+function updateRevealFanId() {
+  const el = document.getElementById('main-reveal-fanid');
+  if (!el) return;
+  const h = savedHandle ? (savedHandle.startsWith('@') ? savedHandle : `@${savedHandle}`) : '';
+  el.textContent = h;
+  el.style.display = h ? '' : 'none';
+}
+
 function setupStep5MainPage(finalScore) {
   const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
   const tagline = generateSportsIdentityTagline();
@@ -1574,6 +1812,9 @@ function setupStep5MainPage(finalScore) {
   
   // Setup editable Fan ID on the card
   setupEditableFanId();
+
+  // Show the Fan ID in the "card is ready" heading area.
+  updateRevealFanId();
   
   // Helper to load or refresh the demo iframe with current user state
   function updateDemoIframe() {
@@ -1609,7 +1850,7 @@ function setupStep5MainPage(finalScore) {
   // Transition step
   goToStep(6);
 
-  // Reaching the final card = a completed Sports Circle. This is the key
+  // Reaching the final card = a completed Loyalty Card. This is the key
   // conversion event: the numerator for visitor→circle and the denominator
   // for share rate. `referredBy` attributes it to a sharer when present.
   const topTeamForTrack = selectedTeams.find(t => t.isTop) || selectedTeams[0];
@@ -1654,6 +1895,7 @@ function setupEditableFanId() {
     if (!val.startsWith('@')) val = '@' + val;
     fanIdEl.textContent = val;
     savedHandle = val.slice(1); // strip @ for savedHandle
+    updateRevealFanId();
   });
   
   fanIdEl.addEventListener('keydown', (e) => {
@@ -1760,7 +2002,15 @@ function generateSportsIdentityTagline(teams = selectedTeams) {
     (ids.includes('dodgers') && ids.includes('giants_mlb')) ||
     (ids.includes('leafs') && ids.includes('bruins')) ||
     (ids.includes('leafs') && ids.includes('canadiens')) ||
-    (ids.includes('chiefs') && ids.includes('raiders'))
+    (ids.includes('chiefs') && ids.includes('raiders')) ||
+    (ids.includes('packers') && ids.includes('bears')) ||
+    (ids.includes('cowboys') && ids.includes('eagles')) ||
+    (ids.includes('cowboys') && ids.includes('giants_nfl')) ||
+    (ids.includes('rangers') && ids.includes('islanders')) ||
+    (ids.includes('oilers') && ids.includes('flames')) ||
+    (ids.includes('bulls') && ids.includes('pistons')) ||
+    (ids.includes('cubs') && ids.includes('cardinals')) ||
+    (ids.includes('argonauts') && ids.includes('ticats'))
   );
   if (hasRivalry) {
     return "The Chaos Agent";
@@ -1814,6 +2064,16 @@ function generateSportsIdentityTagline(teams = selectedTeams) {
         return "Modern Era Bandwagoner";
       }
       return "Dynasty Collector";
+    }
+
+    // Follows winners but with low devotion — the classic frontrunner.
+    if (champsTeams.length >= 1 && avgScore < 55) {
+      return "Fair-Weather Frontrunner";
+    }
+
+    // A mix of winners and heartbreak teams — riding the emotional rollercoaster.
+    if (heartbreakTeams.length >= 1 && champsTeams.length >= 1) {
+      return "Rollercoaster Rider";
     }
   }
 
@@ -1881,48 +2141,63 @@ function generateSportsIdentityTagline(teams = selectedTeams) {
     if (topTeam.id === 'leafs' && topTeam.score >= 85) {
       return "Toronto Sports Martyr";
     }
+    if (topTeam.score >= 95) {
+      return "Ride-or-Die Diehard";
+    }
     if (topTeam.status === 'heartbreak' && topTeam.score >= 80) {
       return "The Heartbreak Specialist";
     }
     if (topTeam.status === 'champs' && topTeam.score >= 80) {
       return "The Glory Collector";
     }
+    if (topTeam.status === 'champs' && topTeam.score < 55) {
+      return "Frontrunner Fan";
+    }
     if (earliestSince < 2000 && topTeam.score >= 80) {
       return "Generational Guardian";
+    }
+    if (latestSince >= 2022 && topTeam.score < 70) {
+      return "Fresh Convert";
+    }
+    if (topTeam.score <= 40) {
+      return "Casual Admirer";
     }
     return "The Pure Loyalist";
   }
 
-  // 9. Multisport & League Profiles (Fallbacks for multi-team profiles)
+  // 9. Multisport & League Profiles (Fallbacks for multi-team profiles).
+  //    Each league has a high-devotion and a standard variant for more variety.
   if (uniqueLeagues.length === 1) {
-    if (uniqueLeagues[0] === "mls") {
-      return "Global Game Disciple";
-    }
-    if (uniqueLeagues[0] === "nfl") {
-      return "Gridiron Analyst";
-    }
-    if (uniqueLeagues[0] === "nba") {
-      return "Hardwood Obsessive";
-    }
-    if (uniqueLeagues[0] === "nhl") {
-      return "Ice Hockey Purist";
-    }
-    if (uniqueLeagues[0] === "mlb") {
-      return "Diamond Tactician";
-    }
-  }
-  
-  if (uniqueLeagues.length === 2) {
-    return "Dual-Front Analyst";
-  }
-  if (uniqueLeagues.length === 3) {
-    return "Tri-Arena Sage";
-  }
-  if (uniqueLeagues.length >= 4) {
-    return "Omni-Sport Polymath";
+    const zealous = avgScore >= 80;
+    const leaguePersonas = {
+      mls: zealous ? "Supporters' Section Capo" : "Global Game Disciple",
+      nfl: zealous ? "Gridiron Zealot" : "Gridiron Analyst",
+      nba: zealous ? "Hardwood Fanatic" : "Hardwood Obsessive",
+      nhl: zealous ? "Rink Warrior" : "Ice Hockey Purist",
+      mlb: zealous ? "Bleacher Creature" : "Diamond Tactician",
+      cfl: zealous ? "Grey Cup Diehard" : "Three-Down Loyalist"
+    };
+    if (leaguePersonas[uniqueLeagues[0]]) return leaguePersonas[uniqueLeagues[0]];
   }
 
-  return "Fandom Connoisseur";
+  if (uniqueLeagues.length === 2) {
+    return avgScore >= 80 ? "Two-Sport Fanatic" : "Dual-Front Analyst";
+  }
+  if (uniqueLeagues.length === 3) {
+    return avgScore >= 80 ? "Tri-Arena Sage" : "Three-League Juggler";
+  }
+  if (uniqueLeagues.length >= 4) {
+    return avgScore >= 75 ? "Omni-Sport Polymath" : "Sports Buffet Grazer";
+  }
+
+  // 10. Tiered devotion fallback — a persona for every intensity level so the
+  //     badge never repeats a single catch-all.
+  if (avgScore >= 90) return "Obsessed Superfan";
+  if (avgScore >= 78) return "Devoted Believer";
+  if (avgScore >= 62) return "Fandom Connoisseur";
+  if (avgScore >= 45) return "Weekend Warrior";
+  if (avgScore >= 30) return "Casual Onlooker";
+  return "Curious Newcomer";
 }
 
 // --- CLOUDFLARE TURNSTILE (spam gate) ---
@@ -1931,7 +2206,7 @@ function generateSportsIdentityTagline(teams = selectedTeams) {
 // function, which verifies it server-side before writing to the DB.
 let turnstileWidgetId = null;
 // One signup per page load (see setupWaitlistBindings). Module-scoped so the
-// restart flow can re-arm the form for a fresh Sports Circle.
+// restart flow can re-arm the form for a fresh Loyalty Card.
 let waitlistSubmitted = false;
 function renderTurnstile() {
   if (turnstileWidgetId !== null) return; // already rendered
@@ -2027,6 +2302,7 @@ function setupWaitlistBindings() {
       const newId = '@' + emailPrefix;
       fanIdEl.textContent = newId;
       savedHandle = emailPrefix;
+      updateRevealFanId();
       // Card handle just changed — refresh the pre-rendered share image.
       prepareShareFile();
     }
@@ -2103,16 +2379,16 @@ function setupWaitlistBindings() {
     }
   });
   
-  // Share My Sports Circle button (shown after email submitted)
+  // Share My Loyalty Card button (shown after email submitted)
   const shareSportsCircleBtn = document.getElementById('b-share-sports-circle');
   if (shareSportsCircleBtn) {
     shareSportsCircleBtn.addEventListener('click', () => {
       const tagline = generateSportsIdentityTagline();
       const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
-      const shareMessage = `My Sports Circle™: "${tagline}" — powered by Fanlog. Build yours:`;
+      const shareMessage = `My Loyalty Card: "${tagline}" — powered by Fanlog. Build yours:`;
       const device = getDeviceDetails();
       if (device.isMobile && navigator.share) {
-        navigator.share({ title: 'My Fanlog Sports Circle', text: shareMessage, url: getShareUrl() }).catch(() => copyToClipboardText(shareMessage));
+        navigator.share({ title: 'My Fanlog Loyalty Card', text: shareMessage, url: getShareUrl() }).catch(() => copyToClipboardText(shareMessage));
       } else {
         copyToClipboardText(shareMessage + ' ' + getShareUrl());
       }
@@ -2294,13 +2570,32 @@ async function prepareShareFile() {
   }
 }
 
-// Shared Sports Circle links carry the sharer's handle as a referral code so
-// we can measure referral → conversion (see referredBy on load). Falls back to
-// 'anon' before the user has set a handle. utm_source lets xdesk segment share
-// traffic from organic visits.
+// Encode the current circle (teams + scores + handle) into a compact URL-safe
+// base64 token so a shared link can reopen the sharer's exact Loyalty Card.
+function encodeCircle() {
+  try {
+    const payload = {
+      h: savedHandle || '',
+      t: selectedTeams.map(t => ({ i: t.id, s: t.score, y: t.fanSince, p: t.prediction, top: t.isTop ? 1 : 0 }))
+    };
+    return btoa(unescape(encodeURIComponent(JSON.stringify(payload))))
+      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  } catch {
+    return '';
+  }
+}
+
+// Shared Loyalty Card links carry: the encoded circle (?c=) so the link opens
+// the sharer's actual card; the sharer's handle (?ref=) so we can measure
+// referral → conversion (see referredBy on load); and utm_source so xdesk can
+// segment share traffic from organic visits.
 function getShareUrl() {
-  const ref = encodeURIComponent(savedHandle || 'anon');
-  return `${window.location.origin}/?ref=${ref}&utm_source=fanlog_share`;
+  const params = new URLSearchParams();
+  params.set('ref', savedHandle || 'anon');
+  params.set('utm_source', 'fanlog_share');
+  const circle = encodeCircle();
+  if (circle) params.set('c', circle);
+  return `${window.location.origin}/?${params.toString()}`;
 }
 
 function getShareText() {
@@ -2573,7 +2868,7 @@ function escapeHTML(str) {
 // 3 random fully-quizzed teams. Vite statically strips this entire block from
 // production builds (import.meta.env.DEV === false in `vite build`), so the
 // button only exists on the dev server.
-// Build a fully-populated random Sports Circle (3 quizzed teams) and jump
+// Build a fully-populated random Loyalty Card (3 quizzed teams) and jump
 // straight to the final card. Shared by the user-facing "Surprise Me" button
 // and the DEV shortcut below.
 function generateRandomCard() {
@@ -2617,6 +2912,13 @@ function generateRandomCard() {
   setupStep5MainPage(finalScore);
 }
 
+// User-facing "Surprise Me" button on the welcome step — builds a random,
+// fully-quizzed Loyalty Card and jumps straight to the final card.
+document.getElementById('btn-random-card')?.addEventListener('click', () => {
+  HubSDK.track('random_card_generated');
+  generateRandomCard();
+});
+
 if (import.meta.env.DEV) {
   const devBtn = document.createElement('button');
   devBtn.id = 'dev-test-card-btn';
@@ -2635,3 +2937,60 @@ if (import.meta.env.DEV) {
 
   document.body.appendChild(devBtn);
 }
+
+// --- SHARED CIRCLE DEEP LINK ---
+// Reconstruct a full team object from its id by looking it up across leagues.
+function buildTeamFromId(id) {
+  for (const lg in sportsData) {
+    const t = sportsData[lg].teams.find(x => x.id === id);
+    if (t) {
+      return {
+        id: t.id, name: t.name, short: t.short, logo: t.logo, city: t.city,
+        status: t.status, primaryColor: t.primary, secondaryColor: t.secondary,
+        league: lg.toUpperCase()
+      };
+    }
+  }
+  return null;
+}
+
+// Rebuild the sharer's circle from a ?c= token and jump straight to their card,
+// so a shared link opens *their* Loyalty Card instead of a blank landing page.
+function loadSharedCircle(enc) {
+  try {
+    const b64 = enc.replace(/-/g, '+').replace(/_/g, '/');
+    const payload = JSON.parse(decodeURIComponent(escape(atob(b64))));
+    const teams = (payload.t || []).map(tt => {
+      const base = buildTeamFromId(tt.i);
+      if (!base) return null;
+      return {
+        ...base,
+        score: Number(tt.s) || 0,
+        fanSince: String(tt.y || ''),
+        prediction: String(tt.p || ''),
+        isTop: !!tt.top,
+        quizQuestions: getRandomQuizQuestions(4)
+      };
+    }).filter(Boolean);
+    if (!teams.length) return false;
+    if (!teams.some(t => t.isTop)) teams[0].isTop = true;
+
+    selectedTeams = teams;
+    savedHandle = payload.h || savedHandle;
+    userQuizAnswers = {};
+
+    const top = selectedTeams.find(t => t.isTop);
+    const others = selectedTeams.filter(t => !t.isTop);
+    const finalScore = others.length
+      ? Math.round(top.score * 0.6 + (others.reduce((s, t) => s + t.score, 0) / others.length) * 0.4)
+      : top.score;
+
+    setupStep5MainPage(finalScore);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+const sharedCircleParam = new URLSearchParams(window.location.search).get('c');
+if (sharedCircleParam) loadSharedCircle(sharedCircleParam);

@@ -5,7 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>FanLog - Your Sports Identity</title>
   <link rel="icon" type="image/svg+xml" href="fanlog_logo.svg">
-  <meta name="description" content="Create your Sports Circle™ and share your sports identity. Show every team you support, your loyalty, and the moments that define you.">
+  <meta name="description" content="Create your Loyalty Card and share your sports identity. Show every team you support, your loyalty, and the moments that define you.">
+  <!-- Open Graph / Twitter share preview. These are STATIC (crawlers don't run
+       JS) so every shared link shows the same branded thumbnail. Per-card
+       thumbnails would need a serverless OG-image route (see notes). Set
+       og:image to an absolute production URL once the domain is finalized. -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="FanLog">
+  <meta property="og:title" content="FanLog — Your Sports Identity">
+  <meta property="og:description" content="Build your Loyalty Card and reveal your FanLog Score. Every team you support, your loyalty, and the moments that define you.">
+  <meta property="og:image" content="/og-image.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="FanLog — Your Sports Identity">
+  <meta name="twitter:description" content="Build your Loyalty Card and reveal your FanLog Score.">
+  <meta name="twitter:image" content="/og-image.jpg">
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -26,8 +39,13 @@
         <span class="logo-text">Fanlog</span><span class="logo-beta">beta</span>
       </div>
       <div class="header-cta" id="header-cta-container">
-        <button id="btn-header-try-demo" class="btn btn-secondary btn-sm">Try the App Demo</button>
-        <button id="btn-header-waitlist" class="btn btn-secondary btn-sm">Share My Sports Circle</button>
+        <div class="header-menu" id="header-menu">
+          <button id="btn-header-try-demo" class="btn btn-secondary btn-sm">Try the App Demo</button>
+          <button id="btn-header-waitlist" class="btn btn-secondary btn-sm">Join the Waitlist</button>
+        </div>
+        <button id="header-menu-toggle" class="header-menu-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="header-menu">
+          <span></span><span></span><span></span>
+        </button>
       </div>
     </div>
   </header>
@@ -41,14 +59,15 @@
         <!-- Title & Subtitle -->
         <div class="welcome-hero-left">
           <h1 class="welcome-title">Home to Your <br><span class="text-gradient">Sports Identity.</span></h1>
-          <p class="welcome-subtitle">Every fan has a story. Fanlog brings yours to life. Create your profile, share your Sports Circle™ to proudly display every team you support, your years of loyalty, and the moments that have shaped your fandom.</p>
+          <p class="welcome-subtitle">Every fan has a story. Fanlog brings yours to life. Create your profile, share your Loyalty Card to proudly display every team you support, your years of loyalty, and the moments that have shaped your fandom.</p>
         </div>
 
         <!-- Onboarding Actions (Left Side, below subtitle on desktop, below card on mobile) -->
         <div class="welcome-hero-actions">
           <div class="welcome-actions">
             <div class="welcome-cta-row">
-              <button id="btn-start-flow" class="btn btn-primary btn-lg">Create My Sports Circle</button>
+              <button id="btn-start-flow" class="btn btn-primary btn-lg">Create My Loyalty Card</button>
+              <button id="btn-random-card" class="btn btn-secondary btn-lg">Surprise Me</button>
               <button id="btn-try-demo" class="btn btn-secondary btn-lg">Try the App Demo</button>
             </div>
           </div>
@@ -62,7 +81,7 @@
               <div class="fcard-header">
                 <div class="fcard-brand">
                    <span class="fcard-dot"></span>
-                   <span class="fcard-brand-label">SPORTS CIRCLE</span>
+                   <span class="fcard-brand-label">LOYALTY CARD</span>
                  </div>
                  <div class="fcard-archetype" id="w-card-archetype">PURE LOYALIST</div>
               </div>
@@ -140,6 +159,7 @@
                     <option value="nhl">NHL (Hockey)</option>
                     <option value="mlb">MLB (Baseball)</option>
                     <option value="mls">MLS (Soccer)</option>
+                    <option value="cfl">CFL (Canadian Football)</option>
                     <option value="" disabled>More Coming Soon</option>
                   </select>
                 </div>
@@ -211,7 +231,7 @@
         <div class="step-header">
           <span class="step-indicator">STEP 3 OF 4</span>
           <h2 class="step-title">Your Fan Profile</h2>
-          <p class="step-subtitle">These are the teams that make up your sports identity. Choose your Top Team to personalize your Sports Circle™, then add more teams to complete your fan story.</p>
+          <p class="step-subtitle">These are the teams that make up your sports identity. Choose your Top Team to personalize your Loyalty Card, then add more teams to complete your fan story.</p>
         </div>
         
         <div class="hub-box-card">
@@ -221,7 +241,7 @@
           
           <div class="hub-actions-grid">
             <button id="btn-hub-add-team" class="btn btn-secondary btn-block">Add Another Team</button>
-            <button id="btn-hub-finish" class="btn btn-primary btn-block">Create My Sports Circle</button>
+            <button id="btn-hub-finish" class="btn btn-primary btn-block">Create My Loyalty Card</button>
           </div>
         </div>
       </div>
@@ -231,7 +251,7 @@
     <!-- STEP 4: REVEAL / CALCULATING ANIMATION -->
     <section id="step-reveal" class="onboarding-step">
       <div class="reveal-step-container">
-        <h2 class="reveal-loading-title">Generating your Sports Circle...</h2>
+        <h2 class="reveal-loading-title">Generating your Loyalty Card...</h2>
         <div class="reveal-progress-container">
           <div class="reveal-progress-track">
             <div id="reveal-progress-fill" class="reveal-progress-fill"></div>
@@ -347,27 +367,28 @@
           
           <!-- CTA Column next to Card -->
           <div class="main-card-actions-column">
-            <h2 class="main-reveal-title">Your Sports Identity Is Ready.</h2>
-            <p class="main-reveal-desc">Your Fanlog Score reveals who you are as a fan, from your loyalty level to the teams that define you. Share your Sports Circle™ and see how your fandom compares.</p>
+            <h2 class="main-reveal-title">Your Loyalty Card Is Ready.</h2>
+            <p class="main-reveal-fanid" id="main-reveal-fanid" style="display: none;"></p>
+            <p class="main-reveal-desc">Your Fanlog Score reveals who you are as a fan, from your loyalty level to the teams that define you. Join the waitlist to save your Loyalty Card, then share it and see how your fandom compares.</p>
             
             <!-- Email capture before sharing -->
             <div class="share-email-capture" id="share-email-area">
               <form id="share-email-form" class="share-email-form">
                 <div class="share-email-input-row">
                   <input type="email" id="fan-email" placeholder="Enter your email" required>
-                  <button type="submit" class="btn btn-primary" id="submit-btn">Share My Sports Circle</button>
+                  <button type="submit" class="btn btn-primary" id="submit-btn">Join the Waitlist</button>
                 </div>
                 <div id="turnstile-container" style="margin-top: 10px; margin-bottom: 10px;"></div>
-                <p class="share-email-note">You'll be added to the Fanlog list automatically.</p>
+                <p class="share-email-note">Join the Fanlog waitlist — we'll email you when we launch. You can share your Loyalty Card right after.</p>
               </form>
               <div id="share-email-success" style="display:none;">
-                <button id="b-share-sports-circle" class="btn btn-primary btn-block">Share My Sports Circle</button>
+                <button id="b-share-sports-circle" class="btn btn-primary btn-block">Share My Loyalty Card</button>
               </div>
             </div>
 
             <div class="card-actions-grid">
               <button id="b-download-png" class="btn btn-secondary btn-block">
-                <span>Download Sports Circle</span>
+                <span>Download Loyalty Card</span>
               </button>
               <button id="b-copy-link" class="btn btn-secondary btn-block">
                 <span>Copy Shareable Link</span>
@@ -381,7 +402,7 @@
             </div>
             
             <div class="restart-flow-box">
-              <button id="b-restart-flow" class="btn-link">Create a new Sports Circle</button>
+              <button id="b-restart-flow" class="btn-link">Create a new Loyalty Card</button>
             </div>
           </div>
         </div>
@@ -400,12 +421,7 @@
           <div class="section-header">
             <h2 class="section-title">The Fan Experience, Transformed.</h2>
             <p class="section-subtitle">Fanlog is your permanent, verified home for your life as a sports fan. Your teams, your loyalty, your memories, and your fan journey, all captured in one evolving identity.</p>
-            <p class="section-subtitle-beta">Fanlog is currently in beta. This is a preview of the Fanlog experience we're building, pre-loaded with your team picks. Explore your profile, discover your Sports Circle&#8482;, and see what your fandom looks like.</p>
-          </div>
-
-          <!-- Phone mockup layered up over the heading above (see .iphone-device-bezel) -->
-          <div class="iphone-device-bezel">
-            <iframe id="demo-mockup-iframe" src="" style="width: 390px; height: 844px; border: none; border-radius: 39px; overflow: hidden; display: block; margin: 2rem auto;" scrolling="no" sandbox="allow-scripts allow-same-origin allow-forms allow-popups-to-escape-sandbox"></iframe>
+            <p class="section-subtitle-beta">Fanlog is currently in beta. This is a preview of the Fanlog experience we're building, pre-loaded with your team picks. Explore your profile, discover your Loyalty Card, and see what your fandom looks like.</p>
           </div>
 
           <div class="showcase-features-grid">
@@ -416,8 +432,8 @@
             </div>
             <div class="showcase-feature-card">
               <div class="showcase-feature-icon">&#128309;</div>
-              <h3>Your Sports Circle&#8482;</h3>
-              <p>Turn your fandom into a shareable identity. Your Sports Circle&#8482; visualizes your teams, loyalty, and fan priorities in one unique graphic that evolves as your fandom grows.</p>
+              <h3>Your Loyalty Card</h3>
+              <p>Turn your fandom into a shareable identity. Your Loyalty Card visualizes your teams, loyalty, and fan priorities in one unique graphic that evolves as your fandom grows.</p>
             </div>
             <div class="showcase-feature-card">
               <div class="showcase-feature-icon">&#127903;&#65039;</div>
