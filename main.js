@@ -497,6 +497,23 @@ function getRandomQuizQuestions(num) {
   return shuffled.slice(0, num);
 }
 
+// Team ids the prebuilt demo app (public/app) recognizes — the original roster
+// before the league expansion. Any id outside this set makes the demo's lookup
+// throw (blank iframe), so updateDemoIframe remaps unsupported teams to a
+// supported one in the same league via toDemoTeamId().
+const DEMO_SUPPORTED_IDS = new Set([
+  'chiefs', 'eagles', 'cowboys', 'niners', 'packers', 'bills', 'seahawks', 'patriots', 'raiders', 'giants_nfl',
+  'lakers', 'celtics', 'warriors', 'bulls', 'raptors', 'heat', 'knicks', 'bucks', 'suns', 'nets',
+  'leafs', 'bruins', 'blackhawks', 'canadiens', 'canucks', 'knights', 'rangers', 'avalanche', 'oilers', 'penguins',
+  'yankees', 'redsox', 'dodgers', 'cubs', 'giants_mlb', 'bluejays', 'braves', 'astros', 'mets', 'cardinals',
+  'miami', 'galaxy', 'sounders', 'lafc', 'timbers', 'atlanta_utd', 'toronto_fc', 'nycfc', 'crew', 'cincinnati'
+]);
+const DEMO_LEAGUE_FALLBACK = { NFL: 'chiefs', NBA: 'lakers', NHL: 'leafs', MLB: 'yankees', MLS: 'miami', CFL: 'chiefs' };
+function toDemoTeamId(team) {
+  if (DEMO_SUPPORTED_IDS.has(team.id)) return team.id;
+  return DEMO_LEAGUE_FALLBACK[team.league] || 'chiefs';
+}
+
 // --- DOM ELEMENTS QUERY ---
 // Navigation and Buttons
 const btnStartFlow = document.getElementById('btn-start-flow');
@@ -632,12 +649,12 @@ function launchTryDemo() {
   setupStep5MainPage(randomProfile.overallScore);
 
   // Glide to the demo once the step transition has settled.
-  setTimeout(scrollToDemo, 650);
+  setTimeout(scrollToDemo, 250);
 }
 
 // Gentle eased scroll to an element (native 'smooth' is too abrupt for the
-// short hop to the phone demo). easeInOutQuad over ~1.1s.
-function smoothScrollTo(target, duration = 1100) {
+// short hop to the phone demo). easeInOutQuad — brisk but not a hard snap.
+function smoothScrollTo(target, duration = 600) {
   const el = typeof target === 'string' ? document.getElementById(target) : target;
   if (!el) return;
   const startY = window.scrollY;
@@ -670,23 +687,27 @@ document.getElementById('btn-header-try-demo')?.addEventListener('click', () => 
   }
 });
 
-btnHeaderWaitlist.addEventListener('click', () => {
+// Take the user to the waitlist signup. The form lives on the final card screen,
+// so if there's no circle yet (e.g. from the landing page) we spin up a quick
+// Surprise Circle first, then scroll to + focus the email field. Shared by the
+// header CTA and the landing-page "Join the Waitlist" button.
+function goToWaitlist() {
   const jumpToWaitlist = () => {
-    smoothScrollTo('share-email-area', 900);
+    smoothScrollTo('share-email-area', 700);
     const email = document.getElementById('fan-email');
-    if (email) setTimeout(() => email.focus({ preventScroll: true }), 900);
+    if (email) setTimeout(() => email.focus({ preventScroll: true }), 700);
   };
   const form = document.getElementById('share-email-area');
-  // The waitlist form lives on the final card screen. If we're not there yet
-  // (no circle built), spin up a quick Surprise Circle so there's a form to
-  // jump to, then scroll once it has rendered.
   if (form && form.offsetParent !== null) {
     jumpToWaitlist();
   } else {
     generateRandomCard();
     setTimeout(jumpToWaitlist, 700);
   }
-});
+}
+
+btnHeaderWaitlist.addEventListener('click', goToWaitlist);
+document.getElementById('btn-landing-waitlist')?.addEventListener('click', goToWaitlist);
 
 // Mobile header dropdown: the two CTAs collapse behind a hamburger on phones.
 const headerMenu = document.getElementById('header-menu');
@@ -1830,7 +1851,11 @@ function setupStep5MainPage(finalScore) {
       finalHandle = `@${rawInput.toLowerCase().replace(/\s+/g, '_')}`;
     }
 
-    const teamIds = selectedTeams.map(t => t.id).join(',');
+    // The prebuilt demo app (public/app) only knows the original roster; passing
+    // a newly-added team id makes its internal lookup throw and the iframe renders
+    // blank white. Map any unsupported id to a supported team in the same league
+    // so the demo always renders. Cosmetic only — the real card above is accurate.
+    const teamIds = selectedTeams.map(toDemoTeamId).join(',');
     // Pass scores alongside team IDs so the React app can mirror the exact same arc values
     const scores = selectedTeams.map(t => t.score).join(',');
     const userName = encodeURIComponent(finalName);
@@ -1862,8 +1887,10 @@ function setupStep5MainPage(finalScore) {
   });
 
   // Pre-render the share image so iOS can open the native share sheet
-  // synchronously on tap (see prepareShareFile). Fire-and-forget.
-  prepareShareFile();
+  // synchronously on tap (see prepareShareFile). Deferred to idle time so the
+  // heavy html2canvas pass doesn't jank the step transition / scroll-to-demo.
+  const scheduleShare = window.requestIdleCallback || ((fn) => setTimeout(fn, 400));
+  scheduleShare(() => prepareShareFile());
 }
 
 // --- SETUP EDITABLE FAN ID ON CARD ---

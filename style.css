@@ -27,6 +27,7 @@
   --border-radius-sm: 8px;
   --border-radius-md: 16px;
   --border-radius-lg: 24px;
+  --border-radius-xs: 6px;    /* small chips, badges, logos, progress bars */
   --border-radius-pill: 100px; /* fully-rounded chips, badges, pills */
 }
 
@@ -36,6 +37,15 @@
   margin: 0;
   padding: 0;
   scroll-behavior: smooth;
+}
+
+/* Desktop ran a bit small at 100%. Type is almost entirely rem-based, so
+   nudging the root font-size up scales the whole UI on larger screens (~120%)
+   without any horizontal overflow. Mobile keeps the 16px base. Tune to taste. */
+@media (min-width: 1024px) {
+  html {
+    font-size: 120%;
+  }
 }
 
 body {
@@ -175,7 +185,8 @@ button, input, select {
 .btn-lg {
   padding: 16px 36px;
   font-size: 1.125rem;
-  border-radius: var(--border-radius-md);
+  /* All button sizes share --border-radius-sm so corners match across the app. */
+  border-radius: var(--border-radius-sm);
 }
 
 .btn-block {
@@ -689,7 +700,7 @@ button, input, select {
   height: 24px;
   object-fit: contain;
   background-color: #ffffff;
-  border-radius: 4px;
+  border-radius: var(--border-radius-xs);
   padding: 1px;
 }
 
@@ -890,7 +901,7 @@ button, input, select {
 .quiz-progress-bar-container {
   background-color: var(--bg-tertiary);
   height: 6px;
-  border-radius: 3px;
+  border-radius: var(--border-radius-xs);
   overflow: hidden;
   position: relative;
 }
@@ -899,7 +910,7 @@ button, input, select {
   background: var(--team-primary);
   width: 0%;
   height: 100%;
-  border-radius: 3px;
+  border-radius: var(--border-radius-xs);
   transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.5s ease;
 }
 
@@ -996,7 +1007,7 @@ button, input, select {
   background-color: var(--bg-secondary);
   border: 1px solid var(--border-color);
   height: 12px;
-  border-radius: 6px;
+  border-radius: var(--border-radius-xs);
   overflow: hidden;
   margin-bottom: 32px;
 }
@@ -1011,7 +1022,7 @@ button, input, select {
   background: linear-gradient(90deg, var(--team-primary), var(--team-secondary));
   width: 0%;
   height: 100%;
-  border-radius: 6px;
+  border-radius: var(--border-radius-xs);
   transition: width 1.8s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -1228,7 +1239,7 @@ button, input, select {
   color: var(--text-main);
   background-color: rgba(255,255,255,0.05);
   padding: 3px 8px;
-  border-radius: 4px;
+  border-radius: var(--border-radius-xs);
   border: 1px solid rgba(255,255,255,0.05);
   max-width: 210px;
   word-break: break-word;
@@ -1694,7 +1705,7 @@ button, input, select {
   color: var(--team-primary);
   background-color: rgba(var(--team-primary), 0.1);
   padding: 4px 10px;
-  border-radius: 4px;
+  border-radius: var(--border-radius-xs);
   border: 1px solid rgba(var(--team-primary), 0.15);
   transition: all 0.5s ease;
 }
@@ -2181,7 +2192,7 @@ button, input, select {
   height: 40px;
   object-fit: contain;
   background-color: #ffffff;
-  border-radius: 8px;
+  border-radius: var(--border-radius-xs);
   padding: 4px;
 }
 
@@ -2594,7 +2605,7 @@ button, input, select {
 /* Editable Fan ID styles */
 .fcard-fan-id-editable {
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: var(--border-radius-xs);
   outline: none;
   transition: background-color 0.2s ease, box-shadow 0.2s ease;
   min-width: 60px;
@@ -2908,7 +2919,7 @@ button, input, select {
   background: none;
   border: none;
   padding: 4px 8px;
-  border-radius: 6px;
+  border-radius: var(--border-radius-sm);
   transition: var(--transition-smooth);
 }
 
