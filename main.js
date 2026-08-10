@@ -10,6 +10,14 @@ HubSDK.init({
   supabaseKey: import.meta.env.VITE_SUPABASE_ANON_KEY,
 });
 
+// --- REFERRAL ATTRIBUTION ---
+// Visitors arriving from a shared Sports Circle carry ?ref=<sharer handle>
+// (see getShareUrl). Capture it once on load so we can measure referral →
+// conversion: fire a landing event now, then stamp `referredBy` onto the
+// downstream conversion events (circle_created, waitlist_signup).
+const referredBy = new URLSearchParams(window.location.search).get('ref') || null;
+if (referredBy) HubSDK.track('referral_landing', { ref: referredBy });
+
 // --- STATE MANAGEMENT ---
 let selectedTeams = [];
 let currentQuizTeamIndex = 0;
@@ -390,8 +398,12 @@ function goToStep(stepIndex) {
   const targetStep = steps[stepIndex - 1];
   if (targetStep) {
     targetStep.classList.add('active');
-    // Scroll to top of step
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Only pull the page up when the user has actually scrolled down past the
+    // header, so advancing a step doesn't "snap" to the top when we're already
+    // there. Lets the step's fade/slide-in transition carry the motion instead.
+    if (window.scrollY > 80) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   }
 
   // Manage morph loop based on step
@@ -1593,9 +1605,24 @@ function setupStep5MainPage(finalScore) {
 
   // Load the iframe initially
   updateDemoIframe();
-  
+
   // Transition step
   goToStep(6);
+
+  // Reaching the final card = a completed Sports Circle. This is the key
+  // conversion event: the numerator for visitor→circle and the denominator
+  // for share rate. `referredBy` attributes it to a sharer when present.
+  const topTeamForTrack = selectedTeams.find(t => t.isTop) || selectedTeams[0];
+  HubSDK.track('circle_created', {
+    teamCount: selectedTeams.length,
+    topLeague: topTeamForTrack ? topTeamForTrack.league : null,
+    score: finalScore,
+    referredBy
+  });
+
+  // Pre-render the share image so iOS can open the native share sheet
+  // synchronously on tap (see prepareShareFile). Fire-and-forget.
+  prepareShareFile();
 }
 
 // --- SETUP EDITABLE FAN ID ON CARD ---
@@ -1815,8 +1842,11 @@ function generateSportsIdentityTagline(teams = selectedTeams) {
     }
   }
 
-  // 6. Highly Specific Team-Specific Tagline Matcher
-  if (topTeam && teamSpecificPhrases[topTeam.id]) {
+  // 6. Highly Specific Team-Specific Tagline Matcher — solo circles only.
+  // For multi-team circles we fall through to the circle-level archetypes below,
+  // so a fan's other teams aren't erased by their single top team's phrase
+  // (e.g. a Leafs + Canucks fan shouldn't just read "Leafs Nation Martyr").
+  if (count === 1 && topTeam && teamSpecificPhrases[topTeam.id]) {
     const phrase = teamSpecificPhrases[topTeam.id];
     if (topTeam.score >= 85) {
       return phrase.high;
@@ -1900,6 +1930,9 @@ function generateSportsIdentityTagline(teams = selectedTeams) {
 // becomes visible. The token it produces is sent to the waitlist-signup edge
 // function, which verifies it server-side before writing to the DB.
 let turnstileWidgetId = null;
+// One signup per page load (see setupWaitlistBindings). Module-scoped so the
+// restart flow can re-arm the form for a fresh Sports Circle.
+let waitlistSubmitted = false;
 function renderTurnstile() {
   if (turnstileWidgetId !== null) return; // already rendered
   const el = document.getElementById('turnstile-container');
@@ -1932,6 +1965,27 @@ function getTurnstileToken() {
 function resetTurnstile() {
   if (window.turnstile && turnstileWidgetId !== null) window.turnstile.reset(turnstileWidgetId);
 }
+// Tear the captcha widget down entirely and hide its container — used after a
+// successful signup so the form/widget closes (one signup per page load).
+function closeTurnstile() {
+  const el = document.getElementById('turnstile-container');
+  if (window.turnstile && turnstileWidgetId !== null) {
+    try { window.turnstile.remove(turnstileWidgetId); } catch { /* ignore */ }
+    turnstileWidgetId = null;
+  }
+  if (el) el.style.display = 'none';
+}
+// Re-arm the waitlist form after a flow restart: allow a new signup, re-enable
+// the submit button, and rebuild the captcha widget that closeTurnstile removed.
+function rearmWaitlistForm() {
+  waitlistSubmitted = false;
+  const submitBtn = document.getElementById('submit-btn');
+  if (submitBtn) submitBtn.removeAttribute('disabled');
+  const el = document.getElementById('turnstile-container');
+  if (el) el.style.display = '';
+  turnstileWidgetId = null; // force a fresh render
+  ensureTurnstile();
+}
 
 // --- WAITLIST DATA AND FORM SUBMISSION ENGINE ---
 // Safe read of the localStorage mirror. A corrupted value must never throw
@@ -1953,13 +2007,19 @@ function setupWaitlistBindings() {
   const submitBtn = document.getElementById('submit-btn');
   
   if (!shareEmailForm) return;
-  
+
+  // One signup per page load (module-scoped waitlistSubmitted): once submitted,
+  // the form/widget closes and further submits are ignored until refresh or an
+  // explicit flow restart (which re-arms via rearmWaitlistForm).
   shareEmailForm.addEventListener('submit', (e) => {
     e.preventDefault();
-    
+
     const email = fanEmailInput ? fanEmailInput.value.trim() : '';
     if (!email) return;
-    
+    if (waitlistSubmitted) return; // already signed up this session
+    waitlistSubmitted = true;
+    if (submitBtn) submitBtn.setAttribute('disabled', 'true');
+
     // Derive fan ID from email prefix (before @)
     const emailPrefix = email.split('@')[0];
     const fanIdEl = document.getElementById('f-card-name');
@@ -1967,6 +2027,8 @@ function setupWaitlistBindings() {
       const newId = '@' + emailPrefix;
       fanIdEl.textContent = newId;
       savedHandle = emailPrefix;
+      // Card handle just changed — refresh the pre-rendered share image.
+      prepareShareFile();
     }
     
     const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
@@ -1991,7 +2053,8 @@ function setupWaitlistBindings() {
       email,
       teams: teamsFormat,
       prediction: waitlistEntry.prediction,
-      overallScore
+      overallScore,
+      referredBy
     });
 
     // Durable, structured store via the captcha-gated edge function.
@@ -2025,7 +2088,10 @@ function setupWaitlistBindings() {
     
     if (shareEmailForm) shareEmailForm.style.display = 'none';
     if (shareEmailSuccess) shareEmailSuccess.style.display = 'block';
-    
+
+    // Close the captcha widget now that signup is done.
+    closeTurnstile();
+
     // Confetti
     if (topTeam) {
       confetti({
@@ -2046,9 +2112,9 @@ function setupWaitlistBindings() {
       const shareMessage = `My Sports Circle™: "${tagline}" — powered by Fanlog. Build yours:`;
       const device = getDeviceDetails();
       if (device.isMobile && navigator.share) {
-        navigator.share({ title: 'My Fanlog Sports Circle', text: shareMessage, url: window.location.origin }).catch(() => copyToClipboardText(shareMessage));
+        navigator.share({ title: 'My Fanlog Sports Circle', text: shareMessage, url: getShareUrl() }).catch(() => copyToClipboardText(shareMessage));
       } else {
-        copyToClipboardText(shareMessage + ' ' + window.location.origin);
+        copyToClipboardText(shareMessage + ' ' + getShareUrl());
       }
     });
   }
@@ -2061,11 +2127,12 @@ btnRestartFlow.addEventListener('click', () => {
   currentQuizTeamIndex = 0;
   savedHandle = '';
   
-  // Reset share email form
+  // Reset share email form (re-arm for a fresh signup + rebuild the captcha)
   const shareEmailForm = document.getElementById('share-email-form');
   const shareEmailSuccess = document.getElementById('share-email-success');
   if (shareEmailForm) shareEmailForm.style.display = '';
   if (shareEmailSuccess) shareEmailSuccess.style.display = 'none';
+  rearmWaitlistForm();
   
   // Reset since picker
   if (sincePickerWidget) {
@@ -2211,10 +2278,35 @@ function canvasToBlob(canvas) {
   });
 }
 
+// iOS Safari requires navigator.share() to be called synchronously inside the
+// user gesture — awaiting html2canvas first drops the transient activation and
+// the share sheet never opens (it silently fell back to a download). So we
+// pre-render the card PNG whenever the card is (re)drawn and cache the File,
+// letting the click handler call share() immediately with no awaits before it.
+let preparedShareFile = null;
+async function prepareShareFile() {
+  try {
+    const canvas = await captureCardCanvas();
+    const blob = await canvasToBlob(canvas);
+    preparedShareFile = new File([blob], `fanlog_card_${getCardFileName()}.png`, { type: 'image/png' });
+  } catch {
+    preparedShareFile = null; // fall back to on-demand capture at share time
+  }
+}
+
+// Shared Sports Circle links carry the sharer's handle as a referral code so
+// we can measure referral → conversion (see referredBy on load). Falls back to
+// 'anon' before the user has set a handle. utm_source lets xdesk segment share
+// traffic from organic visits.
+function getShareUrl() {
+  const ref = encodeURIComponent(savedHandle || 'anon');
+  return `${window.location.origin}/?ref=${ref}&utm_source=fanlog_share`;
+}
+
 function getShareText() {
   const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
   const tagline = generateSportsIdentityTagline();
-  return `Just calculated my FanLog Score! Archetype: "${tagline}". Top Team: ${topTeam ? topTeam.name : 'sports'}. Calculate yours on FanLog: ${window.location.origin}`;
+  return `Just calculated my FanLog Score! Archetype: "${tagline}". Top Team: ${topTeam ? topTeam.name : 'sports'}. Calculate yours on FanLog: ${getShareUrl()}`;
 }
 
 function getCardFileName() {
@@ -2250,35 +2342,15 @@ const canShareFiles = () => {
 const btnShareCard = document.getElementById('b-share-card');
 
 if (btnShareCard) {
-  btnShareCard.addEventListener('click', async () => {
-    const shareText = getShareText();
-
-    // Best path: share the actual card image through the native sheet
-    if (canShareFiles()) {
-      try {
-        const canvas = await captureCardCanvas();
-        const blob = await canvasToBlob(canvas);
-        const file = new File([blob], `fanlog_card_${getCardFileName()}.png`, { type: 'image/png' });
-        await navigator.share({
-          files: [file],
-          title: 'My FanLog Score Card',
-          text: shareText
-        });
-        HubSDK.track('card_shared', { platform: 'native_share_image' });
-        return;
-      } catch (err) {
-        if (err && err.name === 'AbortError') return; // user closed the sheet - not an error
-        console.warn('Image share failed, falling back:', err);
-      }
-    }
-
+  // Text + download fallback for when we can't open a native file-share sheet.
+  async function shareTextOrDownload(shareText) {
     // Next best: native sheet with text + link (older mobile browsers)
     if (navigator.share) {
       try {
         await navigator.share({
           title: 'FanLog Score Card',
           text: shareText,
-          url: window.location.origin
+          url: getShareUrl()
         });
         HubSDK.track('card_shared', { platform: 'native_share_text' });
         return;
@@ -2297,6 +2369,32 @@ if (btnShareCard) {
       // Image failed - still give them the caption
     }
     copyToClipboardText(shareText, btnShareCard, 'Image Saved + Caption Copied!');
+  }
+
+  btnShareCard.addEventListener('click', () => {
+    const shareText = getShareText();
+
+    // Best path: share the actual card image through the native sheet. This MUST
+    // be called synchronously in the click (no awaits before it) or iOS Safari
+    // drops the user activation and refuses to open the sheet — which is why the
+    // old await-then-share path silently fell back to a download on iPhone.
+    if (canShareFiles() && preparedShareFile) {
+      navigator.share({
+        files: [preparedShareFile],
+        title: 'My FanLog Score Card',
+        text: shareText
+      })
+        .then(() => HubSDK.track('card_shared', { platform: 'native_share_image' }))
+        .catch((err) => {
+          if (err && err.name === 'AbortError') return; // user closed the sheet
+          console.warn('Image share failed, falling back:', err);
+          shareTextOrDownload(shareText);
+        });
+      return;
+    }
+
+    // No prepared image yet (or files unsupported): text share / download.
+    shareTextOrDownload(shareText);
   });
 }
 
@@ -2336,10 +2434,10 @@ socialButtons.forEach(btn => {
     const shareMessage = `My FanLog archetype: "${tagline}" supporting ${teamName}. Mapped my teams on FanLog:`;
     
     if (platform === 'X / Twitter') {
-      const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareMessage)}&url=${encodeURIComponent(window.location.origin)}`;
+      const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareMessage)}&url=${encodeURIComponent(getShareUrl())}`;
       window.open(xUrl, '_blank');
     } else if (platform === 'iMessage') {
-      const smsUrl = `sms:&body=${encodeURIComponent(shareMessage + ' ' + window.location.origin)}`;
+      const smsUrl = `sms:&body=${encodeURIComponent(shareMessage + ' ' + getShareUrl())}`;
       window.location.href = smsUrl;
     } else if (platform === 'Instagram Stories') {
       // Instagram has no web share URL - route through the native share sheet
@@ -2350,7 +2448,7 @@ socialButtons.forEach(btn => {
         alert("Step 1: Save your card with the 'Download Image' button.\n\nStep 2: Open Instagram, start a Story, and pick the saved card from your gallery!");
       }
     } else {
-      alert(`Archetype: "${tagline}". Link copied: ${window.location.origin}`);
+      alert(`Archetype: "${tagline}". Link copied: ${getShareUrl()}`);
     }
   });
 });
@@ -2475,6 +2573,50 @@ function escapeHTML(str) {
 // 3 random fully-quizzed teams. Vite statically strips this entire block from
 // production builds (import.meta.env.DEV === false in `vite build`), so the
 // button only exists on the dev server.
+// Build a fully-populated random Sports Circle (3 quizzed teams) and jump
+// straight to the final card. Shared by the user-facing "Surprise Me" button
+// and the DEV shortcut below.
+function generateRandomCard() {
+  const allTeams = [];
+  for (const league in sportsData) {
+    sportsData[league].teams.forEach(t => allTeams.push({ team: t, league }));
+  }
+
+  const picks = [];
+  while (picks.length < 3) {
+    const candidate = allTeams[Math.floor(Math.random() * allTeams.length)];
+    if (!picks.some(p => p.team.id === candidate.team.id)) picks.push(candidate);
+  }
+
+  selectedTeams = picks.map(({ team, league }, i) => ({
+    id: team.id,
+    name: team.name,
+    short: team.short,
+    logo: team.logo,
+    city: team.city,
+    status: team.status,
+    primaryColor: team.primary,
+    secondaryColor: team.secondary,
+    isTop: i === 0,
+    league: league.toUpperCase(),
+    score: [92, 74, 55][i],
+    fanSince: String(1995 + Math.floor(Math.random() * 25)),
+    prediction: String(2026 + Math.floor(Math.random() * 10)),
+    quizQuestions: getRandomQuizQuestions(4)
+  }));
+
+  if (!savedHandle) savedHandle = sampleHandles[Math.floor(Math.random() * sampleHandles.length)];
+  userQuizAnswers = {};
+  recalculateTopTeam();
+
+  const topTeam = selectedTeams.find(t => t.isTop);
+  const others = selectedTeams.filter(t => !t.isTop);
+  const avgOthers = others.reduce((sum, t) => sum + t.score, 0) / others.length;
+  const finalScore = Math.round(topTeam.score * 0.6 + avgOthers * 0.4);
+
+  setupStep5MainPage(finalScore);
+}
+
 if (import.meta.env.DEV) {
   const devBtn = document.createElement('button');
   devBtn.id = 'dev-test-card-btn';
@@ -2489,46 +2631,7 @@ if (import.meta.env.DEV) {
     'box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4)'
   ].join(';');
 
-  devBtn.addEventListener('click', () => {
-    const allTeams = [];
-    for (const league in sportsData) {
-      sportsData[league].teams.forEach(t => allTeams.push({ team: t, league }));
-    }
-
-    const picks = [];
-    while (picks.length < 3) {
-      const candidate = allTeams[Math.floor(Math.random() * allTeams.length)];
-      if (!picks.some(p => p.team.id === candidate.team.id)) picks.push(candidate);
-    }
-
-    selectedTeams = picks.map(({ team, league }, i) => ({
-      id: team.id,
-      name: team.name,
-      short: team.short,
-      logo: team.logo,
-      city: team.city,
-      status: team.status,
-      primaryColor: team.primary,
-      secondaryColor: team.secondary,
-      isTop: i === 0,
-      league: league.toUpperCase(),
-      score: [92, 74, 55][i],
-      fanSince: String(1995 + Math.floor(Math.random() * 25)),
-      prediction: String(2026 + Math.floor(Math.random() * 10)),
-      quizQuestions: getRandomQuizQuestions(4)
-    }));
-
-    if (!savedHandle) savedHandle = '@TestFan';
-    userQuizAnswers = {};
-    recalculateTopTeam();
-
-    const topTeam = selectedTeams.find(t => t.isTop);
-    const others = selectedTeams.filter(t => !t.isTop);
-    const avgOthers = others.reduce((sum, t) => sum + t.score, 0) / others.length;
-    const finalScore = Math.round(topTeam.score * 0.6 + avgOthers * 0.4);
-
-    setupStep5MainPage(finalScore);
-  });
+  devBtn.addEventListener('click', generateRandomCard);
 
   document.body.appendChild(devBtn);
 }
