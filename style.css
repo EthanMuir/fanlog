@@ -41,10 +41,14 @@ body {
   background-color: var(--bg-primary);
   color: var(--text-main);
   font-family: var(--font-main);
+  /* Stop iOS Safari from inflating text on rotation to landscape. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
   line-height: 1.5;
   overflow-x: hidden;
   position: relative;
   min-height: 100vh;
+  min-height: 100dvh; /* iOS: dvh tracks the visible viewport as the toolbar moves */
 }
 
 a {
@@ -192,6 +196,7 @@ button, input, select {
 /* Header */
 .site-header {
   background-color: rgba(8, 9, 12, 0.8);
+  -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border-color);
   position: sticky;
@@ -205,6 +210,11 @@ button, input, select {
   max-width: 1200px;
   margin: 0 auto;
   padding: 16px 24px;
+  /* With viewport-fit=cover the header can sit under the notch in landscape;
+     nudge it clear of the top/side safe areas. */
+  padding-top: max(16px, env(safe-area-inset-top));
+  padding-left: max(24px, env(safe-area-inset-left));
+  padding-right: max(24px, env(safe-area-inset-right));
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -292,6 +302,7 @@ button, input, select {
   padding: 40px 24px;
   align-items: center;
   min-height: calc(100vh - 180px);
+  min-height: calc(100dvh - 180px);
 }
 
 @media (min-width: 1200px) {
@@ -503,7 +514,7 @@ button, input, select {
   border: 1.5px solid var(--border-color);
   border-radius: var(--border-radius-lg);
   color: var(--text-main);
-  font-size: 0.95rem;
+  font-size: 16px; /* >=16px so iOS Safari doesn't auto-zoom on focus */
   font-weight: 500;
   cursor: pointer;
   appearance: none;
@@ -890,6 +901,7 @@ button, input, select {
   align-items: center;
   justify-content: center;
   min-height: 80vh;
+  min-height: 80dvh;
 }
 
 .reveal-step-container {
@@ -1664,6 +1676,7 @@ button, input, select {
 .showcase-card-mini {
   border: 1px solid rgba(255, 255, 255, 0.05);
   background-color: rgba(255, 255, 255, 0.02);
+  -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   border-radius: var(--border-radius-sm);
   padding: 24px;
@@ -1704,6 +1717,7 @@ button, input, select {
   right: 0;
   bottom: 0;
   background-color: rgba(0, 0, 0, 0.85);
+  -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
   z-index: 1000;
   display: flex;
@@ -2539,7 +2553,7 @@ button, input, select {
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius-sm);
   color: var(--text-main);
-  font-size: 0.9rem;
+  font-size: 16px; /* >=16px so iOS Safari doesn't auto-zoom on focus */
   font-family: var(--font-main);
   transition: var(--transition-smooth);
   outline: none;
@@ -2745,6 +2759,7 @@ button, input, select {
   inset: 0;
   z-index: 500;
   background: rgba(0, 0, 0, 0.65);
+  -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
   opacity: 0;
   transition: opacity 0.25s ease;
@@ -2767,6 +2782,8 @@ button, input, select {
   background: var(--bg-secondary);
   border-top: 1px solid var(--border-color);
   border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+  /* Keep the sheet's content clear of the home indicator on notched iPhones. */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.6);
   transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden;
