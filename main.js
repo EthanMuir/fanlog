@@ -2534,9 +2534,9 @@ async function captureCardCanvas() {
 }
 
 // Encode the current circle into a compact URL-safe base64 token so a shared
-// link can (a) reopen the sharer's exact Loyalty Card in the app and (b) let the
-// /api/og function render a per-card share thumbnail without recomputing — hence
-// the archetype (a) and final score (sc) are baked in alongside the teams.
+// link can reopen the sharer's exact Loyalty Card in the app (loadSharedCircle
+// below only reads h/t, recomputing the archetype/score itself; a/sc are kept
+// for the still-available but currently unlinked /share + /api/og routes).
 function encodeCircle() {
   try {
     const scoreEl = document.getElementById('f-card-score');
@@ -2553,19 +2553,19 @@ function encodeCircle() {
   }
 }
 
-// Shared Loyalty Card links point at the /share route (not the app root) so that
-// link-unfurling crawlers get per-card Open Graph tags + a rendered thumbnail
-// (see api/share + api/og); /share then redirects real users into the app at
-// /?c=… . The link carries: the encoded circle (?c=) so it opens the sharer's
-// actual card; the sharer's handle (?ref=) for referral → conversion tracking;
-// and utm_source so xdesk can segment share traffic from organic visits.
+// Shared Loyalty Card links point straight at the app root so opening one
+// drops the recipient directly onto the sharer's card (loadSharedCircle()
+// below), no intermediate landing page or extra tap. The link carries: the
+// encoded circle (?c=) so it opens the sharer's actual card; the sharer's
+// handle (?ref=) for referral → conversion tracking; and utm_source so xdesk
+// can segment share traffic from organic visits.
 function getShareUrl() {
   const params = new URLSearchParams();
   params.set('ref', savedHandle || 'anon');
   params.set('utm_source', 'fanlog_share');
   const circle = encodeCircle();
   if (circle) params.set('c', circle);
-  return `${window.location.origin}/share?${params.toString()}`;
+  return `${window.location.origin}/?${params.toString()}`;
 }
 
 function getShareText() {
@@ -2592,18 +2592,27 @@ btnDownloadPng.addEventListener('click', async () => {
 });
 
 // --- SHARE: native share sheet with the card image where supported ---
-// Attaching the card as a file used to mean rendering it client-side with
-// html2canvas, which needed every team logo (hotlinked from a.espncdn.com) to
-// survive a CORS-clean canvas export — unreliable, and failed silently. /api/og
-// already renders the same card design server-side for the link-preview
-// thumbnail, with no browser CORS involved at all, so fetch that PNG instead:
-// one image, reused for both the file attachment and the link thumbnail.
+// html2canvas captures the actual rendered DOM, so — unlike a server-side
+// reimplementation — it's the real card, not an approximation. It needs
+// every team logo (hotlinked from a.espncdn.com) to survive a CORS-clean
+// canvas export, which captureCardCanvas()/inlineCardImages() already guards
+// against by pre-fetching each logo as a data URL before the capture. This
+// used to fail silently for an unrelated reason: getCardFileName() below
+// referenced an undefined variable and threw on every call, which this
+// function's catch swallowed — so it always looked like a capture failure.
+// That's fixed now, so this gets a real shot instead of a workaround.
 let preparedShareImage = null;
 async function prepareShareImage() {
   try {
-    const res = await fetch(`${window.location.origin}/api/og?c=${encodeURIComponent(encodeCircle())}`);
-    if (!res.ok) throw new Error(`og fetch failed: ${res.status}`);
-    const blob = await res.blob();
+    // A slow/unreachable logo host could otherwise hang this indefinitely
+    // (canShareFiles() && preparedShareImage never becomes true, but nothing
+    // ever surfaces that) — bound it so a stall just falls back to a
+    // link-only share instead of leaving the image "not ready" forever.
+    const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('capture timed out')), 8000));
+    const canvas = await Promise.race([captureCardCanvas(), timeout]);
+    const blob = await new Promise((resolve, reject) => {
+      canvas.toBlob(b => (b ? resolve(b) : reject(new Error('toBlob failed'))), 'image/png');
+    });
     preparedShareImage = new File([blob], `fanlog_card_${getCardFileName()}.png`, { type: 'image/png' });
   } catch {
     preparedShareImage = null; // fall back to link-only share
