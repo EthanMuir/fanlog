@@ -2230,6 +2230,10 @@ function renderTurnstile() {
   turnstileWidgetId = window.turnstile.render(el, {
     sitekey, // real sitekey lives in env only (.env.local locally, Vercel in prod)
     theme: 'dark',
+    // Keep the widget out of the way: it only becomes visible if Cloudflare
+    // actually needs to challenge the visitor. Verification still happens
+    // server-side, so this is purely a visual de-emphasis.
+    appearance: 'interaction-only',
   });
 }
 // Retry until the async Turnstile script has loaded (up to ~5s).
@@ -2371,7 +2375,11 @@ function setupWaitlistBindings() {
     if (verifiedBadge) verifiedBadge.style.display = 'inline-block';
     
     if (shareEmailForm) shareEmailForm.style.display = 'none';
-    if (shareEmailSuccess) shareEmailSuccess.style.display = 'block';
+    if (shareEmailSuccess) {
+      shareEmailSuccess.style.display = 'block';
+      // Make sure the share file is prepared eagerly as soon as success area is shown
+      prepareShareFile();
+    }
 
     // Close the captcha widget now that signup is done.
     closeTurnstile();
@@ -2387,20 +2395,12 @@ function setupWaitlistBindings() {
     }
   });
   
-  // Share My Loyalty Card button (shown after email submitted)
+  // Share My Loyalty Card button (shown after email submitted). Shares the actual
+  // card image via the native sheet so the picture attaches to Messages etc.;
+  // falls back to text + link / download where files can't be shared.
   const shareSportsCircleBtn = document.getElementById('b-share-sports-circle');
   if (shareSportsCircleBtn) {
-    shareSportsCircleBtn.addEventListener('click', () => {
-      const tagline = generateSportsIdentityTagline();
-      const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
-      const shareMessage = `My Loyalty Card: "${tagline}" — powered by Fanlog. Build yours:`;
-      const device = getDeviceDetails();
-      if (device.isMobile && navigator.share) {
-        navigator.share({ title: 'My Fanlog Loyalty Card', text: shareMessage, url: getShareUrl() }).catch(() => copyToClipboardText(shareMessage));
-      } else {
-        copyToClipboardText(shareMessage + ' ' + getShareUrl());
-      }
-    });
+    shareSportsCircleBtn.addEventListener('click', () => shareCardImage(shareSportsCircleBtn));
   }
 }
 
@@ -2649,64 +2649,54 @@ const canShareFiles = () => {
   }
 };
 
-const btnShareCard = document.getElementById('b-share-card');
-
-if (btnShareCard) {
-  // Text + download fallback for when we can't open a native file-share sheet.
-  async function shareTextOrDownload(shareText) {
-    // Next best: native sheet with text + link (older mobile browsers)
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title: 'FanLog Score Card',
-          text: shareText,
-          url: getShareUrl()
-        });
-        HubSDK.track('card_shared', { platform: 'native_share_text' });
-        return;
-      } catch (err) {
-        if (err && err.name === 'AbortError') return;
-      }
-    }
-
-    // Desktop fallback: download the image and copy the caption
-    HubSDK.track('card_shared', { platform: 'desktop_fallback' });
+// Text + link share (older mobile browsers), then desktop download + caption
+// copy. Used whenever we can't attach the actual image file.
+async function shareTextOrDownload(shareText, feedbackBtn = btnCopyLink) {
+  if (navigator.share) {
     try {
-      const canvas = await captureCardCanvas();
-      const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
-      triggerFileDownload(canvas, topTeam ? topTeam.id : 'fandom', getCardFileName());
-    } catch {
-      // Image failed - still give them the caption
-    }
-    copyToClipboardText(shareText, btnShareCard, 'Image Saved + Caption Copied!');
-  }
-
-  btnShareCard.addEventListener('click', () => {
-    const shareText = getShareText();
-
-    // Best path: share the actual card image through the native sheet. This MUST
-    // be called synchronously in the click (no awaits before it) or iOS Safari
-    // drops the user activation and refuses to open the sheet — which is why the
-    // old await-then-share path silently fell back to a download on iPhone.
-    if (canShareFiles() && preparedShareFile) {
-      navigator.share({
-        files: [preparedShareFile],
-        title: 'My FanLog Score Card',
-        text: shareText
-      })
-        .then(() => HubSDK.track('card_shared', { platform: 'native_share_image' }))
-        .catch((err) => {
-          if (err && err.name === 'AbortError') return; // user closed the sheet
-          console.warn('Image share failed, falling back:', err);
-          shareTextOrDownload(shareText);
-        });
+      await navigator.share({ title: 'FanLog Loyalty Card', text: shareText, url: getShareUrl() });
+      HubSDK.track('card_shared', { platform: 'native_share_text' });
       return;
+    } catch (err) {
+      if (err && err.name === 'AbortError') return;
     }
-
-    // No prepared image yet (or files unsupported): text share / download.
-    shareTextOrDownload(shareText);
-  });
+  }
+  HubSDK.track('card_shared', { platform: 'desktop_fallback' });
+  try {
+    const canvas = await captureCardCanvas();
+    const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
+    triggerFileDownload(canvas, topTeam ? topTeam.id : 'fandom', getCardFileName());
+  } catch {
+    // Image failed - still give them the caption
+  }
+  copyToClipboardText(shareText, feedbackBtn, 'Image Saved + Caption Copied!');
 }
+
+// Share the actual card IMAGE through the OS share sheet (Messages, Instagram,
+// WhatsApp, AirDrop…). On iOS this is the ONLY way to attach the image to a text
+// message — the sms: scheme is text-only. MUST run synchronously in the click
+// (no awaits before navigator.share) or iOS drops the user activation and won't
+// open the sheet, silently falling back to text/download. Relies on the PNG
+// pre-rendered in prepareShareFile().
+function shareCardImage(feedbackBtn = btnCopyLink) {
+  const shareText = getShareText();
+  if (canShareFiles() && preparedShareFile) {
+    navigator.share({ files: [preparedShareFile], title: 'My FanLog Loyalty Card', text: shareText })
+      .then(() => HubSDK.track('card_shared', { platform: 'native_share_image' }))
+      .catch((err) => {
+        if (err && err.name === 'AbortError') return; // user closed the sheet
+        console.warn('Image share failed, falling back:', err);
+        shareTextOrDownload(shareText, feedbackBtn);
+      });
+    return;
+  }
+  // No prepared image yet (or files unsupported): text share / download.
+  shareTextOrDownload(shareText, feedbackBtn);
+}
+
+// Optional dedicated share-card button (not always in the DOM).
+const btnShareCard = document.getElementById('b-share-card');
+if (btnShareCard) btnShareCard.addEventListener('click', () => shareCardImage(btnShareCard));
 
 // --- COPY LINK: always copies, no share sheet ---
 btnCopyLink.addEventListener('click', () => {
@@ -2746,17 +2736,8 @@ socialButtons.forEach(btn => {
     if (platform === 'X / Twitter') {
       const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareMessage)}&url=${encodeURIComponent(getShareUrl())}`;
       window.open(xUrl, '_blank');
-    } else if (platform === 'iMessage') {
-      const smsUrl = `sms:&body=${encodeURIComponent(shareMessage + ' ' + getShareUrl())}`;
-      window.location.href = smsUrl;
-    } else if (platform === 'Instagram Stories') {
-      // Instagram has no web share URL - route through the native share sheet
-      // when the browser can share files (the sheet includes Instagram)
-      if (canShareFiles() && btnShareCard) {
-        btnShareCard.click();
-      } else {
-        alert("Step 1: Save your card with the 'Download Image' button.\n\nStep 2: Open Instagram, start a Story, and pick the saved card from your gallery!");
-      }
+    } else if (platform === 'iMessage' || platform === 'Instagram Stories') {
+      shareCardImage(btn);
     } else {
       alert(`Archetype: "${tagline}". Link copied: ${getShareUrl()}`);
     }

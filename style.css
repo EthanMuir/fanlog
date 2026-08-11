@@ -1111,7 +1111,7 @@ button, input, select {
 }
 
 .social-share-horizontal {
-  display: flex;
+  display: none;
   gap: 12px;
 }
 
@@ -1981,8 +1981,6 @@ button, input, select {
     font-size: 3rem;
   }
   
-
-  
   .main-card-hero-row {
     grid-template-columns: 1fr;
     gap: 40px;
@@ -2002,6 +2000,17 @@ button, input, select {
   }
   .showcase-row.alternate .showcase-visual {
     order: 2;
+  }
+}
+
+@media (max-width: 768px) {
+  /* On mobile, native share covers destinations; hide redundant download button
+     and show the social quick-links that trigger the native sheet */
+  #b-download-png {
+    display: none;
+  }
+  .social-share-horizontal {
+    display: flex;
   }
 }
 
@@ -2035,6 +2044,42 @@ button, input, select {
   .morphing-card-wrapper {
     width: 290px;
     height: 450px;
+  }
+
+  /* The card scales down on phones but its internal padding/margins were fixed,
+     so the meta row (FAN SINCE / PREDICTION) and footer were pushed past the
+     card's overflow:hidden edge and clipped. Tighten the vertical spacing so
+     every row fits inside the smaller card. */
+  .fandom-index-card,
+  .fcard-face {
+    padding: 16px;
+  }
+
+  .fcard-inner-border {
+    padding: 14px;
+  }
+
+  .fcard-header {
+    margin-bottom: 14px;
+  }
+
+  .fcard-score-section {
+    margin-bottom: 16px;
+  }
+
+  .fcard-legend-container {
+    margin-top: 8px;
+    margin-bottom: 12px;
+    min-height: 0;
+  }
+
+  .fcard-meta-grid {
+    padding-top: 10px;
+    margin-bottom: 10px;
+  }
+
+  .fcard-footer {
+    padding-top: 8px;
   }
 
   .card-actions-grid {
@@ -2077,13 +2122,6 @@ button, input, select {
   .card-actions-grid,
   .restart-flow-box {
     width: 100%;
-  }
-
-  /* On phones the native share sheet covers every destination, so only
-     Share My Card + Download Image are offered */
-  #b-copy-link,
-  .social-share-horizontal {
-    display: none;
   }
 }
 
