@@ -1888,12 +1888,6 @@ function setupStep5MainPage(finalScore, isSharedView = false) {
     score: finalScore,
     referredBy
   });
-
-  // Pre-render the share image so iOS can open the native share sheet
-  // synchronously on tap (see prepareShareFile). Deferred to idle time so the
-  // heavy html2canvas pass doesn't jank the step transition / scroll-to-demo.
-  const scheduleShare = window.requestIdleCallback || ((fn) => setTimeout(fn, 400));
-  scheduleShare(() => prepareShareFile());
 }
 
 // --- SETUP EDITABLE FAN ID ON CARD ---
@@ -2337,8 +2331,6 @@ function setupWaitlistBindings() {
       fanIdEl.textContent = newId;
       savedHandle = emailPrefix;
       updateRevealFanId();
-      // Card handle just changed — refresh the pre-rendered share image.
-      prepareShareFile();
     }
     
     const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
@@ -2397,11 +2389,7 @@ function setupWaitlistBindings() {
     if (verifiedBadge) verifiedBadge.style.display = 'inline-block';
     
     if (shareEmailForm) shareEmailForm.style.display = 'none';
-    if (shareEmailSuccess) {
-      shareEmailSuccess.style.display = 'block';
-      // Make sure the share file is prepared eagerly as soon as success area is shown
-      prepareShareFile();
-    }
+    if (shareEmailSuccess) shareEmailSuccess.style.display = 'block';
 
     // Close the captcha widget now that signup is done.
     closeTurnstile();
@@ -2417,12 +2405,12 @@ function setupWaitlistBindings() {
     }
   });
   
-  // Share My Loyalty Card button (shown after email submitted). Shares the actual
-  // card image via the native sheet so the picture attaches to Messages etc.;
-  // falls back to text + link / download where files can't be shared.
+  // Share My Loyalty Card button (shown after email submitted). Shares the
+  // link via the native sheet; /share's Open Graph tags render the card as
+  // the link-preview thumbnail wherever it lands.
   const shareSportsCircleBtn = document.getElementById('b-share-sports-circle');
   if (shareSportsCircleBtn) {
-    shareSportsCircleBtn.addEventListener('click', () => shareCardImage(shareSportsCircleBtn));
+    shareSportsCircleBtn.addEventListener('click', () => shareCardLink(shareSportsCircleBtn));
   }
 }
 
@@ -2578,28 +2566,6 @@ async function captureCardCanvas() {
   }
 }
 
-function canvasToBlob(canvas) {
-  return new Promise((resolve, reject) => {
-    canvas.toBlob(blob => (blob ? resolve(blob) : reject(new Error('toBlob failed'))), 'image/png');
-  });
-}
-
-// iOS Safari requires navigator.share() to be called synchronously inside the
-// user gesture — awaiting html2canvas first drops the transient activation and
-// the share sheet never opens (it silently fell back to a download). So we
-// pre-render the card PNG whenever the card is (re)drawn and cache the File,
-// letting the click handler call share() immediately with no awaits before it.
-let preparedShareFile = null;
-async function prepareShareFile() {
-  try {
-    const canvas = await captureCardCanvas();
-    const blob = await canvasToBlob(canvas);
-    preparedShareFile = new File([blob], `fanlog_card_${getCardFileName()}.png`, { type: 'image/png' });
-  } catch {
-    preparedShareFile = null; // fall back to on-demand capture at share time
-  }
-}
-
 // Encode the current circle into a compact URL-safe base64 token so a shared
 // link can (a) reopen the sharer's exact Loyalty Card in the app and (b) let the
 // /api/og function render a per-card share thumbnail without recomputing — hence
@@ -2659,20 +2625,14 @@ btnDownloadPng.addEventListener('click', async () => {
   }
 });
 
-// --- SHARE: native share sheet with the card image where supported ---
+// --- SHARE: native share sheet with the card's link ---
 // On phones this opens the OS share panel (Messages, Instagram, WhatsApp,
-// AirDrop...) with the PNG attached. Falls back to text-only share, then to
+// AirDrop...) with the shareable link. Attaching the actual card PNG via the
+// Web Share API's `files` option turned out unreliable in practice (iOS
+// Safari would silently drop the whole share, no image and no error), so the
+// link itself carries the "thumbnail": /share's Open Graph tags render the
+// card as the link-preview image wherever it's pasted or sent. Falls back to
 // downloading the image + copying the caption on desktop.
-const canShareFiles = () => {
-  try {
-    return !!(navigator.canShare && navigator.canShare({ files: [new File([], 'card.png', { type: 'image/png' })] }));
-  } catch {
-    return false;
-  }
-};
-
-// Text + link share (older mobile browsers), then desktop download + caption
-// copy. Used whenever we can't attach the actual image file.
 async function shareTextOrDownload(shareText, feedbackBtn = btnCopyLink) {
   if (navigator.share) {
     try {
@@ -2700,36 +2660,15 @@ async function shareTextOrDownload(shareText, feedbackBtn = btnCopyLink) {
   copyToClipboardText(shareText, feedbackBtn, 'Image Saved + Caption Copied!');
 }
 
-// Share the actual card IMAGE through the OS share sheet (Messages, Instagram,
-// WhatsApp, AirDrop…). On iOS this is the ONLY way to attach the image to a text
-// message — the sms: scheme is text-only. MUST run synchronously in the click
-// (no awaits before navigator.share) or iOS drops the user activation and won't
-// open the sheet, silently falling back to text/download. Relies on the PNG
-// pre-rendered in prepareShareFile().
-function shareCardImage(feedbackBtn = btnCopyLink) {
-  const shareText = getShareText();
-  if (canShareFiles() && preparedShareFile) {
-    // Files + `url` together is unreliable on iOS Safari — some versions
-    // silently reject the whole share() call when both are present, which
-    // fell back to the text-only path below and dropped the image entirely.
-    // The attached PNG is already the "thumbnail" here, so skip `url` and
-    // keep the link as plain text in the caption instead.
-    navigator.share({ files: [preparedShareFile], title: 'My FanLog Loyalty Card', text: shareText })
-      .then(() => HubSDK.track('card_shared', { platform: 'native_share_image' }))
-      .catch((err) => {
-        if (err && err.name === 'AbortError') return; // user closed the sheet
-        console.warn('Image share failed, falling back:', err);
-        shareTextOrDownload(shareText, feedbackBtn);
-      });
-    return;
-  }
-  // No prepared image yet (or files unsupported): text share / download.
-  shareTextOrDownload(shareText, feedbackBtn);
+// Share the card's link through the OS share sheet (Messages, Instagram,
+// WhatsApp, AirDrop…). Thin wrapper kept for a clear call site at each button.
+function shareCardLink(feedbackBtn = btnCopyLink) {
+  shareTextOrDownload(getShareText(), feedbackBtn);
 }
 
 // Optional dedicated share-card button (not always in the DOM).
 const btnShareCard = document.getElementById('b-share-card');
-if (btnShareCard) btnShareCard.addEventListener('click', () => shareCardImage(btnShareCard));
+if (btnShareCard) btnShareCard.addEventListener('click', () => shareCardLink(btnShareCard));
 
 // --- COPY LINK: always copies, no share sheet ---
 btnCopyLink.addEventListener('click', () => {
@@ -2770,7 +2709,7 @@ socialButtons.forEach(btn => {
       const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareMessage)}&url=${encodeURIComponent(getShareUrl())}`;
       window.open(xUrl, '_blank');
     } else if (platform === 'iMessage' || platform === 'Instagram Stories') {
-      shareCardImage(btn);
+      shareCardLink(btn);
     } else {
       alert(`Archetype: "${tagline}". Link copied: ${getShareUrl()}`);
     }
