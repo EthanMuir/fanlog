@@ -497,23 +497,6 @@ function getRandomQuizQuestions(num) {
   return shuffled.slice(0, num);
 }
 
-// Team ids the prebuilt demo app (public/app) recognizes — the original roster
-// before the league expansion. Any id outside this set makes the demo's lookup
-// throw (blank iframe), so updateDemoIframe remaps unsupported teams to a
-// supported one in the same league via toDemoTeamId().
-const DEMO_SUPPORTED_IDS = new Set([
-  'chiefs', 'eagles', 'cowboys', 'niners', 'packers', 'bills', 'seahawks', 'patriots', 'raiders', 'giants_nfl',
-  'lakers', 'celtics', 'warriors', 'bulls', 'raptors', 'heat', 'knicks', 'bucks', 'suns', 'nets',
-  'leafs', 'bruins', 'blackhawks', 'canadiens', 'canucks', 'knights', 'rangers', 'avalanche', 'oilers', 'penguins',
-  'yankees', 'redsox', 'dodgers', 'cubs', 'giants_mlb', 'bluejays', 'braves', 'astros', 'mets', 'cardinals',
-  'miami', 'galaxy', 'sounders', 'lafc', 'timbers', 'atlanta_utd', 'toronto_fc', 'nycfc', 'crew', 'cincinnati'
-]);
-const DEMO_LEAGUE_FALLBACK = { NFL: 'chiefs', NBA: 'lakers', NHL: 'leafs', MLB: 'yankees', MLS: 'miami', CFL: 'chiefs' };
-function toDemoTeamId(team) {
-  if (DEMO_SUPPORTED_IDS.has(team.id)) return team.id;
-  return DEMO_LEAGUE_FALLBACK[team.league] || 'chiefs';
-}
-
 // --- DOM ELEMENTS QUERY ---
 // Navigation and Buttons
 const btnStartFlow = document.getElementById('btn-start-flow');
@@ -1851,11 +1834,9 @@ function setupStep5MainPage(finalScore) {
       finalHandle = `@${rawInput.toLowerCase().replace(/\s+/g, '_')}`;
     }
 
-    // The prebuilt demo app (public/app) only knows the original roster; passing
-    // a newly-added team id makes its internal lookup throw and the iframe renders
-    // blank white. Map any unsupported id to a supported team in the same league
-    // so the demo always renders. Cosmetic only — the real card above is accurate.
-    const teamIds = selectedTeams.map(toDemoTeamId).join(',');
+    // The demo app (public/app, built from ../fanlog_ui) mirrors the full roster,
+    // so we pass the real team ids straight through.
+    const teamIds = selectedTeams.map(t => t.id).join(',');
     // Pass scores alongside team IDs so the React app can mirror the exact same arc values
     const scores = selectedTeams.map(t => t.score).join(',');
     const userName = encodeURIComponent(finalName);
