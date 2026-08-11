@@ -3,6 +3,7 @@ import confetti from 'canvas-confetti';
 import html2canvas from 'html2canvas';
 import { HubSDK } from '@ethanhodge7373/hub-sdk';
 import { saveWaitlistEntry } from './waitlist.js';
+import { RAINBOW_RADII, RAINBOW_CX, RAINBOW_CY, getLuminance, getContrastAdaptedColor, getPredictionLabel } from './cardVisuals.js';
 
 HubSDK.init({
   appSlug: 'fanlog',
@@ -765,31 +766,6 @@ function getTeamDatabaseColors(teamName) {
   return null;
 }
 
-// --- HELPER: ADAPT COLOR FOR CONTRAST ON DARK BACKGROUNDS ---
-function getLuminance(hex) {
-  if (!hex) return 0;
-  let c = hex.replace('#', '');
-  if (c.length === 3) {
-    c = c[0] + c[0] + c[1] + c[1] + c[2] + c[2];
-  }
-  const r = parseInt(c.substring(0, 2), 16);
-  const g = parseInt(c.substring(2, 4), 16);
-  const b = parseInt(c.substring(4, 6), 16);
-  return (r * 299 + g * 587 + b * 114) / 1000;
-}
-
-function getContrastAdaptedColor(primaryHex, secondaryHex) {
-  const brightness = getLuminance(primaryHex);
-  // If brightness is below 45 (out of 255) and secondary is brighter, use secondary color
-  if (brightness < 45 && secondaryHex) {
-    const secBrightness = getLuminance(secondaryHex);
-    if (secBrightness > brightness) {
-      return secondaryHex;
-    }
-  }
-  return primaryHex;
-}
-
 // --- HELPER: APPLY TEAM THEME GLOBALLY ---
 // Single entry point for setting the page accent colors. Guarantees the accent
 // is never black/near-black (teams like the Raiders, Nets, or LAFC would
@@ -817,11 +793,11 @@ function initializeRainbowSVG(svgEl) {
   if (svgEl.querySelector('.rainbow-track')) return; // already initialized
   
   svgEl.innerHTML = ''; // clear any placeholder
-  
-  const radii = [130, 108, 86, 64];
-  const cx = 150;
-  const cy = 160;
-  
+
+  const radii = RAINBOW_RADII;
+  const cx = RAINBOW_CX;
+  const cy = RAINBOW_CY;
+
   // Create tracks group
   const gTracks = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   gTracks.setAttribute('class', 'rainbow-tracks-group');
@@ -905,11 +881,11 @@ function initializeRainbowSVG(svgEl) {
 function updateRainbowSVG(svgEl, sortedTeams) {
   if (!svgEl) return;
   initializeRainbowSVG(svgEl);
-  
-  const radii = [130, 108, 86, 64];
-  const cx = 150;
-  const cy = 160;
-  
+
+  const radii = RAINBOW_RADII;
+  const cx = RAINBOW_CX;
+  const cy = RAINBOW_CY;
+
   radii.forEach((r, idx) => {
     const track = svgEl.querySelector(`.rainbow-track-${idx}`);
     const fill = svgEl.querySelector(`.rainbow-fill-${idx}`);
@@ -1024,27 +1000,6 @@ function updateLegendChips(legendContainer, sortedTeams) {
     `;
     legendContainer.appendChild(chip);
   });
-}
-
-// --- HELPER: GET LEAGUE SPECIFIC CHAMPIONSHIP LABEL ---
-function getPredictionLabel(league, teamShort) {
-  const prefix = teamShort ? `${teamShort} ` : "";
-  if (!league) return `${prefix}PREDICTION`;
-  const l = league.toLowerCase();
-  switch (l) {
-    case "nhl":
-      return `${prefix}CUP PREDICTION`;
-    case "nfl":
-      return `${prefix}BOWL PREDICTION`;
-    case "nba":
-      return `${prefix}TITLE PREDICTION`;
-    case "mlb":
-      return `${prefix}SERIES PREDICTION`;
-    case "mls":
-      return `${prefix}CUP PREDICTION`;
-    default:
-      return `${prefix}PREDICTION`;
-  }
 }
 
 // --- RENDER DYNAMIC CARD LAYOUT ---
@@ -1888,6 +1843,12 @@ function setupStep5MainPage(finalScore, isSharedView = false) {
     score: finalScore,
     referredBy
   });
+
+  // Pre-fetch the share image so iOS can open the native share sheet
+  // synchronously on tap (see prepareShareImage). Deferred to idle time so it
+  // doesn't compete with the step transition / scroll-to-demo.
+  const scheduleShare = window.requestIdleCallback || ((fn) => setTimeout(fn, 400));
+  scheduleShare(() => prepareShareImage());
 }
 
 // --- SETUP EDITABLE FAN ID ON CARD ---
@@ -2331,6 +2292,8 @@ function setupWaitlistBindings() {
       fanIdEl.textContent = newId;
       savedHandle = emailPrefix;
       updateRevealFanId();
+      // Card handle just changed — refresh the pre-fetched share image.
+      prepareShareImage();
     }
     
     const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
@@ -2389,7 +2352,11 @@ function setupWaitlistBindings() {
     if (verifiedBadge) verifiedBadge.style.display = 'inline-block';
     
     if (shareEmailForm) shareEmailForm.style.display = 'none';
-    if (shareEmailSuccess) shareEmailSuccess.style.display = 'block';
+    if (shareEmailSuccess) {
+      shareEmailSuccess.style.display = 'block';
+      // Make sure the share image is fetched eagerly as soon as the success area is shown.
+      prepareShareImage();
+    }
 
     // Close the captcha widget now that signup is done.
     closeTurnstile();
@@ -2410,7 +2377,7 @@ function setupWaitlistBindings() {
   // the link-preview thumbnail wherever it lands.
   const shareSportsCircleBtn = document.getElementById('b-share-sports-circle');
   if (shareSportsCircleBtn) {
-    shareSportsCircleBtn.addEventListener('click', () => shareCardLink(shareSportsCircleBtn));
+    shareSportsCircleBtn.addEventListener('click', () => shareCardImage(shareSportsCircleBtn));
   }
 }
 
@@ -2608,8 +2575,7 @@ function getShareText() {
 }
 
 function getCardFileName() {
-  const nameVal = fanNameInput ? fanNameInput.value : savedHandle;
-  return nameVal ? nameVal.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'guest';
+  return savedHandle ? savedHandle.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'guest';
 }
 
 // --- DOWNLOAD: always saves the PNG file ---
@@ -2625,14 +2591,35 @@ btnDownloadPng.addEventListener('click', async () => {
   }
 });
 
-// --- SHARE: native share sheet with the card's link ---
-// On phones this opens the OS share panel (Messages, Instagram, WhatsApp,
-// AirDrop...) with the shareable link. Attaching the actual card PNG via the
-// Web Share API's `files` option turned out unreliable in practice (iOS
-// Safari would silently drop the whole share, no image and no error), so the
-// link itself carries the "thumbnail": /share's Open Graph tags render the
-// card as the link-preview image wherever it's pasted or sent. Falls back to
-// downloading the image + copying the caption on desktop.
+// --- SHARE: native share sheet with the card image where supported ---
+// Attaching the card as a file used to mean rendering it client-side with
+// html2canvas, which needed every team logo (hotlinked from a.espncdn.com) to
+// survive a CORS-clean canvas export — unreliable, and failed silently. /api/og
+// already renders the same card design server-side for the link-preview
+// thumbnail, with no browser CORS involved at all, so fetch that PNG instead:
+// one image, reused for both the file attachment and the link thumbnail.
+let preparedShareImage = null;
+async function prepareShareImage() {
+  try {
+    const res = await fetch(`${window.location.origin}/api/og?c=${encodeURIComponent(encodeCircle())}`);
+    if (!res.ok) throw new Error(`og fetch failed: ${res.status}`);
+    const blob = await res.blob();
+    preparedShareImage = new File([blob], `fanlog_card_${getCardFileName()}.png`, { type: 'image/png' });
+  } catch {
+    preparedShareImage = null; // fall back to link-only share
+  }
+}
+
+const canShareFiles = () => {
+  try {
+    return !!(navigator.canShare && navigator.canShare({ files: [new File([], 'card.png', { type: 'image/png' })] }));
+  } catch {
+    return false;
+  }
+};
+
+// Text + link share (no attachable image), then desktop download + caption
+// copy. Used whenever we can't attach the actual image file.
 async function shareTextOrDownload(shareText, feedbackBtn = btnCopyLink) {
   if (navigator.share) {
     try {
@@ -2660,15 +2647,27 @@ async function shareTextOrDownload(shareText, feedbackBtn = btnCopyLink) {
   copyToClipboardText(shareText, feedbackBtn, 'Image Saved + Caption Copied!');
 }
 
-// Share the card's link through the OS share sheet (Messages, Instagram,
-// WhatsApp, AirDrop…). Thin wrapper kept for a clear call site at each button.
-function shareCardLink(feedbackBtn = btnCopyLink) {
-  shareTextOrDownload(getShareText(), feedbackBtn);
+// Share the card image + caption (with the link in the text) through the OS
+// share sheet (Messages, Instagram, WhatsApp, AirDrop…). Falls back to a
+// link-only share when file-sharing isn't supported or the image isn't ready.
+function shareCardImage(feedbackBtn = btnCopyLink) {
+  const shareText = getShareText();
+  if (canShareFiles() && preparedShareImage) {
+    navigator.share({ files: [preparedShareImage], title: 'My FanLog Loyalty Card', text: shareText })
+      .then(() => HubSDK.track('card_shared', { platform: 'native_share_image' }))
+      .catch((err) => {
+        if (err && err.name === 'AbortError') return; // user closed the sheet
+        console.warn('Image share failed, falling back:', err);
+        shareTextOrDownload(shareText, feedbackBtn);
+      });
+    return;
+  }
+  shareTextOrDownload(shareText, feedbackBtn);
 }
 
 // Optional dedicated share-card button (not always in the DOM).
 const btnShareCard = document.getElementById('b-share-card');
-if (btnShareCard) btnShareCard.addEventListener('click', () => shareCardLink(btnShareCard));
+if (btnShareCard) btnShareCard.addEventListener('click', () => shareCardImage(btnShareCard));
 
 // --- COPY LINK: always copies, no share sheet ---
 btnCopyLink.addEventListener('click', () => {
@@ -2709,7 +2708,7 @@ socialButtons.forEach(btn => {
       const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareMessage)}&url=${encodeURIComponent(getShareUrl())}`;
       window.open(xUrl, '_blank');
     } else if (platform === 'iMessage' || platform === 'Instagram Stories') {
-      shareCardLink(btn);
+      shareCardImage(btn);
     } else {
       alert(`Archetype: "${tagline}". Link copied: ${getShareUrl()}`);
     }

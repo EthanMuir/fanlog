@@ -13,6 +13,7 @@
 // transform/react dependency question entirely.
 import { ImageResponse } from '@vercel/og';
 import { sportsData } from '../teams.js';
+import { RAINBOW_RADII, RAINBOW_CX, RAINBOW_CY, getContrastAdaptedColor, getPredictionLabel } from '../cardVisuals.js';
 
 export const config = { runtime: 'edge' };
 
@@ -39,43 +40,14 @@ function teamById(id) {
 // satori can fetch them. ESPN logos are already absolute https URLs.
 const absLogo = (logo, origin) => (logo.startsWith('/') ? origin + logo : logo);
 
-// Mirror of the client getLuminance()/getContrastAdaptedColor() — picks
-// whichever of a team's two colors reads against the card's dark background.
-function getLuminance(hex) {
-  if (!hex) return 0;
-  let c = hex.replace('#', '');
-  if (c.length === 3) c = c[0] + c[0] + c[1] + c[1] + c[2] + c[2];
-  const r = parseInt(c.substring(0, 2), 16);
-  const g = parseInt(c.substring(2, 4), 16);
-  const b = parseInt(c.substring(4, 6), 16);
-  return (r * 299 + g * 587 + b * 114) / 1000;
-}
-
-function getContrastAdaptedColor(primaryHex, secondaryHex) {
-  const brightness = getLuminance(primaryHex);
-  if (brightness < 45 && secondaryHex && getLuminance(secondaryHex) > brightness) return secondaryHex;
-  return primaryHex;
-}
-
-function predictionLabel(league, short) {
-  const prefix = short ? `${short} ` : '';
-  switch ((league || '').toLowerCase()) {
-    case 'nhl': return `${prefix}CUP`;
-    case 'nfl': return `${prefix}BOWL`;
-    case 'nba': return `${prefix}TITLE`;
-    case 'mlb': return `${prefix}SERIES`;
-    case 'mls': return `${prefix}CUP`;
-    default: return `${prefix}TITLE`;
-  }
-}
 
 // Same geometry as the in-app rainbow gauge (initializeRainbowSVG/updateRainbowSVG
 // in main.js): four concentric half-circle tracks, each filled proportional to
 // that team's score, with a logo badge at the fill's leading edge.
 function rainbowGauge(teams, origin) {
-  const radii = [130, 108, 86, 64];
-  const cx = 150;
-  const cy = 160;
+  const radii = RAINBOW_RADII;
+  const cx = RAINBOW_CX;
+  const cy = RAINBOW_CY;
   const arcs = radii.map((r, i) => {
     const team = teams[i];
     const C = 2 * Math.PI * r;
@@ -173,22 +145,22 @@ export default function handler(req) {
   const topTeam = teams.find(t => t.top) || teams[0] || null;
   const cardAccent = topTeam ? getContrastAdaptedColor(topTeam.primary, topTeam.secondary) : '#5B8DEF';
 
+  // The image IS the card — no separate background/frame around it, so it
+  // reads as "the loyalty card" itself rather than a card floating on a
+  // decorative banner. One flat surface, filling essentially the whole
+  // 1200x630 canvas, with just enough side margin to keep the (portrait)
+  // content column from stretching edge to edge and looking distorted.
   const tree = h(
     'div',
     {
       style: {
-        position: 'relative', width: '1200px', height: '630px', display: 'flex',
-        alignItems: 'center', justifyContent: 'center', backgroundColor: '#0A0B0F',
-        backgroundImage: `radial-gradient(circle at 50% 15%, ${cardAccent}33 0%, #0A0B0F 62%)`,
-        fontFamily: 'sans-serif'
+        position: 'relative', width: '1200px', height: '630px', display: 'flex', flexDirection: 'column',
+        alignItems: 'center', backgroundColor: '#0e1016',
+        backgroundImage: `radial-gradient(circle at 50% 0%, ${cardAccent}22 0%, #0e1016 70%)`,
+        padding: '18px 0', fontFamily: 'sans-serif'
       }
     },
-    h('div', {
-      style: {
-        position: 'relative', width: '420px', height: '608px', display: 'flex', flexDirection: 'column',
-        backgroundColor: '#0e1016', border: '1.5px solid rgba(255,255,255,0.14)', borderRadius: 24, padding: '24px 28px'
-      }
-    },
+    h('div', { style: { display: 'flex', flexDirection: 'column', width: '460px', height: '100%' } },
       h('div', { style: { display: 'flex', width: '100%', justifyContent: 'center', marginBottom: 14 } },
         h('div', {
           style: {
@@ -213,7 +185,7 @@ export default function handler(req) {
           h('div', { style: { display: 'flex', flex: 1, justifyContent: 'center' } },
             metaBox(topTeam ? `${topTeam.short} SINCE` : 'FAN SINCE', topTeam ? topTeam.year : null)),
           h('div', { style: { display: 'flex', flex: 1, justifyContent: 'center' } },
-            metaBox(topTeam ? predictionLabel(topTeam.league, topTeam.short) + ' PREDICTION' : 'PREDICTION', topTeam ? topTeam.prediction : null))
+            metaBox(topTeam ? getPredictionLabel(topTeam.league, topTeam.short) : 'PREDICTION', topTeam ? topTeam.prediction : null))
         )
       ),
       h('div', {
