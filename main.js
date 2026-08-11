@@ -531,7 +531,11 @@ const revealTicker = document.getElementById('reveal-ticker');
 
 // --- WAKE UP ROUTINES ---
 document.addEventListener('DOMContentLoaded', () => {
-  goToStep(1);
+  // A shared-card link (?c=...) already jumped to step 6 with the sharer's
+  // card via loadSharedCircle() below, at module-evaluation time (module
+  // scripts run before DOMContentLoaded fires). Don't stomp that by resetting
+  // to the welcome step and restarting its random morphing loop.
+  if (!sharedCircleLoaded) goToStep(1);
   setupWaitlistBindings();
   setupNotifyMeBinding();
   initYearPickers();
@@ -2654,7 +2658,13 @@ const canShareFiles = () => {
 async function shareTextOrDownload(shareText, feedbackBtn = btnCopyLink) {
   if (navigator.share) {
     try {
-      await navigator.share({ title: 'FanLog Loyalty Card', text: shareText, url: getShareUrl() });
+      const shareUrl = getShareUrl();
+      // Pass the link as its own `url` field instead of only embedded inside
+      // `text` — targets like Messages only generate a rich link-preview
+      // thumbnail for a URL that arrives isolated like this, not one buried
+      // mid-sentence, so keep the caption's copy of it out to avoid a
+      // duplicate plain-text link.
+      await navigator.share({ title: 'FanLog Loyalty Card', text: shareText.replace(shareUrl, '').trim(), url: shareUrl });
       HubSDK.track('card_shared', { platform: 'native_share_text' });
       return;
     } catch (err) {
@@ -2680,8 +2690,12 @@ async function shareTextOrDownload(shareText, feedbackBtn = btnCopyLink) {
 // pre-rendered in prepareShareFile().
 function shareCardImage(feedbackBtn = btnCopyLink) {
   const shareText = getShareText();
+  const shareUrl = getShareUrl();
   if (canShareFiles() && preparedShareFile) {
-    navigator.share({ files: [preparedShareFile], title: 'My FanLog Loyalty Card', text: shareText })
+    // `url` carries the link on its own so Messages/etc. can render its own
+    // thumbnail preview for it, separate from the attached card image; the
+    // caption drops the URL it would otherwise duplicate from shareText.
+    navigator.share({ files: [preparedShareFile], title: 'My FanLog Loyalty Card', text: shareText.replace(shareUrl, '').trim(), url: shareUrl })
       .then(() => HubSDK.track('card_shared', { platform: 'native_share_image' }))
       .catch((err) => {
         if (err && err.name === 'AbortError') return; // user closed the sheet
@@ -2989,4 +3003,4 @@ function loadSharedCircle(enc) {
 }
 
 const sharedCircleParam = new URLSearchParams(window.location.search).get('c');
-if (sharedCircleParam) loadSharedCircle(sharedCircleParam);
+const sharedCircleLoaded = sharedCircleParam ? loadSharedCircle(sharedCircleParam) : false;

@@ -2004,13 +2004,12 @@ button, input, select {
 }
 
 @media (max-width: 768px) {
-  /* On mobile, native share covers destinations; hide redundant download button
-     and show the social quick-links that trigger the native sheet */
-  #b-download-png {
-    display: none;
-  }
+  /* On phones the only share path is "Join the Waitlist" -> "Share My Loyalty
+     Card", which opens the native OS share sheet. Hide the download/copy-link
+     grid and the X/IG/MSG row there so there's just one share CTA. */
+  .card-actions-grid,
   .social-share-horizontal {
-    display: flex;
+    display: none;
   }
 }
 
@@ -2042,14 +2041,15 @@ button, input, select {
 
   .fcard-scene,
   .morphing-card-wrapper {
-    width: 290px;
-    height: 450px;
+    width: 300px;
+    height: 500px;
   }
 
   /* The card scales down on phones but its internal padding/margins were fixed,
      so the meta row (FAN SINCE / PREDICTION) and footer were pushed past the
-     card's overflow:hidden edge and clipped. Tighten the vertical spacing so
-     every row fits inside the smaller card. */
+     card's overflow:hidden edge and clipped. Tighten the vertical spacing (and
+     grow the card itself) so every row fits inside the smaller card even with
+     a two-line archetype tagline and a wrapped legend row. */
   .fandom-index-card,
   .fcard-face {
     padding: 16px;
@@ -2060,26 +2060,35 @@ button, input, select {
   }
 
   .fcard-header {
-    margin-bottom: 14px;
+    margin-bottom: 10px;
   }
 
   .fcard-score-section {
     margin-bottom: 16px;
   }
 
+  .fcard-rainbow-wrapper {
+    margin-top: 4px;
+    margin-bottom: 4px;
+  }
+
+  .rainbow-chart-container {
+    max-width: 210px;
+  }
+
   .fcard-legend-container {
-    margin-top: 8px;
-    margin-bottom: 12px;
+    margin-top: 6px;
+    margin-bottom: 8px;
     min-height: 0;
   }
 
   .fcard-meta-grid {
-    padding-top: 10px;
-    margin-bottom: 10px;
+    padding-top: 8px;
+    margin-bottom: 8px;
   }
 
   .fcard-footer {
-    padding-top: 8px;
+    padding-top: 6px;
   }
 
   .card-actions-grid {
@@ -2638,6 +2647,28 @@ button, input, select {
   font-weight: 700;
   color: var(--text-muted);
   letter-spacing: 0.5px;
+}
+
+/* .fcard-header-sports-circle / .fcard-footer-sports-circle carry the same
+   specificity as .fcard-header / .fcard-footer (each a single class) but are
+   declared later in the file, so they were winning the cascade on phones and
+   silently re-widening the spacing the @media (max-width: 576px) block above
+   tightened — pushing the meta row + footer back past the card's
+   overflow:hidden edge. Re-apply the tightened values here, after both
+   unconditional rules, so they actually take effect on small screens. */
+@media (max-width: 576px) {
+  .fcard-header-sports-circle {
+    margin-bottom: 10px;
+  }
+
+  .fcard-footer-sports-circle {
+    padding-top: 6px;
+  }
+
+  .fcard-archetype-large {
+    font-size: 0.8rem;
+    padding: 5px 12px;
+  }
 }
 
 /* Editable Fan ID styles */

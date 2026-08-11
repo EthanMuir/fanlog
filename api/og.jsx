@@ -60,6 +60,7 @@ export default function handler(req) {
     (
       <div
         style={{
+          position: 'relative',
           width: '1200px',
           height: '630px',
           display: 'flex',
