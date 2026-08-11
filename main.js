@@ -1795,13 +1795,13 @@ function updateRevealFanId() {
   el.style.display = h ? '' : 'none';
 }
 
-function setupStep5MainPage(finalScore) {
+function setupStep5MainPage(finalScore, isSharedView = false) {
   const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
   const tagline = generateSportsIdentityTagline();
-  
+
   // Fan ID defaults to @GUEST, will be updated from email prefix once user enters email
   const displayHandle = savedHandle ? (savedHandle.startsWith('@') ? savedHandle : `@${savedHandle}`) : "@GUEST";
-  
+
   // Form profile object
   const userProfile = {
     name: displayHandle,
@@ -1814,16 +1814,34 @@ function setupStep5MainPage(finalScore) {
     secondaryColor: topTeam.secondaryColor,
     teams: selectedTeams
   };
-  
+
   // Render card
   updateCardDOM(document.getElementById('final-card'), userProfile, true);
-  
+
   // Setup editable Fan ID on the card
   setupEditableFanId();
 
   // Show the Fan ID in the "card is ready" heading area.
   updateRevealFanId();
-  
+
+  // Someone landing here via a shared link is looking at another fan's card,
+  // not one they just built — swap the "Your Loyalty Card Is Ready" copy for
+  // messaging that makes that clear and points them toward building their own.
+  // Re-applied (or reset back to the default) on every render so it doesn't
+  // linger once a visitor restarts the flow to build their own card.
+  const titleEl = document.querySelector('.main-reveal-title');
+  const descEl = document.querySelector('.main-reveal-desc');
+  const noteEl = document.querySelector('.share-email-note');
+  if (isSharedView) {
+    if (titleEl) titleEl.textContent = `${displayHandle}'s Loyalty Card`;
+    if (descEl) descEl.textContent = `This is ${displayHandle}'s FanLog Score, revealing who they are as a fan. Join the waitlist to build your own Loyalty Card and see how your fandom compares.`;
+    if (noteEl) noteEl.textContent = "Join the Fanlog waitlist to build your own Loyalty Card — we'll email you when we launch.";
+  } else {
+    if (titleEl) titleEl.textContent = 'Your Loyalty Card Is Ready.';
+    if (descEl) descEl.textContent = 'Your Fanlog Score reveals who you are as a fan, from your loyalty level to the teams that define you. Join the waitlist to save your Loyalty Card, then share it and see how your fandom compares.';
+    if (noteEl) noteEl.textContent = "Join the Fanlog waitlist — we'll email you when we launch. You can share your Loyalty Card right after.";
+  }
+
   // Helper to load or refresh the demo iframe with current user state
   function updateDemoIframe() {
     const rawInput = savedHandle ? savedHandle.trim() : "";
@@ -2690,12 +2708,13 @@ async function shareTextOrDownload(shareText, feedbackBtn = btnCopyLink) {
 // pre-rendered in prepareShareFile().
 function shareCardImage(feedbackBtn = btnCopyLink) {
   const shareText = getShareText();
-  const shareUrl = getShareUrl();
   if (canShareFiles() && preparedShareFile) {
-    // `url` carries the link on its own so Messages/etc. can render its own
-    // thumbnail preview for it, separate from the attached card image; the
-    // caption drops the URL it would otherwise duplicate from shareText.
-    navigator.share({ files: [preparedShareFile], title: 'My FanLog Loyalty Card', text: shareText.replace(shareUrl, '').trim(), url: shareUrl })
+    // Files + `url` together is unreliable on iOS Safari — some versions
+    // silently reject the whole share() call when both are present, which
+    // fell back to the text-only path below and dropped the image entirely.
+    // The attached PNG is already the "thumbnail" here, so skip `url` and
+    // keep the link as plain text in the caption instead.
+    navigator.share({ files: [preparedShareFile], title: 'My FanLog Loyalty Card', text: shareText })
       .then(() => HubSDK.track('card_shared', { platform: 'native_share_image' }))
       .catch((err) => {
         if (err && err.name === 'AbortError') return; // user closed the sheet
@@ -2995,7 +3014,7 @@ function loadSharedCircle(enc) {
       ? Math.round(top.score * 0.6 + (others.reduce((s, t) => s + t.score, 0) / others.length) * 0.4)
       : top.score;
 
-    setupStep5MainPage(finalScore);
+    setupStep5MainPage(finalScore, true);
     return true;
   } catch {
     return false;
