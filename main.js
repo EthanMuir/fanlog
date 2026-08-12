@@ -2512,15 +2512,13 @@ async function captureCardCanvas() {
   }
 }
 
-// Shrinks the captured card to ~65% of the exported image, padded out to full
+// Shrinks the captured card to ~80% of the exported image, padded out to full
 // size with the card's own background color. Messaging apps often crop a
 // shared/attached image to fit their own thumbnail shape, and without this
 // margin that crop could eat into the card itself; the padding gives it room
 // to crop into instead. Same color as the card (not a contrasting border) so
-// it reads as extra background, not a visible frame. The top kept getting
-// clipped specifically, so most of the vertical padding goes above the card
-// (pushing it down) rather than splitting it evenly top/bottom.
-function padCardCanvas(canvas, cardFraction = 0.65, topPaddingShare = 0.75) {
+// it reads as extra background, not a visible frame.
+function padCardCanvas(canvas, cardFraction = 0.8) {
   const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg-secondary').trim() || '#0e1016';
   const padded = document.createElement('canvas');
   padded.width = Math.round(canvas.width / cardFraction);
@@ -2528,9 +2526,7 @@ function padCardCanvas(canvas, cardFraction = 0.65, topPaddingShare = 0.75) {
   const ctx = padded.getContext('2d');
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, padded.width, padded.height);
-  const offsetX = Math.round((padded.width - canvas.width) / 2);
-  const offsetY = Math.round((padded.height - canvas.height) * topPaddingShare);
-  ctx.drawImage(canvas, offsetX, offsetY);
+  ctx.drawImage(canvas, Math.round((padded.width - canvas.width) / 2), Math.round((padded.height - canvas.height) / 2));
   return padded;
 }
 
