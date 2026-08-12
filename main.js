@@ -532,11 +532,7 @@ const revealTicker = document.getElementById('reveal-ticker');
 
 // --- WAKE UP ROUTINES ---
 document.addEventListener('DOMContentLoaded', () => {
-  // A shared-card link (?c=...) already jumped to step 6 with the sharer's
-  // card via loadSharedCircle() below, at module-evaluation time (module
-  // scripts run before DOMContentLoaded fires). Don't stomp that by resetting
-  // to the welcome step and restarting its random morphing loop.
-  if (!sharedCircleLoaded) goToStep(1);
+  goToStep(1);
   setupWaitlistBindings();
   setupNotifyMeBinding();
   initYearPickers();
@@ -1750,7 +1746,7 @@ function updateRevealFanId() {
   el.style.display = h ? '' : 'none';
 }
 
-function setupStep5MainPage(finalScore, isSharedView = false) {
+function setupStep5MainPage(finalScore) {
   const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
   const tagline = generateSportsIdentityTagline();
 
@@ -1778,24 +1774,6 @@ function setupStep5MainPage(finalScore, isSharedView = false) {
 
   // Show the Fan ID in the "card is ready" heading area.
   updateRevealFanId();
-
-  // Someone landing here via a shared link is looking at another fan's card,
-  // not one they just built — swap the "Your Loyalty Card Is Ready" copy for
-  // messaging that makes that clear and points them toward building their own.
-  // Re-applied (or reset back to the default) on every render so it doesn't
-  // linger once a visitor restarts the flow to build their own card.
-  const titleEl = document.querySelector('.main-reveal-title');
-  const descEl = document.querySelector('.main-reveal-desc');
-  const noteEl = document.querySelector('.share-email-note');
-  if (isSharedView) {
-    if (titleEl) titleEl.textContent = `${displayHandle}'s Loyalty Card`;
-    if (descEl) descEl.textContent = `This is ${displayHandle}'s FanLog Score, revealing who they are as a fan. Join the waitlist to build your own Loyalty Card and see how your fandom compares.`;
-    if (noteEl) noteEl.textContent = "Join the Fanlog waitlist to build your own Loyalty Card — we'll email you when we launch.";
-  } else {
-    if (titleEl) titleEl.textContent = 'Your Loyalty Card Is Ready.';
-    if (descEl) descEl.textContent = 'Your Fanlog Score reveals who you are as a fan, from your loyalty level to the teams that define you. Join the waitlist to save your Loyalty Card, then share it and see how your fandom compares.';
-    if (noteEl) noteEl.textContent = "Join the Fanlog waitlist — we'll email you when we launch. You can share your Loyalty Card right after.";
-  }
 
   // Helper to load or refresh the demo iframe with current user state
   function updateDemoIframe() {
@@ -2520,12 +2498,13 @@ async function captureCardCanvas() {
   }
 
   try {
-    return await html2canvas(frontFace, {
+    const rawCanvas = await html2canvas(frontFace, {
       scale: 3,
       backgroundColor: null,
       useCORS: true,
       logging: false
     });
+    return padCardCanvas(rawCanvas);
   } finally {
     cardElement.style.transform = originalTransform;
     frontFace.style.cssText = originalFaceCss;
@@ -2533,10 +2512,29 @@ async function captureCardCanvas() {
   }
 }
 
-// Encode the current circle into a compact URL-safe base64 token so a shared
-// link can reopen the sharer's exact Loyalty Card in the app (loadSharedCircle
-// below only reads h/t, recomputing the archetype/score itself; a/sc are kept
-// for the still-available but currently unlinked /share + /api/og routes).
+// Shrinks the captured card to ~80% of the exported image, padded out to full
+// size with the card's own background color. Messaging apps often crop a
+// shared/attached image to fit their own thumbnail shape, and without this
+// margin that crop could eat into the card itself; the padding gives it room
+// to crop into instead. Same color as the card (not a contrasting border) so
+// it reads as extra background, not a visible frame.
+function padCardCanvas(canvas, cardFraction = 0.8) {
+  const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg-secondary').trim() || '#0e1016';
+  const padded = document.createElement('canvas');
+  padded.width = Math.round(canvas.width / cardFraction);
+  padded.height = Math.round(canvas.height / cardFraction);
+  const ctx = padded.getContext('2d');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, padded.width, padded.height);
+  ctx.drawImage(canvas, Math.round((padded.width - canvas.width) / 2), Math.round((padded.height - canvas.height) / 2));
+  return padded;
+}
+
+// Encode the current circle into a compact URL-safe base64 token, still baked
+// into the share link (see getShareUrl below) even though nothing currently
+// reads it back out — kept for the still-available but currently unlinked
+// /share + /api/og routes, and so the link format doesn't need to change if
+// deep-linking into a shared card ever comes back.
 function encodeCircle() {
   try {
     const scoreEl = document.getElementById('f-card-score');
@@ -2553,12 +2551,11 @@ function encodeCircle() {
   }
 }
 
-// Shared Loyalty Card links point straight at the app root so opening one
-// drops the recipient directly onto the sharer's card (loadSharedCircle()
-// below), no intermediate landing page or extra tap. The link carries: the
-// encoded circle (?c=) so it opens the sharer's actual card; the sharer's
-// handle (?ref=) for referral → conversion tracking; and utm_source so xdesk
-// can segment share traffic from organic visits.
+// Shared Loyalty Card links point at the app root and open the normal
+// landing page — they no longer drop the recipient onto the sharer's card.
+// The link still carries the encoded circle (?c=, currently unread) and the
+// sharer's handle (?ref=) for referral → conversion tracking, plus
+// utm_source so xdesk can segment share traffic from organic visits.
 function getShareUrl() {
   const params = new URLSearchParams();
   params.set('ref', savedHandle || 'anon');
@@ -2917,59 +2914,8 @@ if (import.meta.env.DEV) {
   document.body.appendChild(devBtn);
 }
 
-// --- SHARED CIRCLE DEEP LINK ---
-// Reconstruct a full team object from its id by looking it up across leagues.
-function buildTeamFromId(id) {
-  for (const lg in sportsData) {
-    const t = sportsData[lg].teams.find(x => x.id === id);
-    if (t) {
-      return {
-        id: t.id, name: t.name, short: t.short, logo: t.logo, city: t.city,
-        status: t.status, primaryColor: t.primary, secondaryColor: t.secondary,
-        league: lg.toUpperCase()
-      };
-    }
-  }
-  return null;
-}
-
-// Rebuild the sharer's circle from a ?c= token and jump straight to their card,
-// so a shared link opens *their* Loyalty Card instead of a blank landing page.
-function loadSharedCircle(enc) {
-  try {
-    const b64 = enc.replace(/-/g, '+').replace(/_/g, '/');
-    const payload = JSON.parse(decodeURIComponent(escape(atob(b64))));
-    const teams = (payload.t || []).map(tt => {
-      const base = buildTeamFromId(tt.i);
-      if (!base) return null;
-      return {
-        ...base,
-        score: Number(tt.s) || 0,
-        fanSince: String(tt.y || ''),
-        prediction: String(tt.p || ''),
-        isTop: !!tt.top,
-        quizQuestions: getRandomQuizQuestions(4)
-      };
-    }).filter(Boolean);
-    if (!teams.length) return false;
-    if (!teams.some(t => t.isTop)) teams[0].isTop = true;
-
-    selectedTeams = teams;
-    savedHandle = payload.h || savedHandle;
-    userQuizAnswers = {};
-
-    const top = selectedTeams.find(t => t.isTop);
-    const others = selectedTeams.filter(t => !t.isTop);
-    const finalScore = others.length
-      ? Math.round(top.score * 0.6 + (others.reduce((s, t) => s + t.score, 0) / others.length) * 0.4)
-      : top.score;
-
-    setupStep5MainPage(finalScore, true);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-const sharedCircleParam = new URLSearchParams(window.location.search).get('c');
-const sharedCircleLoaded = sharedCircleParam ? loadSharedCircle(sharedCircleParam) : false;
+// A shared card link still carries ?c=... (see encodeCircle/getShareUrl) so
+// the token stays available if this ever needs to come back, but visitors no
+// longer get dropped straight onto the sharer's card — every link opens the
+// normal landing page. ?ref= is still read separately above for referral
+// attribution regardless.
