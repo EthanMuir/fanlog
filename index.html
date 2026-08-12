@@ -6,19 +6,19 @@
   <title>FanLog - Your Sports Identity</title>
   <link rel="icon" type="image/svg+xml" href="fanlog_logo.svg">
   <meta name="description" content="Create your Loyalty Card and share your sports identity. Show every team you support, your loyalty, and the moments that define you.">
-  <!-- Open Graph / Twitter share preview. These are STATIC (crawlers don't run
-       JS) so every shared link shows the same branded thumbnail. Per-card
-       thumbnails would need a serverless OG-image route (see notes). Set
-       og:image to an absolute production URL once the domain is finalized. -->
+  <!-- Open Graph / Twitter share preview — text only, deliberately no image.
+       This is the same URL a shared Loyalty Card link points at (see
+       getShareUrl() in main.js), and that share already attaches the actual
+       card as a real photo via the native share sheet; a second, generic
+       link-preview thumbnail here would just be redundant/misleading
+       alongside it, so there's no og:image/twitter:image to unfurl into one. -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="FanLog">
   <meta property="og:title" content="FanLog — Your Sports Identity">
   <meta property="og:description" content="Build your Loyalty Card and reveal your FanLog Score. Every team you support, your loyalty, and the moments that define you.">
-  <meta property="og:image" content="/og-image.jpg">
-  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="FanLog — Your Sports Identity">
   <meta name="twitter:description" content="Build your Loyalty Card and reveal your FanLog Score.">
-  <meta name="twitter:image" content="/og-image.jpg">
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

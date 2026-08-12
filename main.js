@@ -2662,7 +2662,10 @@ async function shareTextOrDownload(shareText, feedbackBtn = btnCopyLink) {
 function shareCardImage(feedbackBtn = btnCopyLink) {
   const shareText = getShareText();
   if (canShareFiles() && preparedShareImage) {
-    navigator.share({ files: [preparedShareImage], title: 'My FanLog Loyalty Card', text: shareText })
+    // No `title` — some share targets treat it as a separate leading item
+    // ahead of the photo+caption, which is the likeliest reason the image
+    // was appearing before the caption text instead of after it.
+    navigator.share({ files: [preparedShareImage], text: shareText })
       .then(() => HubSDK.track('card_shared', { platform: 'native_share_image' }))
       .catch((err) => {
         if (err && err.name === 'AbortError') return; // user closed the sheet
