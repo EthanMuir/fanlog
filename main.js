@@ -2535,40 +2535,21 @@ function padCardCanvas(canvas, cardFraction = 0.8) {
 // reads it back out — kept for the still-available but currently unlinked
 // /share + /api/og routes, and so the link format doesn't need to change if
 // deep-linking into a shared card ever comes back.
-function encodeCircle() {
-  try {
-    const scoreEl = document.getElementById('f-card-score');
-    const payload = {
-      h: savedHandle || '',
-      a: generateSportsIdentityTagline(),
-      sc: scoreEl ? (parseInt(scoreEl.textContent, 10) || 0) : 0,
-      t: selectedTeams.map(t => ({ i: t.id, s: t.score, y: t.fanSince, p: t.prediction, top: t.isTop ? 1 : 0 }))
-    };
-    return btoa(unescape(encodeURIComponent(JSON.stringify(payload))))
-      .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  } catch {
-    return '';
-  }
-}
-
 // Shared Loyalty Card links point at the app root and open the normal
 // landing page — they no longer drop the recipient onto the sharer's card.
-// The link still carries the encoded circle (?c=, currently unread) and the
-// sharer's handle (?ref=) for referral → conversion tracking, plus
-// utm_source so xdesk can segment share traffic from organic visits.
+// The link carries the sharer's handle (?ref=) for referral → conversion
+// tracking, plus utm_source so xdesk can segment share traffic from organic
+// visits. Kept short on purpose (no encoded card data) since it also has to
+// fit cleanly inside the share caption on phones.
 function getShareUrl() {
   const params = new URLSearchParams();
   params.set('ref', savedHandle || 'anon');
   params.set('utm_source', 'fanlog_share');
-  const circle = encodeCircle();
-  if (circle) params.set('c', circle);
   return `${window.location.origin}/?${params.toString()}`;
 }
 
 function getShareText() {
-  const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
-  const tagline = generateSportsIdentityTagline();
-  return `Just calculated my FanLog Score! Archetype: "${tagline}". Top Team: ${topTeam ? topTeam.name : 'sports'}. Calculate yours on FanLog: ${getShareUrl()}`;
+  return `Judge my Sports Loyalty Card. 👇\nI'll judge yours. ${getShareUrl()}`;
 }
 
 function getCardFileName() {
@@ -2914,8 +2895,6 @@ if (import.meta.env.DEV) {
   document.body.appendChild(devBtn);
 }
 
-// A shared card link still carries ?c=... (see encodeCircle/getShareUrl) so
-// the token stays available if this ever needs to come back, but visitors no
-// longer get dropped straight onto the sharer's card — every link opens the
-// normal landing page. ?ref= is still read separately above for referral
-// attribution regardless.
+// Shared card links no longer drop visitors straight onto the sharer's card
+// — every link opens the normal landing page. ?ref= is still read separately
+// above for referral attribution regardless.

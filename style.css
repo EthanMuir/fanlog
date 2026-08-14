@@ -221,10 +221,10 @@ button, input, select {
 .header-container {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 16px 24px;
+  padding: 10px 24px;
   /* With viewport-fit=cover the header can sit under the notch in landscape;
      nudge it clear of the top/side safe areas. */
-  padding-top: max(16px, env(safe-area-inset-top));
+  padding-top: max(10px, env(safe-area-inset-top));
   padding-left: max(24px, env(safe-area-inset-left));
   padding-right: max(24px, env(safe-area-inset-right));
   display: flex;
@@ -241,8 +241,8 @@ button, input, select {
 }
 
 .logo-img {
-  width: 46px;
-  height: 46px;
+  width: 34px;
+  height: 34px;
   object-fit: contain;
   filter: drop-shadow(0 0 10px color-mix(in srgb, var(--team-primary) 35%, transparent));
   transition: filter 0.5s ease;
@@ -251,7 +251,7 @@ button, input, select {
 .logo-text {
   font-family: var(--font-mono);
   font-weight: 700;
-  font-size: 1.55rem;
+  font-size: 1.25rem;
   letter-spacing: -0.5px;
 }
 
@@ -480,14 +480,15 @@ button, input, select {
 
 @media (max-width: 992px) {
   .welcome-hero-grid {
-    grid-template-areas: 
+    grid-template-areas:
       "left"
       "right"
       "actions";
     grid-template-columns: 1fr;
     grid-template-rows: auto auto auto;
-    gap: 40px;
-    padding: 60px 24px;
+    gap: 20px;
+    padding: 24px 24px;
+    min-height: auto;
     text-align: center;
   }
   .welcome-hero-left {
@@ -500,6 +501,7 @@ button, input, select {
   }
   .welcome-title {
     font-size: 3rem;
+    margin-bottom: 10px;
   }
   .welcome-subtitle {
     margin-bottom: 0;
@@ -2004,8 +2006,8 @@ button, input, select {
 }
 
 @media (max-width: 768px) {
-  /* On phones the only share path is "Join the Waitlist" -> "Share My Loyalty
-     Card", which opens the native OS share sheet. Hide the download/copy-link
+  /* On phones the only share path is "Share" -> "Share My Loyalty Card",
+     which opens the native OS share sheet. Hide the download/copy-link
      grid and the X/IG/MSG row there so there's just one share CTA. */
   .card-actions-grid,
   .social-share-horizontal {
