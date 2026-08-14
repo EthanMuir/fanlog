@@ -6,12 +6,11 @@
   <title>FanLog - Your Sports Identity</title>
   <link rel="icon" type="image/svg+xml" href="fanlog_logo.svg">
   <meta name="description" content="Create your Loyalty Card and share your sports identity. Show every team you support, your loyalty, and the moments that define you.">
-  <!-- Open Graph / Twitter share preview — text only, deliberately no image.
-       This is the same URL a shared Loyalty Card link points at (see
-       getShareUrl() in main.js), and that share already attaches the actual
-       card as a real photo via the native share sheet; a second, generic
-       link-preview thumbnail here would just be redundant/misleading
-       alongside it, so there's no og:image/twitter:image to unfurl into one. -->
+  <!-- Generic, text-only Open Graph tags for direct/organic visits to the app
+       root. Shared Loyalty Card links point at /share instead (see
+       getShareUrl() in main.js), which serves its own per-card og:image via
+       /api/og — that's the one that renders the actual card as a link-preview
+       thumbnail, not this one. -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="FanLog">
   <meta property="og:title" content="FanLog — Your Sports Identity">
