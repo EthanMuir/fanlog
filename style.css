@@ -2753,31 +2753,6 @@ button, input, select {
 }
 
 /* ==========================================================================
-   Notify Me Section
-   ========================================================================== */
-
-.notify-capture-section {
-  padding: 48px 24px;
-  border-top: 1px solid var(--border-color);
-  text-align: center;
-}
-
-.notify-section-inner {
-  max-width: 480px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-}
-
-.notify-text {
-  font-size: 1.1rem;
-  color: var(--text-muted);
-  line-height: 1.5;
-}
-
-/* ==========================================================================
    Showcase Section Redesign Styles
    ========================================================================== */
 

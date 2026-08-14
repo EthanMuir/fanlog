@@ -534,7 +534,6 @@ const revealTicker = document.getElementById('reveal-ticker');
 document.addEventListener('DOMContentLoaded', () => {
   goToStep(1);
   setupWaitlistBindings();
-  setupNotifyMeBinding();
   initYearPickers();
 });
 
@@ -2375,23 +2374,6 @@ btnRestartFlow.addEventListener('click', () => {
   goToStep(2);
 });
 
-// --- NOTIFY ME BUTTON ---
-function setupNotifyMeBinding() {
-  const notifyBtn = document.getElementById('btn-notify-me');
-  if (!notifyBtn) return;
-  notifyBtn.addEventListener('click', () => {
-    const email = prompt('Enter your email to be notified when new features are added:');
-    if (!email || !email.includes('@')) return;
-    let notifyList = JSON.parse(localStorage.getItem('fanlog_notify') || '[]');
-    if (!notifyList.includes(email.toLowerCase())) {
-      notifyList.push(email.toLowerCase());
-      localStorage.setItem('fanlog_notify', JSON.stringify(notifyList));
-    }
-    notifyBtn.textContent = 'You\'re on the list!';
-    notifyBtn.disabled = true;
-  });
-}
-
 // --- DEVICE DETECTION UTILITY ---
 function getDeviceDetails() {
   const ua = navigator.userAgent;
@@ -2593,8 +2575,10 @@ async function shareTextOrDownload(shareText, feedbackBtn = btnCopyLink) {
       // `text` — targets like Messages only generate a rich link-preview
       // thumbnail for a URL that arrives isolated like this, not one buried
       // mid-sentence, so keep the caption's copy of it out to avoid a
-      // duplicate plain-text link.
-      await navigator.share({ title: 'FanLog Loyalty Card', text: shareText.replace(shareUrl, '').trim(), url: shareUrl });
+      // duplicate plain-text link. No `title` field: Messages was placing the
+      // url ahead of the caption text when one was set, putting the link
+      // above the message instead of below it.
+      await navigator.share({ text: shareText.replace(shareUrl, '').trim(), url: shareUrl });
       HubSDK.track('card_shared', { platform: 'native_share_text' });
       return;
     } catch (err) {
