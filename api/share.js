@@ -51,7 +51,11 @@ export default async function handler(req) {
   // intermediate card-preview page first.
   const ua = req.headers.get('user-agent') || '';
   if (!BOT_UA_PATTERN.test(ua)) {
-    return Response.redirect(appUrl, 302);
+    // Explicit no-store here too, not just on the HTML branch below — same
+    // reasoning: this response depends on the request's User-Agent, so a
+    // shared cache keyed by URL alone must never be allowed to serve it
+    // (or the bot-branch response) to the wrong kind of requester.
+    return new Response(null, { status: 302, headers: { Location: appUrl, 'cache-control': 'no-store' } });
   }
 
   const ogImageParam = id ? `id=${encodeURIComponent(id)}` : c ? `c=${encodeURIComponent(c)}` : '';
@@ -120,8 +124,16 @@ export default async function handler(req) {
   return new Response(html, {
     headers: {
       'content-type': 'text/html; charset=utf-8',
-      // Cache the unfurl HTML briefly so repeated crawler hits are cheap.
-      'cache-control': 'public, max-age=300, s-maxage=300'
+      // Deliberately NOT cached (was `public, max-age=300, s-maxage=300`
+      // before this response started branching on User-Agent). A shared
+      // CDN cache is keyed by URL only, not by who's asking — so Apple's
+      // link-preview bot pre-fetching this URL the moment a message sends
+      // would get this HTML page cached for 5 minutes, and a real person
+      // tapping the *same* URL moments later would be served that same
+      // cached bot response straight from the edge, never reaching the
+      // redirect check below. This has to run fresh on every request for
+      // the branch to mean anything.
+      'cache-control': 'no-store'
     }
   });
 }
