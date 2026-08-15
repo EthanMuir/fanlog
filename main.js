@@ -2503,7 +2503,10 @@ function padCardCanvas(canvas, cardFraction = 0.8) {
 
 // Encode the current circle into a compact URL-safe base64 token so /share
 // and /api/og (see api/share.js, api/og.js) can render this card's actual
-// design as the link's Open Graph image.
+// design as the link's Open Graph image. Deliberately only what those two
+// actually read (handle, archetype, overall score, and per-team id/score/
+// top-flag) — this ends up baked into the visible share link, so anything
+// extra here is pure length with no payoff.
 function encodeCircle() {
   try {
     const scoreEl = document.getElementById('f-card-score');
@@ -2511,7 +2514,7 @@ function encodeCircle() {
       h: savedHandle || '',
       a: generateSportsIdentityTagline(),
       sc: scoreEl ? (parseInt(scoreEl.textContent, 10) || 0) : 0,
-      t: selectedTeams.map(t => ({ i: t.id, s: t.score, y: t.fanSince, p: t.prediction, top: t.isTop ? 1 : 0 }))
+      t: selectedTeams.map(t => ({ i: t.id, s: t.score, top: t.isTop ? 1 : 0 }))
     };
     return btoa(unescape(encodeURIComponent(JSON.stringify(payload))))
       .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');

@@ -122,7 +122,7 @@ export default async function handler(req) {
       teams = (p.t || [])
         .map(tt => {
           const base = teamById(tt.i);
-          return base ? { ...base, score: Number(tt.s) || 0, year: tt.y, prediction: tt.p, top: !!tt.top } : null;
+          return base ? { ...base, score: Number(tt.s) || 0, top: !!tt.top } : null;
         })
         .filter(Boolean)
         .sort((a, b) => (b.top ? 1 : 0) - (a.top ? 1 : 0));
