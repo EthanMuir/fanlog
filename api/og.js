@@ -1,7 +1,10 @@
 // Per-card Open Graph image. Vercel Edge function that renders a 1200x630 PNG
-// mirroring the actual in-app Loyalty Card (rainbow score gauge, team legend,
-// meta row, footer) straight from the ?c= token, so link unfurls in iMessage /
-// WhatsApp / Discord / X show the real card design instead of a generic image.
+// straight from the ?c= token, so link unfurls in iMessage / WhatsApp /
+// Discord / X show the real card's colors, fonts, and data instead of a
+// generic image. Laid out landscape (identity bar on top, gauge + team/meta
+// split left-right below) to use the full 1200x630 canvas — the in-app card
+// itself is a narrow portrait shape, which left most of this canvas empty
+// when it was reproduced verbatim as a centered column here.
 // Reached via api/share's <meta property="og:image">.
 //
 // Plain object elements (no JSX) on purpose: Vercel's Edge Function bundler
@@ -40,10 +43,46 @@ function teamById(id) {
 // satori can fetch them. ESPN logos are already absolute https URLs.
 const absLogo = (logo, origin) => (logo.startsWith('/') ? origin + logo : logo);
 
+// The live card is set entirely in Space Grotesk (--font-mono in style.css),
+// not a generic sans — satori has no built-in fonts, so it has to be fetched
+// as raw bytes and handed to ImageResponse. Google Fonts serves woff2 by
+// default, which satori's font parser (opentype.js) can't read; spoofing a
+// legacy-Safari UA on the CSS request gets back plain woff/ttf urls instead,
+// both of which it does support. Cached per warm isolate so repeat requests
+// (a link shared multiple times) don't re-fetch.
+const LEGACY_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36';
+
+async function loadGoogleFont(family, weight) {
+  const cssUrl = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(family)}:wght@${weight}`;
+  const css = await (await fetch(cssUrl, { headers: { 'User-Agent': LEGACY_UA } })).text();
+  const match = css.match(/src: url\(([^)]+)\) format\('(?:woff|truetype|opentype)'\)/);
+  if (!match) throw new Error(`could not resolve ${family} ${weight}`);
+  const fontRes = await fetch(match[1]);
+  return fontRes.arrayBuffer();
+}
+
+// Google's hosted Space Grotesk only goes up to weight 700 (no 800) — the
+// card's own CSS asks for font-weight 800 in a few spots too, but a browser
+// just resolves that to the nearest weight the family actually has, which is
+// this same 700 file. Loading one weight and using 700 everywhere below
+// matches what's actually rendering on the live card.
+let fontsPromise = null;
+function getFonts() {
+  if (!fontsPromise) {
+    fontsPromise = loadGoogleFont('Space Grotesk', 700).then((bold) => [
+      { name: 'Space Grotesk', data: bold, weight: 700, style: 'normal' }
+    ]);
+  }
+  return fontsPromise;
+}
+
 
 // Same geometry as the in-app rainbow gauge (initializeRainbowSVG/updateRainbowSVG
 // in main.js): four concentric half-circle tracks, each filled proportional to
-// that team's score, with a logo badge at the fill's leading edge.
+// that team's score, with a logo badge at the fill's leading edge. Only the
+// container's rendered width/height changes between layouts — the arc math
+// runs in the shared 300x180 viewBox coordinate space either way, so this
+// stays visually identical to the in-app gauge at any size.
 function rainbowGauge(teams, origin) {
   const radii = RAINBOW_RADII;
   const cx = RAINBOW_CX;
@@ -74,16 +113,16 @@ function rainbowGauge(teams, origin) {
     );
   });
 
-  return h('div', { style: { position: 'relative', display: 'flex', justifyContent: 'center', width: '320px', marginTop: 6, marginBottom: 6 } },
-    h('svg', { width: 320, height: 192, viewBox: '0 0 300 180' }, ...arcs),
+  return h('div', { style: { position: 'relative', display: 'flex', justifyContent: 'center', width: '460px' } },
+    h('svg', { width: 460, height: 276, viewBox: '0 0 300 180' }, ...arcs),
     h('div', {
       style: {
-        position: 'absolute', bottom: 6, left: '50%', transform: 'translateX(-50%)',
+        position: 'absolute', bottom: 10, left: '50%', transform: 'translateX(-50%)',
         display: 'flex', flexDirection: 'column', alignItems: 'center'
       }
     },
-      h('div', { style: { display: 'flex', fontSize: 64, fontWeight: 800, letterSpacing: -2, lineHeight: 1 } }, String(teams.length ? Math.round(scoreOf(teams)) : '--')),
-      h('div', { style: { display: 'flex', fontSize: 13, fontWeight: 700, letterSpacing: 2, color: '#8e95a5', marginTop: 4 } }, 'FANLOG SCORE')
+      h('div', { style: { display: 'flex', fontSize: 92, fontWeight: 700, letterSpacing: -3, lineHeight: 1 } }, String(teams.length ? Math.round(scoreOf(teams)) : '--')),
+      h('div', { style: { display: 'flex', fontSize: 18, fontWeight: 700, letterSpacing: 3, color: '#8e95a5', marginTop: 6 } }, 'FANLOG SCORE')
     )
   );
 }
@@ -95,29 +134,31 @@ function scoreOf(teams) {
   return top.score * 0.6 + (others.reduce((s, t) => s + t.score, 0) / others.length) * 0.4;
 }
 
-function legendChip(team, origin) {
+// One team per row, filling the width of the right-hand column — replaces the
+// wrapped-pill layout used when the card was rendered as a narrow center
+// column, which doesn't fit the wide landscape layout.
+function legendRow(team, origin) {
   const color = getContrastAdaptedColor(team.primary, team.secondary);
   return h('div', {
     style: {
-      display: 'flex', alignItems: 'center', gap: 8,
-      background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)',
-      borderLeft: `3px solid ${color}`, borderRadius: 999, padding: '6px 14px 6px 10px'
+      display: 'flex', alignItems: 'center', width: '100%',
+      padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.08)'
     }
   },
-    h('img', { src: absLogo(team.logo, origin), width: 20, height: 20, style: { borderRadius: 999, background: '#fff' } }),
-    h('div', { style: { display: 'flex', fontSize: 15, fontWeight: 700, color: '#8e95a5' } }, team.short),
-    h('div', { style: { display: 'flex', fontSize: 15, fontWeight: 800, color: '#f3f4f6' } }, String(team.score))
+    h('img', { src: absLogo(team.logo, origin), width: 30, height: 30, style: { borderRadius: 999, background: '#fff', marginRight: 14 } }),
+    h('div', { style: { display: 'flex', flex: 1, fontSize: 18, fontWeight: 700, color: '#f3f4f6' } }, team.name || team.short),
+    h('div', { style: { display: 'flex', fontSize: 18, fontWeight: 700, color } }, String(team.score))
   );
 }
 
 function metaBox(label, value) {
-  return h('div', { style: { display: 'flex', flexDirection: 'column', alignItems: 'center' } },
-    h('div', { style: { display: 'flex', fontSize: 10, fontWeight: 700, letterSpacing: 1, color: '#8e95a5' } }, label.toUpperCase()),
-    h('div', { style: { display: 'flex', fontSize: 15, fontWeight: 700, color: '#f3f4f6', marginTop: 4 } }, String(value || '----').toUpperCase())
+  return h('div', { style: { display: 'flex', flexDirection: 'column' } },
+    h('div', { style: { display: 'flex', fontSize: 12, fontWeight: 700, letterSpacing: 1, color: '#8e95a5' } }, label.toUpperCase()),
+    h('div', { style: { display: 'flex', fontSize: 18, fontWeight: 700, color: '#f3f4f6', marginTop: 6 } }, String(value || '----').toUpperCase())
   );
 }
 
-export default function handler(req) {
+export default async function handler(req) {
   const { searchParams, origin } = new URL(req.url);
 
   let handle = '@GUEST';
@@ -145,63 +186,76 @@ export default function handler(req) {
   const topTeam = teams.find(t => t.top) || teams[0] || null;
   const cardAccent = topTeam ? getContrastAdaptedColor(topTeam.primary, topTeam.secondary) : '#5B8DEF';
 
-  // The image IS the card — no separate background/frame around it, so it
-  // reads as "the loyalty card" itself rather than a card floating on a
-  // decorative banner. One flat surface, filling essentially the whole
-  // 1200x630 canvas, with just enough side margin to keep the (portrait)
-  // content column from stretching edge to edge and looking distorted.
+  // If Google Fonts is unreachable for some reason, fall back to satori's
+  // default rather than failing the whole image — a slightly-off font beats
+  // a broken-image icon in the link preview.
+  let fonts = [];
+  try {
+    fonts = await getFonts();
+  } catch (err) {
+    console.warn('[api/og] font load failed, falling back to default sans:', err);
+  }
+
+  // Landscape layout: identity bar on top (brand, archetype, handle), then
+  // the gauge and team/meta info split left-right below, filling the full
+  // 1200x630 canvas instead of a narrow centered column. Background and type
+  // match the live card exactly — same --bg-secondary (#0e1016) and Space
+  // Grotesk (--font-mono) as style.css.
   const tree = h(
     'div',
     {
       style: {
         position: 'relative', width: '1200px', height: '630px', display: 'flex', flexDirection: 'column',
-        alignItems: 'center', backgroundColor: '#0e1016',
-        backgroundImage: `radial-gradient(circle at 50% 0%, ${cardAccent}22 0%, #0e1016 70%)`,
-        padding: '18px 0', fontFamily: 'sans-serif'
+        backgroundColor: '#0e1016',
+        backgroundImage: `radial-gradient(circle at 10% 0%, ${cardAccent}22 0%, #0e1016 55%)`,
+        padding: '48px 64px', color: '#f3f4f6',
+        fontFamily: fonts.length ? 'Space Grotesk' : 'sans-serif'
       }
     },
-    h('div', { style: { display: 'flex', flexDirection: 'column', width: '460px', height: '100%' } },
-      h('div', { style: { display: 'flex', width: '100%', justifyContent: 'center', marginBottom: 14 } },
+    // Identity bar: brand | archetype | handle
+    h('div', { style: { display: 'flex', width: '100%', alignItems: 'center' } },
+      h('div', { style: { display: 'flex', flex: 1, alignItems: 'center', gap: 10 } },
+        h('div', { style: { display: 'flex', width: 10, height: 10, borderRadius: 999, backgroundColor: cardAccent } }),
+        h('div', { style: { display: 'flex', fontSize: 20, fontWeight: 700 } }, 'Fanlog')
+      ),
+      h('div', { style: { display: 'flex', flex: 2, justifyContent: 'center' } },
         h('div', {
           style: {
-            display: 'flex', maxWidth: 360, fontSize: 17, fontWeight: 800, letterSpacing: 0.5, textAlign: 'center',
+            display: 'flex', maxWidth: 480, fontSize: 18, fontWeight: 700, letterSpacing: 0.5, textAlign: 'center',
             color: '#f3f4f6', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: 999, padding: '7px 18px'
+            borderRadius: 999, padding: '8px 22px'
           }
         }, archetype)
       ),
+      h('div', { style: { display: 'flex', flex: 1, justifyContent: 'flex-end' } },
+        h('div', { style: { display: 'flex', fontSize: 18, fontWeight: 700, color: '#8e95a5' } }, handle)
+      )
+    ),
+    h('div', { style: { display: 'flex', width: '100%', height: 1, backgroundColor: 'rgba(255,255,255,0.08)', marginTop: 24 } }),
+
+    // Main split: gauge left, team legend + meta right
+    h('div', { style: { display: 'flex', width: '100%', flex: 1, alignItems: 'center' } },
       h('div', { style: { display: 'flex', justifyContent: 'center' } }, rainbowGauge(teams, origin)),
-      h('div', { style: { display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginTop: 8, marginBottom: 14 } },
-        ...teams.slice(0, 4).map(t => legendChip(t, origin))
-      ),
-      h('div', {
-        style: {
-          display: 'flex', flexDirection: 'column', alignItems: 'center',
-          borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 14, marginBottom: 14
-        }
-      },
-        metaBox('Fan ID', handle),
-        h('div', { style: { display: 'flex', width: '100%', marginTop: 14 } },
-          h('div', { style: { display: 'flex', flex: 1, justifyContent: 'center' } },
+      h('div', { style: { display: 'flex', flexDirection: 'column', flex: 1, marginLeft: 56 } },
+        ...teams.slice(0, 4).map(t => legendRow(t, origin)),
+        h('div', { style: { display: 'flex', width: '100%', marginTop: 22 } },
+          h('div', { style: { display: 'flex', flex: 1 } },
             metaBox(topTeam ? `${topTeam.short} SINCE` : 'FAN SINCE', topTeam ? topTeam.year : null)),
-          h('div', { style: { display: 'flex', flex: 1, justifyContent: 'center' } },
+          h('div', { style: { display: 'flex', flex: 1 } },
             metaBox(topTeam ? getPredictionLabel(topTeam.league, topTeam.short) : 'PREDICTION', topTeam ? topTeam.prediction : null))
         )
-      ),
-      h('div', {
-        style: {
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: 12, marginTop: 'auto'
-        }
-      },
-        h('div', { style: { display: 'flex', alignItems: 'center', gap: 7 } },
-          h('div', { style: { display: 'flex', width: 8, height: 8, borderRadius: 999, backgroundColor: cardAccent } }),
-          h('div', { style: { display: 'flex', fontSize: 13, fontWeight: 700, color: '#8e95a5', letterSpacing: 0.5 } }, 'Fanlog')
-        ),
-        h('div', { style: { display: 'flex', fontSize: 12, fontWeight: 700, color: '#8e95a5' } }, 'FL-2026-INDEX')
       )
+    ),
+
+    h('div', { style: { display: 'flex', width: '100%', height: 1, backgroundColor: 'rgba(255,255,255,0.08)' } }),
+    h('div', { style: { display: 'flex', width: '100%', justifyContent: 'flex-end', paddingTop: 14 } },
+      h('div', { style: { display: 'flex', fontSize: 13, fontWeight: 700, color: '#8e95a5', letterSpacing: 1 } }, 'FL-2026-INDEX')
     )
   );
 
-  return new ImageResponse(tree, { width: 1200, height: 630 });
+  // Passing an empty array here (instead of omitting the key) would disable
+  // @vercel/og's own bundled fallback font and hard-fail the whole image
+  // ("No fonts are loaded") instead of just looking visually off — worse
+  // than the font mismatch we're trying to fix.
+  return new ImageResponse(tree, { width: 1200, height: 630, fonts: fonts.length ? fonts : undefined });
 }
