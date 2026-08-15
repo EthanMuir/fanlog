@@ -2908,12 +2908,24 @@ button, input, select {
   -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
   opacity: 0;
-  transition: opacity 0.25s ease;
+  /* visibility (not just opacity/transform) is the real "closed" state — a
+     position:fixed element's offscreen transform is only offscreen relative
+     to the real 844px-tall viewport. Tools that render the page at full
+     document height in one pass (iOS Safari's own "Full Page" screenshot,
+     Playwright's fullPage screenshots, print) recompute that transform
+     against the full page height instead, landing this sheet visibly
+     mid-page. visibility:hidden removes it from rendering entirely,
+     independent of any viewport-relative position math. Delayed on the way
+     out so the close transition still gets to play first. */
+  visibility: hidden;
+  transition: opacity 0.25s ease, visibility 0s linear 0.25s;
   pointer-events: none;
 }
 
 .year-picker-backdrop.visible {
   opacity: 1;
+  visibility: visible;
+  transition: opacity 0.25s ease;
   pointer-events: auto;
 }
 
@@ -2931,12 +2943,16 @@ button, input, select {
   /* Keep the sheet's content clear of the home indicator on notched iPhones. */
   padding-bottom: env(safe-area-inset-bottom, 0px);
   box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.6);
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  /* See .year-picker-backdrop above for why visibility (delayed on close). */
+  visibility: hidden;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), visibility 0s linear 0.35s;
   overflow: hidden;
 }
 
 .year-picker-sheet.visible {
   transform: translateX(-50%) translateY(0);
+  visibility: visible;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .year-picker-sheet-header {
