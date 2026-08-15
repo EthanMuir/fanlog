@@ -97,7 +97,7 @@ function barChart(teams, origin) {
       team.logo
         ? h('img', { src: absLogo(team.logo, origin), width: 42, height: 42, style: { borderRadius: 999, background: '#fff', marginRight: 18, flexShrink: 0 } })
         : h('div', { style: { display: 'flex', width: 42, height: 42, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.08)', marginRight: 18, flexShrink: 0 } }),
-      h('div', { style: { display: 'flex', flex: 1, height: 28, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 999 } },
+      h('div', { style: { display: 'flex', flex: 1, height: 17, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 999 } },
         h('div', { style: { display: 'flex', width: `${pct}%`, height: '100%', backgroundColor: color, borderRadius: 999 } })
       ),
       h('div', { style: { display: 'flex', width: 56, justifyContent: 'flex-end', marginLeft: 18, fontSize: 22, fontWeight: 700 } }, String(team.score))
