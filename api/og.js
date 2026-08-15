@@ -1,7 +1,8 @@
-// Per-card Open Graph image. Vercel Edge function that renders a 1200x630 PNG
-// straight from the ?c= token, so link unfurls in iMessage / WhatsApp /
-// Discord / X show the real card's colors, fonts, and data instead of a
-// generic image. Reached via api/share's <meta property="og:image">.
+// Per-card Open Graph image. Vercel Edge function that renders a PNG (fixed
+// 900px wide, height fit to content — see estimateOgImageHeight) straight
+// from the ?c= token, so link unfurls in iMessage / WhatsApp / Discord / X
+// show the real card's colors, fonts, and data instead of a generic image.
+// Reached via api/share's <meta property="og:image">.
 //
 // Deliberately sparse: this renders as a small link-preview thumbnail in a
 // phone chat bubble, not a full-size image, so a Since/Prediction detail row
@@ -17,7 +18,7 @@
 // transform/react dependency question entirely.
 import { ImageResponse } from '@vercel/og';
 import { sportsData } from '../teams.js';
-import { getContrastAdaptedColor, estimateOgImageHeight } from '../cardVisuals.js';
+import { getContrastAdaptedColor, estimateOgImageHeight, OG_IMAGE_WIDTH } from '../cardVisuals.js';
 
 export const config = { runtime: 'edge' };
 
@@ -77,7 +78,6 @@ function getFonts() {
   return fontsPromise;
 }
 
-
 function scoreOf(teams) {
   const top = teams.find(t => t.top) || teams[0];
   const others = teams.filter(t => t !== top);
@@ -103,7 +103,7 @@ function barChart(teams, origin) {
       h('div', { style: { display: 'flex', width: 56, justifyContent: 'flex-end', marginLeft: 18, fontSize: 22, fontWeight: 700 } }, String(team.score))
     );
   });
-  return h('div', { style: { display: 'flex', flexDirection: 'column', flex: 1 } }, ...rows);
+  return h('div', { style: { display: 'flex', flexDirection: 'column', width: 400 } }, ...rows);
 }
 
 export default async function handler(req) {
@@ -156,12 +156,15 @@ export default async function handler(req) {
   // own header). Below that, the hero row (big score, bar chart), then the
   // archetype line and handle stacked underneath, full width. Background and
   // type match the live card exactly — same --bg-secondary (#0e1016) and
-  // Space Grotesk (--font-mono) as style.css.
+  // Space Grotesk (--font-mono) as style.css. Canvas width (like height) is
+  // sized to content, not the 1200px "large image" default — the bar chart
+  // reads better short and chunky than stretched across a wide canvas, and a
+  // fixed 400px chart width doesn't need the extra room.
   const tree = h(
     'div',
     {
       style: {
-        position: 'relative', width: '1200px', height: `${height}px`, display: 'flex', flexDirection: 'column',
+        position: 'relative', width: `${OG_IMAGE_WIDTH}px`, height: `${height}px`, display: 'flex', flexDirection: 'column',
         backgroundColor: '#0e1016',
         backgroundImage: `radial-gradient(circle at 10% 0%, ${cardAccent}22 0%, #0e1016 55%)`,
         padding: '48px 72px', color: '#f3f4f6',
@@ -182,7 +185,7 @@ export default async function handler(req) {
       ),
       barChart(teams, origin)
     ),
-    h('div', { style: { display: 'flex', maxWidth: 1000, fontSize: 36, fontWeight: 700, lineHeight: 1.2, marginTop: 32 } }, archetype),
+    h('div', { style: { display: 'flex', maxWidth: OG_IMAGE_WIDTH - 144, fontSize: 36, fontWeight: 700, lineHeight: 1.2, marginTop: 32 } }, archetype),
     h('div', { style: { display: 'flex', fontSize: 22, fontWeight: 700, color: '#8e95a5', marginTop: 14 } }, handle)
   );
 
@@ -190,5 +193,5 @@ export default async function handler(req) {
   // @vercel/og's own bundled fallback font and hard-fail the whole image
   // ("No fonts are loaded") instead of just looking visually off — worse
   // than the font mismatch we're trying to fix.
-  return new ImageResponse(tree, { width: 1200, height, fonts: fonts.length ? fonts : undefined });
+  return new ImageResponse(tree, { width: OG_IMAGE_WIDTH, height, fonts: fonts.length ? fonts : undefined });
 }

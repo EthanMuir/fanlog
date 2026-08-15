@@ -31,6 +31,12 @@ export function getContrastAdaptedColor(primaryHex, secondaryHex) {
   return primaryHex;
 }
 
+// The OG image's canvas width — fixed regardless of content, unlike its
+// height. api/share.js needs the same number for its og:image:width meta
+// tag and the fallback page's <img> aspect ratio, hence exporting it rather
+// than each file hardcoding its own copy.
+export const OG_IMAGE_WIDTH = 900;
+
 // The share-link OG image (api/og.js) fits its canvas height to content
 // (1-4 team bars, 1-3 archetype lines) instead of a fixed size, so the
 // og:image:height meta tag api/share.js prints for crawlers has to predict
