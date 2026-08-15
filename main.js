@@ -2570,15 +2570,17 @@ btnDownloadPng.addEventListener('click', async () => {
 async function shareTextOrDownload(shareText, feedbackBtn = btnCopyLink) {
   if (navigator.share) {
     try {
-      const shareUrl = getShareUrl();
-      // Pass the link as its own `url` field instead of only embedded inside
-      // `text` — targets like Messages only generate a rich link-preview
-      // thumbnail for a URL that arrives isolated like this, not one buried
-      // mid-sentence, so keep the caption's copy of it out to avoid a
-      // duplicate plain-text link. No `title` field: Messages was placing the
-      // url ahead of the caption text when one was set, putting the link
-      // above the message instead of below it.
-      await navigator.share({ text: shareText.replace(shareUrl, '').trim(), url: shareUrl });
+      // shareText already ends with the link (see getShareText). Earlier
+      // this stripped the link back out and passed it separately as `url`
+      // so Messages would treat it as an isolated link-preview target — but
+      // that's what was actually putting the link ABOVE the caption text:
+      // Messages was placing the separate `url` field ahead of `text`
+      // regardless of a `title` field being present or not. Passing the
+      // whole string as `text` and skipping `url` entirely pins the link
+      // where it already sits in the string — after the caption — and
+      // Messages still auto-generates the rich preview from a URL found
+      // anywhere in the text, so the thumbnail isn't lost either.
+      await navigator.share({ text: shareText });
       HubSDK.track('card_shared', { platform: 'native_share_text' });
       return;
     } catch (err) {
