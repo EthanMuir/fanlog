@@ -1,11 +1,13 @@
 // Per-card Open Graph image. Vercel Edge function that renders a 1200x630 PNG
 // straight from the ?c= token, so link unfurls in iMessage / WhatsApp /
 // Discord / X show the real card's colors, fonts, and data instead of a
-// generic image. Laid out landscape (identity bar on top, gauge + team/meta
-// split left-right below) to use the full 1200x630 canvas — the in-app card
-// itself is a narrow portrait shape, which left most of this canvas empty
-// when it was reproduced verbatim as a centered column here.
-// Reached via api/share's <meta property="og:image">.
+// generic image. Reached via api/share's <meta property="og:image">.
+//
+// Deliberately sparse: this renders as a small link-preview thumbnail in a
+// phone chat bubble, not a full-size image, so per-team scores and a
+// Since/Prediction detail row (an earlier version of this had both) are just
+// illegible noise at that size. Score + gauge + archetype + handle is the
+// whole hook — everything else got cut.
 //
 // Plain object elements (no JSX) on purpose: Vercel's Edge Function bundler
 // transforms JSX assuming a `react/jsx-runtime` import by default, and this
@@ -16,7 +18,7 @@
 // transform/react dependency question entirely.
 import { ImageResponse } from '@vercel/og';
 import { sportsData } from '../teams.js';
-import { RAINBOW_RADII, RAINBOW_CX, RAINBOW_CY, getContrastAdaptedColor, getPredictionLabel } from '../cardVisuals.js';
+import { RAINBOW_RADII, RAINBOW_CX, RAINBOW_CY, getContrastAdaptedColor } from '../cardVisuals.js';
 
 export const config = { runtime: 'edge' };
 
@@ -113,16 +115,16 @@ function rainbowGauge(teams, origin) {
     );
   });
 
-  return h('div', { style: { position: 'relative', display: 'flex', justifyContent: 'center', width: '460px' } },
-    h('svg', { width: 460, height: 276, viewBox: '0 0 300 180' }, ...arcs),
+  return h('div', { style: { position: 'relative', display: 'flex', justifyContent: 'center', width: '560px' } },
+    h('svg', { width: 560, height: 336, viewBox: '0 0 300 180' }, ...arcs),
     h('div', {
       style: {
-        position: 'absolute', bottom: 10, left: '50%', transform: 'translateX(-50%)',
+        position: 'absolute', bottom: 14, left: '50%', transform: 'translateX(-50%)',
         display: 'flex', flexDirection: 'column', alignItems: 'center'
       }
     },
-      h('div', { style: { display: 'flex', fontSize: 92, fontWeight: 700, letterSpacing: -3, lineHeight: 1 } }, String(teams.length ? Math.round(scoreOf(teams)) : '--')),
-      h('div', { style: { display: 'flex', fontSize: 18, fontWeight: 700, letterSpacing: 3, color: '#8e95a5', marginTop: 6 } }, 'FANLOG SCORE')
+      h('div', { style: { display: 'flex', fontSize: 112, fontWeight: 700, letterSpacing: -4, lineHeight: 1 } }, String(teams.length ? Math.round(scoreOf(teams)) : '--')),
+      h('div', { style: { display: 'flex', fontSize: 20, fontWeight: 700, letterSpacing: 3, color: '#8e95a5', marginTop: 8 } }, 'FANLOG SCORE')
     )
   );
 }
@@ -132,30 +134,6 @@ function scoreOf(teams) {
   const others = teams.filter(t => t !== top);
   if (!others.length) return top.score;
   return top.score * 0.6 + (others.reduce((s, t) => s + t.score, 0) / others.length) * 0.4;
-}
-
-// One team per row, filling the width of the right-hand column — replaces the
-// wrapped-pill layout used when the card was rendered as a narrow center
-// column, which doesn't fit the wide landscape layout.
-function legendRow(team, origin) {
-  const color = getContrastAdaptedColor(team.primary, team.secondary);
-  return h('div', {
-    style: {
-      display: 'flex', alignItems: 'center', width: '100%',
-      padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.08)'
-    }
-  },
-    h('img', { src: absLogo(team.logo, origin), width: 30, height: 30, style: { borderRadius: 999, background: '#fff', marginRight: 14 } }),
-    h('div', { style: { display: 'flex', flex: 1, fontSize: 18, fontWeight: 700, color: '#f3f4f6' } }, team.name || team.short),
-    h('div', { style: { display: 'flex', fontSize: 18, fontWeight: 700, color } }, String(team.score))
-  );
-}
-
-function metaBox(label, value) {
-  return h('div', { style: { display: 'flex', flexDirection: 'column' } },
-    h('div', { style: { display: 'flex', fontSize: 12, fontWeight: 700, letterSpacing: 1, color: '#8e95a5' } }, label.toUpperCase()),
-    h('div', { style: { display: 'flex', fontSize: 18, fontWeight: 700, color: '#f3f4f6', marginTop: 6 } }, String(value || '----').toUpperCase())
-  );
 }
 
 export default async function handler(req) {
@@ -196,11 +174,10 @@ export default async function handler(req) {
     console.warn('[api/og] font load failed, falling back to default sans:', err);
   }
 
-  // Landscape layout: identity bar on top (brand, archetype, handle), then
-  // the gauge and team/meta info split left-right below, filling the full
-  // 1200x630 canvas instead of a narrow centered column. Background and type
-  // match the live card exactly — same --bg-secondary (#0e1016) and Space
-  // Grotesk (--font-mono) as style.css.
+  // Small brand mark top-left, then one centered hero row: the gauge+score
+  // on the left, archetype + handle stacked on the right. Background and
+  // type match the live card exactly — same --bg-secondary (#0e1016) and
+  // Space Grotesk (--font-mono) as style.css.
   const tree = h(
     'div',
     {
@@ -208,48 +185,21 @@ export default async function handler(req) {
         position: 'relative', width: '1200px', height: '630px', display: 'flex', flexDirection: 'column',
         backgroundColor: '#0e1016',
         backgroundImage: `radial-gradient(circle at 10% 0%, ${cardAccent}22 0%, #0e1016 55%)`,
-        padding: '48px 64px', color: '#f3f4f6',
+        padding: '56px 72px', color: '#f3f4f6',
         fontFamily: fonts.length ? 'Space Grotesk' : 'sans-serif'
       }
     },
-    // Identity bar: brand | archetype | handle
-    h('div', { style: { display: 'flex', width: '100%', alignItems: 'center' } },
-      h('div', { style: { display: 'flex', flex: 1, alignItems: 'center', gap: 10 } },
-        h('div', { style: { display: 'flex', width: 10, height: 10, borderRadius: 999, backgroundColor: cardAccent } }),
-        h('div', { style: { display: 'flex', fontSize: 20, fontWeight: 700 } }, 'Fanlog')
-      ),
-      h('div', { style: { display: 'flex', flex: 2, justifyContent: 'center' } },
-        h('div', {
-          style: {
-            display: 'flex', maxWidth: 480, fontSize: 18, fontWeight: 700, letterSpacing: 0.5, textAlign: 'center',
-            color: '#f3f4f6', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: 999, padding: '8px 22px'
-          }
-        }, archetype)
-      ),
-      h('div', { style: { display: 'flex', flex: 1, justifyContent: 'flex-end' } },
-        h('div', { style: { display: 'flex', fontSize: 18, fontWeight: 700, color: '#8e95a5' } }, handle)
-      )
+    h('div', { style: { display: 'flex', alignItems: 'center', gap: 10 } },
+      h('div', { style: { display: 'flex', width: 10, height: 10, borderRadius: 999, backgroundColor: cardAccent } }),
+      h('div', { style: { display: 'flex', fontSize: 20, fontWeight: 700 } }, 'Fanlog')
     ),
-    h('div', { style: { display: 'flex', width: '100%', height: 1, backgroundColor: 'rgba(255,255,255,0.08)', marginTop: 24 } }),
-
-    // Main split: gauge left, team legend + meta right
     h('div', { style: { display: 'flex', width: '100%', flex: 1, alignItems: 'center' } },
       h('div', { style: { display: 'flex', justifyContent: 'center' } }, rainbowGauge(teams, origin)),
-      h('div', { style: { display: 'flex', flexDirection: 'column', flex: 1, marginLeft: 56 } },
-        ...teams.slice(0, 4).map(t => legendRow(t, origin)),
-        h('div', { style: { display: 'flex', width: '100%', marginTop: 22 } },
-          h('div', { style: { display: 'flex', flex: 1 } },
-            metaBox(topTeam ? `${topTeam.short} SINCE` : 'FAN SINCE', topTeam ? topTeam.year : null)),
-          h('div', { style: { display: 'flex', flex: 1 } },
-            metaBox(topTeam ? getPredictionLabel(topTeam.league, topTeam.short) : 'PREDICTION', topTeam ? topTeam.prediction : null))
-        )
+      h('div', { style: { display: 'flex', flexDirection: 'column', marginLeft: 64 } },
+        h('div', { style: { display: 'flex', maxWidth: 500, fontSize: 44, fontWeight: 700, letterSpacing: 0.5, lineHeight: 1.15 } }, archetype),
+        h('div', { style: { display: 'flex', width: 220, height: 1, backgroundColor: 'rgba(255,255,255,0.15)', marginTop: 22, marginBottom: 22 } }),
+        h('div', { style: { display: 'flex', fontSize: 24, fontWeight: 700, color: '#8e95a5' } }, handle)
       )
-    ),
-
-    h('div', { style: { display: 'flex', width: '100%', height: 1, backgroundColor: 'rgba(255,255,255,0.08)' } }),
-    h('div', { style: { display: 'flex', width: '100%', justifyContent: 'flex-end', paddingTop: 14 } },
-      h('div', { style: { display: 'flex', fontSize: 13, fontWeight: 700, color: '#8e95a5', letterSpacing: 1 } }, 'FL-2026-INDEX')
     )
   );
 
