@@ -4,10 +4,9 @@
 // generic image. Reached via api/share's <meta property="og:image">.
 //
 // Deliberately sparse: this renders as a small link-preview thumbnail in a
-// phone chat bubble, not a full-size image, so per-team scores and a
-// Since/Prediction detail row (an earlier version of this had both) are just
-// illegible noise at that size. Score + gauge + archetype + handle is the
-// whole hook — everything else got cut.
+// phone chat bubble, not a full-size image, so a Since/Prediction detail row
+// (an earlier version of this had one) is just illegible noise at that size.
+// Header, big score + per-team bar chart, archetype, handle — that's it.
 //
 // Plain object elements (no JSX) on purpose: Vercel's Edge Function bundler
 // transforms JSX assuming a `react/jsx-runtime` import by default, and this
@@ -18,7 +17,7 @@
 // transform/react dependency question entirely.
 import { ImageResponse } from '@vercel/og';
 import { sportsData } from '../teams.js';
-import { RAINBOW_RADII, RAINBOW_CX, RAINBOW_CY, getContrastAdaptedColor } from '../cardVisuals.js';
+import { getContrastAdaptedColor } from '../cardVisuals.js';
 
 export const config = { runtime: 'edge' };
 
@@ -79,61 +78,32 @@ function getFonts() {
 }
 
 
-// Same geometry as the in-app rainbow gauge (initializeRainbowSVG/updateRainbowSVG
-// in main.js): four concentric half-circle tracks, each filled proportional to
-// that team's score, with a logo badge at the fill's leading edge. Only the
-// container's rendered width/height changes between layouts — the arc math
-// runs in the shared 300x180 viewBox coordinate space either way, so this
-// stays visually identical to the in-app gauge at any size.
-function rainbowGauge(teams, origin) {
-  const radii = RAINBOW_RADII;
-  const cx = RAINBOW_CX;
-  const cy = RAINBOW_CY;
-  const arcs = radii.map((r, i) => {
-    const team = teams[i];
-    const C = 2 * Math.PI * r;
-    const halfC = Math.PI * r;
-    const track = h('circle', {
-      cx, cy, r, fill: 'none', stroke: 'rgba(255,255,255,0.08)', 'stroke-width': 10,
-      'stroke-dasharray': `${halfC} ${C}`, transform: `rotate(180, ${cx}, ${cy})`, 'stroke-linecap': 'round'
-    });
-    if (!team) return track;
-
-    const color = getContrastAdaptedColor(team.primary, team.secondary);
-    const L = (team.score / 100) * halfC;
-    const angle = Math.PI * (1 - team.score / 100);
-    const x = cx + r * Math.cos(angle);
-    const y = cy - r * Math.sin(angle);
-    return h('g', {},
-      track,
-      h('circle', {
-        cx, cy, r, fill: 'none', stroke: color, 'stroke-width': 10,
-        'stroke-dasharray': `${L} ${C - L}`, transform: `rotate(180, ${cx}, ${cy})`, 'stroke-linecap': 'round'
-      }),
-      h('circle', { cx: x, cy: y, r: 13, fill: '#ffffff', stroke: color, 'stroke-width': 2 }),
-      team.logo ? h('image', { href: absLogo(team.logo, origin), x: x - 9, y: y - 9, width: 18, height: 18 }) : null
-    );
-  });
-
-  return h('div', { style: { position: 'relative', display: 'flex', justifyContent: 'center', width: '560px' } },
-    h('svg', { width: 560, height: 336, viewBox: '0 0 300 180' }, ...arcs),
-    h('div', {
-      style: {
-        position: 'absolute', bottom: 14, left: '50%', transform: 'translateX(-50%)',
-        display: 'flex', flexDirection: 'column', alignItems: 'center'
-      }
-    },
-      h('div', { style: { display: 'flex', fontSize: 112, fontWeight: 700, letterSpacing: -4, lineHeight: 1 } }, String(teams.length ? Math.round(scoreOf(teams)) : '--')),
-      h('div', { style: { display: 'flex', fontSize: 20, fontWeight: 700, letterSpacing: 3, color: '#8e95a5', marginTop: 8 } }, 'FANLOG SCORE')
-    )
-  );
-}
-
 function scoreOf(teams) {
   const top = teams.find(t => t.top) || teams[0];
   const others = teams.filter(t => t !== top);
   if (!others.length) return top.score;
   return top.score * 0.6 + (others.reduce((s, t) => s + t.score, 0) / others.length) * 0.4;
+}
+
+// One chunky bar per team (logo, fill proportional to score, score value) —
+// swapped in for the in-app rainbow-arc gauge, which packs the same info
+// into fine detail that doesn't survive being shrunk to a chat-bubble
+// thumbnail. Bars read as "who, and roughly how much" at a glance even tiny.
+function barChart(teams, origin) {
+  const rows = teams.slice(0, 4).map((team, i) => {
+    const color = getContrastAdaptedColor(team.primary, team.secondary);
+    const pct = Math.max(6, Math.min(100, team.score));
+    return h('div', { style: { display: 'flex', alignItems: 'center', width: '100%', marginTop: i === 0 ? 0 : 20 } },
+      team.logo
+        ? h('img', { src: absLogo(team.logo, origin), width: 42, height: 42, style: { borderRadius: 999, background: '#fff', marginRight: 18, flexShrink: 0 } })
+        : h('div', { style: { display: 'flex', width: 42, height: 42, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.08)', marginRight: 18, flexShrink: 0 } }),
+      h('div', { style: { display: 'flex', flex: 1, height: 28, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 999 } },
+        h('div', { style: { display: 'flex', width: `${pct}%`, height: '100%', backgroundColor: color, borderRadius: 999 } })
+      ),
+      h('div', { style: { display: 'flex', width: 56, justifyContent: 'flex-end', marginLeft: 18, fontSize: 22, fontWeight: 700 } }, String(team.score))
+    );
+  });
+  return h('div', { style: { display: 'flex', flexDirection: 'column', width: 560 } }, ...rows);
 }
 
 export default async function handler(req) {
@@ -174,8 +144,9 @@ export default async function handler(req) {
     console.warn('[api/og] font load failed, falling back to default sans:', err);
   }
 
-  // Small brand mark top-left, then one centered hero row: the gauge+score
-  // on the left, archetype + handle stacked on the right. Background and
+  // Header: brand left, "Loyalty Card" label right (mirrors the in-app card's
+  // own header). Below that, the hero row (big score, bar chart), then the
+  // archetype line and handle stacked underneath, full width. Background and
   // type match the live card exactly — same --bg-secondary (#0e1016) and
   // Space Grotesk (--font-mono) as style.css.
   const tree = h(
@@ -189,17 +160,23 @@ export default async function handler(req) {
         fontFamily: fonts.length ? 'Space Grotesk' : 'sans-serif'
       }
     },
-    h('div', { style: { display: 'flex', alignItems: 'center', gap: 10 } },
-      h('div', { style: { display: 'flex', width: 10, height: 10, borderRadius: 999, backgroundColor: cardAccent } }),
-      h('div', { style: { display: 'flex', fontSize: 20, fontWeight: 700 } }, 'Fanlog')
+    h('div', { style: { display: 'flex', width: '100%', alignItems: 'center' } },
+      h('div', { style: { display: 'flex', flex: 1, alignItems: 'center', gap: 10 } },
+        h('div', { style: { display: 'flex', width: 10, height: 10, borderRadius: 999, backgroundColor: cardAccent } }),
+        h('div', { style: { display: 'flex', fontSize: 20, fontWeight: 700 } }, 'Fanlog')
+      ),
+      h('div', { style: { display: 'flex', fontSize: 14, fontWeight: 700, letterSpacing: 2, color: '#8e95a5' } }, 'LOYALTY CARD')
     ),
-    h('div', { style: { display: 'flex', width: '100%', flex: 1, alignItems: 'center' } },
-      h('div', { style: { display: 'flex', justifyContent: 'center' } }, rainbowGauge(teams, origin)),
-      h('div', { style: { display: 'flex', flexDirection: 'column', marginLeft: 64 } },
-        h('div', { style: { display: 'flex', maxWidth: 500, fontSize: 44, fontWeight: 700, letterSpacing: 0.5, lineHeight: 1.15 } }, archetype),
-        h('div', { style: { display: 'flex', width: 220, height: 1, backgroundColor: 'rgba(255,255,255,0.15)', marginTop: 22, marginBottom: 22 } }),
-        h('div', { style: { display: 'flex', fontSize: 24, fontWeight: 700, color: '#8e95a5' } }, handle)
-      )
+    h('div', { style: { display: 'flex', width: '100%', flex: 1, flexDirection: 'column', justifyContent: 'center' } },
+      h('div', { style: { display: 'flex', width: '100%', alignItems: 'center' } },
+        h('div', { style: { display: 'flex', flexDirection: 'column', marginRight: 64 } },
+          h('div', { style: { display: 'flex', fontSize: 132, fontWeight: 700, letterSpacing: -5, lineHeight: 1 } }, String(teams.length ? Math.round(scoreOf(teams)) : '--')),
+          h('div', { style: { display: 'flex', fontSize: 20, fontWeight: 700, letterSpacing: 3, color: '#8e95a5', marginTop: 8 } }, 'FANLOG SCORE')
+        ),
+        barChart(teams, origin)
+      ),
+      h('div', { style: { display: 'flex', maxWidth: 1000, fontSize: 36, fontWeight: 700, lineHeight: 1.2, marginTop: 40 } }, archetype),
+      h('div', { style: { display: 'flex', fontSize: 22, fontWeight: 700, color: '#8e95a5', marginTop: 14 } }, handle)
     )
   );
 
