@@ -11,13 +11,9 @@
 // branded landing page with the card thumbnail and a tap-through button into
 // the app instead of an invisible instant hop.
 import { estimateOgImageHeight, OG_IMAGE_WIDTH } from '../cardVisuals.js';
+import { resolveCircle } from '../circleLookup.js';
 
 export const config = { runtime: 'edge' };
-
-function decodeCircle(enc) {
-  const b64 = enc.replace(/-/g, '+').replace(/_/g, '/');
-  return JSON.parse(decodeURIComponent(escape(atob(b64))));
-}
 
 const esc = (s) =>
   String(s)
@@ -26,9 +22,10 @@ const esc = (s) =>
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
 
-export default function handler(req) {
+export default async function handler(req) {
   const url = new URL(req.url);
   const { origin } = url;
+  const id = url.searchParams.get('id') || '';
   const c = url.searchParams.get('c') || '';
   const ref = url.searchParams.get('ref') || '';
   const utm = url.searchParams.get('utm_source') || '';
@@ -37,19 +34,21 @@ export default function handler(req) {
   const appParams = new URLSearchParams();
   if (ref) appParams.set('ref', ref);
   if (utm) appParams.set('utm_source', utm);
-  if (c) appParams.set('c', c);
+  if (id) appParams.set('id', id);
+  else if (c) appParams.set('c', c);
   const appUrl = `${origin}/?${appParams.toString()}`;
 
-  const ogImage = `${origin}/api/og${c ? `?c=${encodeURIComponent(c)}` : ''}`;
+  const ogImageParam = id ? `id=${encodeURIComponent(id)}` : c ? `c=${encodeURIComponent(c)}` : '';
+  const ogImage = `${origin}/api/og${ogImageParam ? `?${ogImageParam}` : ''}`;
 
-  // Pull display fields from the token for a nicer unfurl title/description.
+  // Pull display fields from the resolved circle for a nicer unfurl title/description.
   let handle = '';
   let archetype = '';
   let score = '';
   let teamCount = 0;
   try {
-    if (c) {
-      const p = decodeCircle(c);
+    const p = await resolveCircle(url.searchParams);
+    if (p) {
       handle = p.h ? '@' + String(p.h).replace(/^@/, '') : '';
       archetype = p.a || '';
       score = p.sc != null ? String(p.sc) : '';

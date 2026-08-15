@@ -1,8 +1,9 @@
 // Per-card Open Graph image. Vercel Edge function that renders a PNG (fixed
-// 900px wide, height fit to content — see estimateOgImageHeight) straight
-// from the ?c= token, so link unfurls in iMessage / WhatsApp / Discord / X
-// show the real card's colors, fonts, and data instead of a generic image.
-// Reached via api/share's <meta property="og:image">.
+// 900px wide, height fit to content — see estimateOgImageHeight) from the
+// card summary resolved by circleLookup.js (?id= lookup or legacy ?c=), so
+// link unfurls in iMessage / WhatsApp / Discord / X show the real card's
+// colors, fonts, and data instead of a generic image. Reached via
+// api/share's <meta property="og:image">.
 //
 // Deliberately sparse: this renders as a small link-preview thumbnail in a
 // phone chat bubble, not a full-size image, so a Since/Prediction detail row
@@ -19,18 +20,13 @@
 import { ImageResponse } from '@vercel/og';
 import { sportsData } from '../teams.js';
 import { getContrastAdaptedColor, estimateOgImageHeight, OG_IMAGE_WIDTH } from '../cardVisuals.js';
+import { resolveCircle } from '../circleLookup.js';
 
 export const config = { runtime: 'edge' };
 
 function h(type, props, ...children) {
   const flat = children.flat(Infinity).filter((c) => c !== null && c !== undefined && c !== false);
   return { type, props: { ...props, children: flat.length <= 1 ? flat[0] : flat } };
-}
-
-// Mirror of the client encodeCircle(): URL-safe base64 of a small JSON payload.
-function decodeCircle(enc) {
-  const b64 = enc.replace(/-/g, '+').replace(/_/g, '/');
-  return JSON.parse(decodeURIComponent(escape(atob(b64))));
 }
 
 function teamById(id) {
@@ -114,9 +110,8 @@ export default async function handler(req) {
   let teams = [];
 
   try {
-    const c = searchParams.get('c');
-    if (c) {
-      const p = decodeCircle(c);
+    const p = await resolveCircle(searchParams);
+    if (p) {
       handle = p.h ? '@' + String(p.h).replace(/^@/, '') : '@GUEST';
       archetype = (p.a || 'Sports Fan').toUpperCase();
       teams = (p.t || [])

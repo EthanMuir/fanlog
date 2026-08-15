@@ -3,6 +3,7 @@ import confetti from 'canvas-confetti';
 import html2canvas from 'html2canvas';
 import { HubSDK } from '@ethanhodge7373/hub-sdk';
 import { saveWaitlistEntry } from './waitlist.js';
+import { saveCircle } from './circles.js';
 import { RAINBOW_RADII, RAINBOW_CX, RAINBOW_CY, getLuminance, getContrastAdaptedColor, getPredictionLabel } from './cardVisuals.js';
 
 HubSDK.init({
@@ -1821,6 +1822,11 @@ function setupStep5MainPage(finalScore) {
     referredBy
   });
 
+  // Pre-fetch the share link's short id so it's ready by the time the user
+  // taps Share (see prepareShareUrl). Deferred to idle time so it doesn't
+  // compete with the step transition / scroll-to-demo.
+  const scheduleShare = window.requestIdleCallback || ((fn) => setTimeout(fn, 400));
+  scheduleShare(() => prepareShareUrl());
 }
 
 // --- SETUP EDITABLE FAN ID ON CARD ---
@@ -2323,6 +2329,9 @@ function setupWaitlistBindings() {
     
     if (shareEmailForm) shareEmailForm.style.display = 'none';
     if (shareEmailSuccess) shareEmailSuccess.style.display = 'block';
+    // Handle just finalized from the email prefix — refresh the pre-fetched
+    // share id so it reflects the real handle, not the placeholder.
+    prepareShareUrl();
 
     // Close the captcha widget now that signup is done.
     closeTurnstile();
@@ -2353,7 +2362,8 @@ btnRestartFlow.addEventListener('click', () => {
   userQuizAnswers = {};
   currentQuizTeamIndex = 0;
   savedHandle = '';
-  
+  cachedShareId = null; // stale — belonged to the card being replaced
+
   // Reset share email form (re-arm for a fresh signup + rebuild the captcha)
   const shareEmailForm = document.getElementById('share-email-form');
   const shareEmailSuccess = document.getElementById('share-email-success');
@@ -2501,21 +2511,26 @@ function padCardCanvas(canvas, cardFraction = 0.8) {
   return padded;
 }
 
-// Encode the current circle into a compact URL-safe base64 token so /share
-// and /api/og (see api/share.js, api/og.js) can render this card's actual
-// design as the link's Open Graph image. Deliberately only what those two
-// actually read (handle, archetype, overall score, and per-team id/score/
-// top-flag) — this ends up baked into the visible share link, so anything
-// extra here is pure length with no payoff.
-function encodeCircle() {
+// The small card summary /share and /api/og (see api/share.js, api/og.js)
+// need to render this card's actual design as the link's Open Graph image.
+// Deliberately only what those two actually read (handle, archetype,
+// overall score, and per-team id/score/top-flag) — this ends up either
+// stored server-side or baked directly into the link, so anything extra
+// here is pure cost with no payoff.
+function buildCirclePayload() {
+  const scoreEl = document.getElementById('f-card-score');
+  return {
+    h: savedHandle || '',
+    a: generateSportsIdentityTagline(),
+    sc: scoreEl ? (parseInt(scoreEl.textContent, 10) || 0) : 0,
+    t: selectedTeams.map(t => ({ i: t.id, s: t.score, top: t.isTop ? 1 : 0 }))
+  };
+}
+
+// Fallback-only now (see getShareUrl): a compact URL-safe base64 encoding
+// of the same payload, for when saveCircle() can't reach Supabase.
+function encodeCircle(payload = buildCirclePayload()) {
   try {
-    const scoreEl = document.getElementById('f-card-score');
-    const payload = {
-      h: savedHandle || '',
-      a: generateSportsIdentityTagline(),
-      sc: scoreEl ? (parseInt(scoreEl.textContent, 10) || 0) : 0,
-      t: selectedTeams.map(t => ({ i: t.id, s: t.score, top: t.isTop ? 1 : 0 }))
-    };
     return btoa(unescape(encodeURIComponent(JSON.stringify(payload))))
       .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   } catch {
@@ -2533,12 +2548,35 @@ function encodeCircle() {
 // Real visitors who tap through land on /share's own page, not directly on
 // the sharer's card — they get a "view this card" button into the normal
 // app, never auto-dropped into someone else's session.
+//
+// The card summary is stored server-side (public.circles) and referenced by
+// a short ?id=, instead of being base64'd directly into the link — that's
+// what was making these links so long. That write has to happen BEFORE the
+// user taps Share, not during the click: navigator.share() only works
+// inside the synchronous window of a user gesture, and iOS Safari throws
+// NotAllowedError if anything async (like a network round trip) runs ahead
+// of it in the same handler. So prepareShareUrl() below pre-fetches the id
+// at points where the card summary is known to have just changed, caches
+// it, and getShareUrl() reads the cache synchronously — falling back to
+// embedding the payload directly (?c=, always synchronous) if the cache
+// isn't ready yet or Supabase is unreachable, so sharing never hard-fails
+// on a network hiccup. Both link forms are read by api/share.js/api/og.js.
+let cachedShareId = null;
+
+async function prepareShareUrl() {
+  cachedShareId = await saveCircle(buildCirclePayload());
+}
+
 function getShareUrl() {
   const params = new URLSearchParams();
   params.set('ref', savedHandle || 'anon');
   params.set('utm_source', 'fanlog_share');
-  const circle = encodeCircle();
-  if (circle) params.set('c', circle);
+  if (cachedShareId) {
+    params.set('id', cachedShareId);
+  } else {
+    const circle = encodeCircle();
+    if (circle) params.set('c', circle);
+  }
   return `${window.location.origin}/share?${params.toString()}`;
 }
 
