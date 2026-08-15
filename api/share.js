@@ -3,17 +3,25 @@
 // read its per-card Open Graph / Twitter tags — they never run the app's JS —
 // so we render those tags server-side here, pointing og:image at /api/og.
 //
-// This page deliberately does NOT auto-redirect. iMessage's link-preview
-// fetcher (and some other unfurlers) follows an instant meta-refresh/JS
-// redirect before reading the page's own tags, landing on /?c=… instead —
-// which only has the generic site-wide OG tags, not this card's — so the
-// preview silently lost its per-card thumbnail. Real users get a lightweight
-// branded landing page with the card thumbnail and a tap-through button into
-// the app instead of an invisible instant hop.
+// This page does NOT redirect crawlers. It used to auto-redirect everyone,
+// but iMessage's link-preview fetcher (and some other unfurlers) followed
+// that instant redirect before reading the page's own tags, landing on
+// /?c=… instead — which only has the generic site-wide OG tags, not this
+// card's — so the preview silently lost its per-card thumbnail.
+//
+// Real visitors DO get redirected, straight through to the landing page —
+// see BOT_UA_PATTERN below. Distinguishing "crawler" from "person tapping
+// the link on their phone" by User-Agent is the standard fix for this exact
+// tension (want bots to see the tags-only page, everyone else to skip
+// straight past it): known unfurlers self-identify in their UA string, so
+// only requests that don't match get the redirect.
 import { estimateOgImageHeight, OG_IMAGE_WIDTH } from '../cardVisuals.js';
 import { resolveCircle } from '../circleLookup.js';
 
 export const config = { runtime: 'edge' };
+
+const BOT_UA_PATTERN =
+  /bot|crawl|spider|facebookexternalhit|whatsapp|telegrambot|slackbot|discordbot|twitterbot|linkedinbot|pinterest|redditbot|embedly|quora link preview|vkshare|w3c_validator|outbrain|nuzzel|skypeuripreview|iframely|flipboard|applebot/i;
 
 const esc = (s) =>
   String(s)
@@ -37,6 +45,14 @@ export default async function handler(req) {
   if (id) appParams.set('id', id);
   else if (c) appParams.set('c', c);
   const appUrl = `${origin}/?${appParams.toString()}`;
+
+  // Not a known link-preview bot — this is someone actually tapping the
+  // link, so send them straight to the landing page instead of showing the
+  // intermediate card-preview page first.
+  const ua = req.headers.get('user-agent') || '';
+  if (!BOT_UA_PATTERN.test(ua)) {
+    return Response.redirect(appUrl, 302);
+  }
 
   const ogImageParam = id ? `id=${encodeURIComponent(id)}` : c ? `c=${encodeURIComponent(c)}` : '';
   const ogImage = `${origin}/api/og${ogImageParam ? `?${ogImageParam}` : ''}`;
