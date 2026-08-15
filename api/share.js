@@ -10,6 +10,8 @@
 // preview silently lost its per-card thumbnail. Real users get a lightweight
 // branded landing page with the card thumbnail and a tap-through button into
 // the app instead of an invisible instant hop.
+import { estimateOgImageHeight } from '../cardVisuals.js';
+
 export const config = { runtime: 'edge' };
 
 function decodeCircle(enc) {
@@ -44,16 +46,23 @@ export default function handler(req) {
   let handle = '';
   let archetype = '';
   let score = '';
+  let teamCount = 0;
   try {
     if (c) {
       const p = decodeCircle(c);
       handle = p.h ? '@' + String(p.h).replace(/^@/, '') : '';
       archetype = p.a || '';
       score = p.sc != null ? String(p.sc) : '';
+      teamCount = Array.isArray(p.t) ? p.t.length : 0;
     }
   } catch {
     // ignore — fall back to generic copy
   }
+
+  // Must match api/og.js's own height computation — that's the image this
+  // tag is describing, and a wrong hint can make strict unfurlers letterbox
+  // or crop it.
+  const ogImageHeight = estimateOgImageHeight(archetype.toUpperCase(), teamCount);
 
   const title = handle ? `${handle}'s FanLog Loyalty Card` : 'FanLog — Your Sports Identity';
   const description = archetype
@@ -72,7 +81,7 @@ export default function handler(req) {
 <meta property="og:description" content="${esc(description)}">
 <meta property="og:image" content="${esc(ogImage)}">
 <meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
+<meta property="og:image:height" content="${ogImageHeight}">
 <meta property="og:url" content="${esc(appUrl)}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="${esc(title)}">
@@ -88,7 +97,7 @@ export default function handler(req) {
 </style>
 </head>
 <body>
-<img src="${esc(ogImage)}" alt="${esc(title)}" width="600" height="315">
+<img src="${esc(ogImage)}" alt="${esc(title)}" width="600" height="${Math.round(ogImageHeight / 2)}">
 <a class="btn" href="${esc(appUrl)}">Open ${handle ? `${esc(handle)}'s` : 'this'} Loyalty Card →</a>
 </body>
 </html>`;

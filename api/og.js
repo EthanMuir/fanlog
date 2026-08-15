@@ -17,7 +17,7 @@
 // transform/react dependency question entirely.
 import { ImageResponse } from '@vercel/og';
 import { sportsData } from '../teams.js';
-import { getContrastAdaptedColor } from '../cardVisuals.js';
+import { getContrastAdaptedColor, estimateOgImageHeight } from '../cardVisuals.js';
 
 export const config = { runtime: 'edge' };
 
@@ -103,7 +103,7 @@ function barChart(teams, origin) {
       h('div', { style: { display: 'flex', width: 56, justifyContent: 'flex-end', marginLeft: 18, fontSize: 22, fontWeight: 700 } }, String(team.score))
     );
   });
-  return h('div', { style: { display: 'flex', flexDirection: 'column', width: 560 } }, ...rows);
+  return h('div', { style: { display: 'flex', flexDirection: 'column', flex: 1 } }, ...rows);
 }
 
 export default async function handler(req) {
@@ -144,6 +144,14 @@ export default async function handler(req) {
     console.warn('[api/og] font load failed, falling back to default sans:', err);
   }
 
+  // Canvas height is fit to content instead of fixed at the 1200x630 "large
+  // image" default — with a static height the block of content (which varies
+  // 1-4 bars, 1-3 archetype lines) either left a lot of dead space below it
+  // (typical case) or the reverse. api/share.js has to predict this same
+  // number for its og:image:height tag without rendering anything, so the
+  // formula lives in cardVisuals.js where both can use it.
+  const height = estimateOgImageHeight(archetype, teams.length);
+
   // Header: brand left, "Loyalty Card" label right (mirrors the in-app card's
   // own header). Below that, the hero row (big score, bar chart), then the
   // archetype line and handle stacked underneath, full width. Background and
@@ -153,10 +161,10 @@ export default async function handler(req) {
     'div',
     {
       style: {
-        position: 'relative', width: '1200px', height: '630px', display: 'flex', flexDirection: 'column',
+        position: 'relative', width: '1200px', height: `${height}px`, display: 'flex', flexDirection: 'column',
         backgroundColor: '#0e1016',
         backgroundImage: `radial-gradient(circle at 10% 0%, ${cardAccent}22 0%, #0e1016 55%)`,
-        padding: '56px 72px', color: '#f3f4f6',
+        padding: '48px 72px', color: '#f3f4f6',
         fontFamily: fonts.length ? 'Space Grotesk' : 'sans-serif'
       }
     },
@@ -167,22 +175,20 @@ export default async function handler(req) {
       ),
       h('div', { style: { display: 'flex', fontSize: 14, fontWeight: 700, letterSpacing: 2, color: '#8e95a5' } }, 'LOYALTY CARD')
     ),
-    h('div', { style: { display: 'flex', width: '100%', flex: 1, flexDirection: 'column', justifyContent: 'center' } },
-      h('div', { style: { display: 'flex', width: '100%', alignItems: 'center' } },
-        h('div', { style: { display: 'flex', flexDirection: 'column', marginRight: 64 } },
-          h('div', { style: { display: 'flex', fontSize: 132, fontWeight: 700, letterSpacing: -5, lineHeight: 1 } }, String(teams.length ? Math.round(scoreOf(teams)) : '--')),
-          h('div', { style: { display: 'flex', fontSize: 20, fontWeight: 700, letterSpacing: 3, color: '#8e95a5', marginTop: 8 } }, 'FANLOG SCORE')
-        ),
-        barChart(teams, origin)
+    h('div', { style: { display: 'flex', width: '100%', alignItems: 'center', marginTop: 24 } },
+      h('div', { style: { display: 'flex', flexDirection: 'column', marginRight: 64 } },
+        h('div', { style: { display: 'flex', fontSize: 132, fontWeight: 700, letterSpacing: -5, lineHeight: 1 } }, String(teams.length ? Math.round(scoreOf(teams)) : '--')),
+        h('div', { style: { display: 'flex', fontSize: 20, fontWeight: 700, letterSpacing: 3, color: '#8e95a5', marginTop: 8 } }, 'FANLOG SCORE')
       ),
-      h('div', { style: { display: 'flex', maxWidth: 1000, fontSize: 36, fontWeight: 700, lineHeight: 1.2, marginTop: 40 } }, archetype),
-      h('div', { style: { display: 'flex', fontSize: 22, fontWeight: 700, color: '#8e95a5', marginTop: 14 } }, handle)
-    )
+      barChart(teams, origin)
+    ),
+    h('div', { style: { display: 'flex', maxWidth: 1000, fontSize: 36, fontWeight: 700, lineHeight: 1.2, marginTop: 32 } }, archetype),
+    h('div', { style: { display: 'flex', fontSize: 22, fontWeight: 700, color: '#8e95a5', marginTop: 14 } }, handle)
   );
 
   // Passing an empty array here (instead of omitting the key) would disable
   // @vercel/og's own bundled fallback font and hard-fail the whole image
   // ("No fonts are loaded") instead of just looking visually off — worse
   // than the font mismatch we're trying to fix.
-  return new ImageResponse(tree, { width: 1200, height: 630, fonts: fonts.length ? fonts : undefined });
+  return new ImageResponse(tree, { width: 1200, height, fonts: fonts.length ? fonts : undefined });
 }

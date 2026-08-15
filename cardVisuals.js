@@ -8,8 +8,7 @@
 // rainbow-gauge geometry and prediction-label logic already had.
 
 // Concentric rainbow gauge geometry (initializeRainbowSVG/updateRainbowSVG in
-// main.js, rainbowGauge in api/og.js): four half-circle tracks sharing one
-// center, outermost first.
+// main.js): four half-circle tracks sharing one center, outermost first.
 export const RAINBOW_RADII = [130, 108, 86, 64];
 export const RAINBOW_CX = 150;
 export const RAINBOW_CY = 160;
@@ -30,6 +29,22 @@ export function getContrastAdaptedColor(primaryHex, secondaryHex) {
   const brightness = getLuminance(primaryHex);
   if (brightness < 45 && secondaryHex && getLuminance(secondaryHex) > brightness) return secondaryHex;
   return primaryHex;
+}
+
+// The share-link OG image (api/og.js) fits its canvas height to content
+// (1-4 team bars, 1-3 archetype lines) instead of a fixed size, so the
+// og:image:height meta tag api/share.js prints for crawlers has to predict
+// the same number without actually rendering the image. Keeping the formula
+// here means the two can't drift apart the way separately-hand-copied
+// layout constants would.
+export function estimateOgImageHeight(archetype, teamCount) {
+  const barRows = Math.min(teamCount, 4);
+  const chartHeight = barRows ? 42 + (barRows - 1) * 62 : 0;
+  const heroHeight = Math.max(160, chartHeight);
+  const archetypeLines = Math.max(1, Math.min(3, Math.ceil((archetype || '').length / 45)));
+  const archetypeHeight = archetypeLines * 43;
+  const contentHeight = 40 + 24 + heroHeight + 32 + archetypeHeight + 14 + 28;
+  return Math.max(420, Math.min(630, contentHeight + 96));
 }
 
 export function getPredictionLabel(league, teamShort) {
