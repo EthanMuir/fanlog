@@ -19,7 +19,7 @@
 // transform/react dependency question entirely.
 import { ImageResponse } from '@vercel/og';
 import { sportsData } from '../teams.js';
-import { getContrastAdaptedColor, estimateOgImageHeight, OG_IMAGE_WIDTH } from '../cardVisuals.js';
+import { getContrastAdaptedColor, estimateOgImageHeight, OG_IMAGE_WIDTH, computeFanScore } from '../cardVisuals.js';
 import { resolveCircle } from '../circleLookup.js';
 
 export const config = { runtime: 'edge' };
@@ -74,12 +74,6 @@ function getFonts() {
   return fontsPromise;
 }
 
-function scoreOf(teams) {
-  const top = teams.find(t => t.top) || teams[0];
-  const others = teams.filter(t => t !== top);
-  if (!others.length) return top.score;
-  return top.score * 0.6 + (others.reduce((s, t) => s + t.score, 0) / others.length) * 0.4;
-}
 
 // One chunky bar per team (logo, fill proportional to score, score value) —
 // swapped in for the in-app rainbow-arc gauge, which packs the same info
@@ -175,7 +169,7 @@ export default async function handler(req) {
     ),
     h('div', { style: { display: 'flex', width: '100%', alignItems: 'center', marginTop: 24 } },
       h('div', { style: { display: 'flex', flexDirection: 'column', marginRight: 64 } },
-        h('div', { style: { display: 'flex', fontSize: 132, fontWeight: 700, letterSpacing: -5, lineHeight: 1 } }, String(teams.length ? Math.round(scoreOf(teams)) : '--')),
+        h('div', { style: { display: 'flex', fontSize: 132, fontWeight: 700, letterSpacing: -5, lineHeight: 1 } }, String(teams.length ? computeFanScore(teams) : '--')),
         h('div', { style: { display: 'flex', fontSize: 20, fontWeight: 700, letterSpacing: 3, color: '#8e95a5', marginTop: 8 } }, 'FANLOG SCORE')
       ),
       barChart(teams, origin)

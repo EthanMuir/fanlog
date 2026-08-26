@@ -53,6 +53,48 @@ export function estimateOgImageHeight(archetype, teamCount) {
   return Math.max(420, Math.min(630, contentHeight + 96));
 }
 
+// --- FANLOG SCORE ---
+// The single source of truth for a card's overall score, shared by the live
+// card (main.js) and the share-link OG image (api/og.js) so the two can't
+// disagree — they used to, main.js averaging raw team scores while api/og.js
+// used a 60/40 top-vs-rest weighting.
+//
+// Generous by design: the score lives in a compressed [SCORE_BASE, 100] band
+// (base 75) rather than [0, 100], so every fan reads as a committed one and
+// nobody who built a real card sees a demoralizing low number. Shape:
+//
+//   finalScore = SCORE_BASE + SCORE_SPAN * mean(curve(teamScore)) / 100
+//
+// which is exactly "start at 75, then each team adds teamScore/100 * 25/n":
+// summing that per-team contribution over n teams gives SCORE_SPAN times the
+// mean, so all-100 teams reach 100 and all-0 teams sit at the 75 floor.
+//
+// curve() applies an extra upward "generosity" lift to each team's own score
+// before averaging (GENEROSITY > 1 bows scores toward the max; = 1 disables
+// it). These three constants are the tuning knobs — raise SCORE_BASE for a
+// higher floor, lower it toward ~55 if you want 75 to be the *average* rather
+// than the floor, raise GENEROSITY to push typical scores higher still.
+// Current values (base 65 / gen 1.5) are the "in between" setting: generous
+// but keeps some range — a typical 92/74/55 card scores ~95, a middling
+// 50/50/50 ~88, a weak 40/30/20 ~79, floor 65.
+export const SCORE_BASE = 65;
+export const SCORE_SPAN = 100 - SCORE_BASE; // so a perfect card tops out at exactly 100
+export const GENEROSITY = 1.5;
+
+function curveTeamScore(score) {
+  const x = Math.max(0, Math.min(100, Number(score) || 0)) / 100;
+  // Ease-out: 1 - (1 - x)^GENEROSITY. Concave, so it lifts every score toward
+  // the top without ever exceeding 100 or dropping below 0.
+  return (1 - Math.pow(1 - x, GENEROSITY)) * 100;
+}
+
+export function computeFanScore(teams) {
+  if (!teams || !teams.length) return SCORE_BASE;
+  const meanCurved =
+    teams.reduce((sum, t) => sum + curveTeamScore(t.score), 0) / teams.length;
+  return Math.round(Math.min(100, SCORE_BASE + (SCORE_SPAN * meanCurved) / 100));
+}
+
 export function getPredictionLabel(league, teamShort) {
   const prefix = teamShort ? `${teamShort} ` : "";
   if (!league) return `${prefix}PREDICTION`;

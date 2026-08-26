@@ -4,7 +4,7 @@ import html2canvas from 'html2canvas';
 import { HubSDK } from '@ethanhodge7373/hub-sdk';
 import { saveWaitlistEntry } from './waitlist.js';
 import { saveCircle } from './circles.js';
-import { RAINBOW_RADII, RAINBOW_CX, RAINBOW_CY, getLuminance, getContrastAdaptedColor, getPredictionLabel } from './cardVisuals.js';
+import { RAINBOW_RADII, RAINBOW_CX, RAINBOW_CY, getLuminance, getContrastAdaptedColor, getPredictionLabel, computeFanScore } from './cardVisuals.js';
 
 HubSDK.init({
   appSlug: 'fanlog',
@@ -99,9 +99,7 @@ function generateRandomMorphProfile() {
   });
   
   const topTeam = chosen[0];
-  const overallScore = Math.round(
-    chosen.reduce((sum, t) => sum + t.score, 0) / chosen.length
-  );
+  const overallScore = computeFanScore(chosen);
   
   const welcomeInput = document.getElementById('welcome-fan-name');
   let name = "";
@@ -1684,10 +1682,9 @@ function runRevealSequence() {
   revealProgressFill.style.width = '0%';
   revealTicker.textContent = '00';
   
-  // Calculate finished average overall score as a simple average of all team scores
-  const finalScore = Math.min(100, Math.round(
-    selectedTeams.reduce((sum, t) => sum + t.score, 0) / selectedTeams.length
-  ));
+  // Canonical FanLog Score (see computeFanScore in cardVisuals.js) — shared
+  // with the share-image renderer so the card and its link preview agree.
+  const finalScore = computeFanScore(selectedTeams);
   
   const startRevealTime = performance.now();
   const revealDuration = 1800; // ms
@@ -2845,10 +2842,7 @@ function generateRandomCard() {
   userQuizAnswers = {};
   recalculateTopTeam();
 
-  const topTeam = selectedTeams.find(t => t.isTop);
-  const others = selectedTeams.filter(t => !t.isTop);
-  const avgOthers = others.reduce((sum, t) => sum + t.score, 0) / others.length;
-  const finalScore = Math.round(topTeam.score * 0.6 + avgOthers * 0.4);
+  const finalScore = computeFanScore(selectedTeams);
 
   setupStep5MainPage(finalScore);
 }
