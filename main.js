@@ -497,6 +497,327 @@ function getRandomQuizQuestions(num) {
   return shuffled.slice(0, num);
 }
 
+// --- GAMES-WATCHED SLIDER BUCKET CONFIG ---
+// Each entry is an array of display-range labels. The slider index maps to a label.
+// Score = Math.round((index / (buckets.length - 1)) * 25)
+const leagueSlideBuckets = {
+  NFL:        ['0', '1–4', '5–8', '9–12', '13–15', '16–17'],
+  NBA:        ['0', '1–10', '11–20', '21–30', '31–41', '42–50', '51–60', '61–70', '71–82'],
+  NHL:        ['0', '1–10', '11–20', '21–30', '31–41', '42–50', '51–60', '61–70', '71–82'],
+  MLB:        ['0', '1–20', '21–40', '41–60', '61–80', '81–100', '101–120', '121–140', '141–162'],
+  MLS:        ['0', '1–5', '6–10', '11–15', '16–20', '21–25', '26–30', '31–34'],
+  CFL:        ['0', '1–3', '4–6', '7–9', '10–12', '13–15', '16–18'],
+  EPL:        ['0', '1–5', '6–10', '11–15', '16–20', '21–25', '26–30', '31–38'],
+  LALIGA:     ['0', '1–5', '6–10', '11–15', '16–20', '21–25', '26–30', '31–38'],
+  BUNDESLIGA: ['0', '1–4', '5–8', '9–12', '13–17', '18–22', '23–27', '28–34'],
+  SERIEA:     ['0', '1–5', '6–10', '11–15', '16–20', '21–25', '26–30', '31–38'],
+  LIGUE1:     ['0', '1–4', '5–8', '9–12', '13–16', '17–20', '21–24', '25–28', '29–34'],
+};
+
+function getSliderBuckets(leagueKey) {
+  return leagueSlideBuckets[leagueKey] || leagueSlideBuckets['NFL'];
+}
+
+// --- TEAM-SPECIFIC TRIVIA DATABASE ---
+// Each entry: { q: "question text", opts: [ {t: "option text", c: true/false}, ... ] }
+// Exactly one option should have c: true. Correct = 25 pts, wrong = 5 pts.
+const triviaDatabase = {
+  // ── NFL ──
+  chiefs: { q: "Patrick Mahomes and the Chiefs defeated which team in Super Bowl LVII (2023)?", opts: [{t:"Philadelphia Eagles",c:true},{t:"Buffalo Bills"},{t:"Baltimore Ravens"},{t:"San Francisco 49ers"}] },
+  eagles: { q: "The Eagles won their first-ever Super Bowl in Super Bowl LII. Who did they beat?", opts: [{t:"New England Patriots",c:true},{t:"Kansas City Chiefs"},{t:"Pittsburgh Steelers"},{t:"Dallas Cowboys"}] },
+  cowboys: { q: "Which Cowboys legend holds the NFL all-time regular-season rushing yards record?", opts: [{t:"Emmitt Smith",c:true},{t:"Tony Dorsett"},{t:"DeMarco Murray"},{t:"Ezekiel Elliott"}] },
+  niners: { q: "The 49ers lost Super Bowl LVIII (2024) to which team in overtime?", opts: [{t:"Kansas City Chiefs",c:true},{t:"Baltimore Ravens"},{t:"Green Bay Packers"},{t:"Detroit Lions"}] },
+  packers: { q: "Aaron Rodgers won his only Super Bowl with Green Bay. Which season was it?", opts: [{t:"2010 season",c:true},{t:"2014 season"},{t:"2007 season"},{t:"2016 season"}] },
+  bills: { q: "Josh Allen was drafted by Buffalo 7th overall. Which year was the 2018 NFL Draft held?", opts: [{t:"2018",c:true},{t:"2017"},{t:"2019"},{t:"2020"}] },
+  seahawks: { q: "The Seahawks crushed Denver 43–8 in Super Bowl XLVIII. Who was their QB?", opts: [{t:"Russell Wilson",c:true},{t:"Matt Hasselbeck"},{t:"Geno Smith"},{t:"Tarvaris Jackson"}] },
+  patriots: { q: "How many Super Bowls did Tom Brady win while playing for New England?", opts: [{t:"6",c:true},{t:"5"},{t:"7"},{t:"4"}] },
+  raiders: { q: "The Raiders relocated from Oakland to Las Vegas and played their first season there in which year?", opts: [{t:"2020",c:true},{t:"2019"},{t:"2021"},{t:"2022"}] },
+  giants_nfl: { q: "The Giants defeated the undefeated Patriots in Super Bowl XLII (2008). Who was New York's QB?", opts: [{t:"Eli Manning",c:true},{t:"Kerry Collins"},{t:"David Carr"},{t:"Phil Simms"}] },
+  dolphins: { q: "The 1972 Miami Dolphins finished with a perfect record — the only undefeated Super Bowl champion. What was their final record?", opts: [{t:"17–0",c:true},{t:"16–0"},{t:"14–0"},{t:"15–0"}] },
+  jets: { q: "The Jets selected QB Zach Wilson 2nd overall in the 2021 NFL Draft. Which college did he attend?", opts: [{t:"BYU",c:true},{t:"Utah"},{t:"Alabama"},{t:"Clemson"}] },
+  ravens: { q: "Lamar Jackson won his second NFL MVP award after which 2023 regular season?", opts: [{t:"2023 season",c:true},{t:"2022 season"},{t:"2021 season"},{t:"2019 season"}] },
+  bengals: { q: "Joe Burrow led Cincinnati to Super Bowl LVI (2022) where they lost to which team?", opts: [{t:"Los Angeles Rams",c:true},{t:"Kansas City Chiefs"},{t:"San Francisco 49ers"},{t:"Buffalo Bills"}] },
+  browns: { q: "Which veteran QB had an unlikely playoff run with Cleveland in the 2023 season, going 4–1 as starter?", opts: [{t:"Joe Flacco",c:true},{t:"Deshaun Watson"},{t:"Baker Mayfield"},{t:"Jacoby Brissett"}] },
+  steelers: { q: "Pittsburgh's iconic 'Steel Curtain' defense — defined by four Super Bowl wins — dominated which decade?", opts: [{t:"1970s",c:true},{t:"1980s"},{t:"1960s"},{t:"1990s"}] },
+  texans: { q: "C.J. Stroud was Houston's first pick in the 2023 draft. What overall pick was he?", opts: [{t:"2nd overall",c:true},{t:"1st overall"},{t:"3rd overall"},{t:"5th overall"}] },
+  colts: { q: "Peyton Manning's #18 is retired by the Colts. How many Super Bowls did he win with Indianapolis?", opts: [{t:"1",c:true},{t:"2"},{t:"0"},{t:"3"}] },
+  jaguars: { q: "The Jaguars took Trevor Lawrence 1st overall in the 2021 NFL Draft. Which college did he come from?", opts: [{t:"Clemson",c:true},{t:"LSU"},{t:"Ohio State"},{t:"Alabama"}] },
+  titans: { q: "The Tennessee Titans were formerly known by which name when they played in Houston?", opts: [{t:"Houston Oilers",c:true},{t:"Houston Texans"},{t:"Memphis Oilers"},{t:"Nashville Predators"}] },
+  broncos: { q: "Denver defeated which team 24–10 in Super Bowl 50 (2016), powered by their 'No-Fly Zone' defense?", opts: [{t:"Carolina Panthers",c:true},{t:"New England Patriots"},{t:"Seattle Seahawks"},{t:"Arizona Cardinals"}] },
+  chargers: { q: "Justin Herbert was selected 6th overall by the Chargers in 2020. What jersey number does he wear?", opts: [{t:"10",c:true},{t:"17"},{t:"12"},{t:"7"}] },
+  commanders: { q: "Washington officially rebranded from Washington Football Team to what new name in 2022?", opts: [{t:"Commanders",c:true},{t:"Sentinels"},{t:"Red Wolves"},{t:"Presidents"}] },
+  lions: { q: "The Lions ended a 30-year playoff win drought in the 2023 season. Who did they beat in the Wild Card round?", opts: [{t:"Los Angeles Rams",c:true},{t:"Tampa Bay Buccaneers"},{t:"Green Bay Packers"},{t:"Dallas Cowboys"}] },
+  vikings: { q: "The 'Minneapolis Miracle' (2018 playoffs) was a walk-off touchdown catch by which Vikings receiver?", opts: [{t:"Stefon Diggs",c:true},{t:"Adam Thielen"},{t:"Justin Jefferson"},{t:"Randy Moss"}] },
+  bears: { q: "Chicago selected Caleb Williams with the 1st overall pick in the 2024 NFL Draft. What position does he play?", opts: [{t:"Quarterback",c:true},{t:"Wide Receiver"},{t:"Running Back"},{t:"Tight End"}] },
+  buccaneers: { q: "Tom Brady won his 7th Super Bowl with Tampa Bay, defeating which team in Super Bowl LV (2021)?", opts: [{t:"Kansas City Chiefs",c:true},{t:"Green Bay Packers"},{t:"New Orleans Saints"},{t:"Buffalo Bills"}] },
+  saints: { q: "Drew Brees won his only Super Bowl (XLIV) with New Orleans. Who did they defeat?", opts: [{t:"Indianapolis Colts",c:true},{t:"Miami Dolphins"},{t:"Dallas Cowboys"},{t:"San Diego Chargers"}] },
+  falcons: { q: "Atlanta blew a 28–3 lead in Super Bowl LI (2017) and lost in overtime to which team?", opts: [{t:"New England Patriots",c:true},{t:"New York Giants"},{t:"Philadelphia Eagles"},{t:"Pittsburgh Steelers"}] },
+  panthers: { q: "The Panthers went 15–1 in the regular season before losing the Super Bowl in which year?", opts: [{t:"2015 season",c:true},{t:"2013 season"},{t:"2017 season"},{t:"2011 season"}] },
+  rams: { q: "The Rams won Super Bowl LVI (2022) in their own building. What is the name of their stadium?", opts: [{t:"SoFi Stadium",c:true},{t:"MetLife Stadium"},{t:"AT&T Stadium"},{t:"Raymond James Stadium"}] },
+  cardinals_nfl: { q: "Kyler Murray was the Cardinals' 1st overall pick. From which college was he selected?", opts: [{t:"University of Oklahoma",c:true},{t:"University of Arizona"},{t:"Auburn University"},{t:"Texas A&M"}] },
+
+  // ── NBA ──
+  lakers: { q: "LeBron James passed Kareem Abdul-Jabbar as the NBA's all-time leading scorer in which city?", opts: [{t:"Oklahoma City",c:true},{t:"Los Angeles"},{t:"Cleveland"},{t:"Miami"}] },
+  celtics: { q: "Jaylen Brown won the 2024 NBA Finals MVP after the Celtics defeated which team in the Finals?", opts: [{t:"Dallas Mavericks",c:true},{t:"Miami Heat"},{t:"Indiana Pacers"},{t:"Minnesota Timberwolves"}] },
+  warriors: { q: "The Warriors set the all-time NBA regular season wins record in 2015–16 with how many victories?", opts: [{t:"73",c:true},{t:"72"},{t:"67"},{t:"69"}] },
+  bulls: { q: "Michael Jordan won 6 championships with Chicago across two separate three-peats. When were those runs?", opts: [{t:"1991–93 & 1996–98",c:true},{t:"1989–91 & 1995–97"},{t:"1991–93 & 1995–97"},{t:"1990–92 & 1997–99"}] },
+  raptors: { q: "Toronto won the 2019 NBA Championship in 6 games. Where was the deciding Game 6 played?", opts: [{t:"Oracle Arena, Oakland",c:true},{t:"Scotiabank Arena, Toronto"},{t:"Madison Square Garden"},{t:"Staples Center"}] },
+  heat: { q: "Before signing with Miami in 2019, Jimmy Butler came from which team?", opts: [{t:"Philadelphia 76ers",c:true},{t:"Houston Rockets"},{t:"Oklahoma City Thunder"},{t:"Minnesota Timberwolves"}] },
+  knicks: { q: "Which Knicks guard broke out as a star in 2023–24, helping end the team's postseason irrelevance?", opts: [{t:"Jalen Brunson",c:true},{t:"Kristaps Porzingis"},{t:"Julius Randle"},{t:"RJ Barrett"}] },
+  bucks: { q: "Giannis Antetokounmpo scored how many points in Game 6 of the 2021 NBA Finals?", opts: [{t:"50",c:true},{t:"38"},{t:"45"},{t:"32"}] },
+  suns: { q: "Steve Nash won back-to-back MVP awards with Phoenix in which consecutive seasons?", opts: [{t:"2004–05 & 2005–06",c:true},{t:"2006–07 & 2007–08"},{t:"2002–03 & 2003–04"},{t:"2003–04 & 2004–05"}] },
+  nets: { q: "Kevin Durant joined the Brooklyn Nets in 2019 via sign-and-trade from which team?", opts: [{t:"Golden State Warriors",c:true},{t:"Oklahoma City Thunder"},{t:"Cleveland Cavaliers"},{t:"Miami Heat"}] },
+  sixers: { q: "Joel Embiid ultimately chose to represent which country's national team at the Olympics?", opts: [{t:"France",c:true},{t:"Cameroon"},{t:"Senegal"},{t:"USA"}] },
+  cavaliers: { q: "LeBron James delivered Cleveland's first major sports championship in 52 years by coming back from 3–1 in which year?", opts: [{t:"2016",c:true},{t:"2015"},{t:"2017"},{t:"2014"}] },
+  pistons: { q: "Detroit's 'Bad Boys' Pistons swept the Lakers to win back-to-back championships. Who was their head coach?", opts: [{t:"Chuck Daly",c:true},{t:"Larry Brown"},{t:"Rick Carlisle"},{t:"Flip Saunders"}] },
+  pacers: { q: "Reggie Miller spent his entire NBA career with Indiana. How many total seasons did he play for the Pacers?", opts: [{t:"18",c:true},{t:"15"},{t:"12"},{t:"20"}] },
+  hawks: { q: "Trae Young led Atlanta to the Eastern Conference Finals in 2021 by eliminating which #1 seed?", opts: [{t:"Philadelphia 76ers",c:true},{t:"Milwaukee Bucks"},{t:"Brooklyn Nets"},{t:"Miami Heat"}] },
+  hornets: { q: "LaMelo Ball won the 2020–21 NBA Rookie of the Year. He is the younger brother of which NBA player?", opts: [{t:"Lonzo Ball",c:true},{t:"Gelo Ball"},{t:"D.J. Wilson"},{t:"Jordan Bell"}] },
+  magic: { q: "Orlando selected Paolo Banchero 1st overall in 2022. He played college basketball at which school?", opts: [{t:"Duke",c:true},{t:"Kentucky"},{t:"UConn"},{t:"Gonzaga"}] },
+  wizards: { q: "Bradley Beal was selected by Washington with the 3rd overall pick in which NBA Draft?", opts: [{t:"2012",c:true},{t:"2013"},{t:"2011"},{t:"2014"}] },
+  nuggets: { q: "Nikola Jokic won three MVP awards and the 2023 NBA title. He is originally from which country?", opts: [{t:"Serbia",c:true},{t:"Croatia"},{t:"Slovenia"},{t:"Bosnia"}] },
+  timberwolves: { q: "Anthony Edwards was selected 1st overall by Minnesota in 2020. Which university did he attend?", opts: [{t:"University of Georgia",c:true},{t:"University of Texas"},{t:"University of Kentucky"},{t:"UNC"}] },
+  thunder: { q: "Shai Gilgeous-Alexander was traded to Oklahoma City from which team in 2019?", opts: [{t:"LA Clippers",c:true},{t:"Toronto Raptors"},{t:"Sacramento Kings"},{t:"Memphis Grizzlies"}] },
+  blazers: { q: "Damian Lillard was drafted by Portland in 2012. What overall pick was he?", opts: [{t:"6th",c:true},{t:"11th"},{t:"3rd"},{t:"15th"}] },
+  jazz: { q: "Karl Malone and John Stockton reached the NBA Finals twice. Which team denied them the title both times?", opts: [{t:"Chicago Bulls",c:true},{t:"Houston Rockets"},{t:"Seattle SuperSonics"},{t:"LA Lakers"}] },
+  clippers: { q: "Kawhi Leonard suffered a playoff injury in the 2021 second round against the Suns. What type of injury was it?", opts: [{t:"Torn ACL",c:true},{t:"Torn Achilles"},{t:"Torn MCL"},{t:"Fractured knee"}] },
+  kings_nba: { q: "The Kings ended a 16-year playoff drought in which year?", opts: [{t:"2023",c:true},{t:"2022"},{t:"2021"},{t:"2024"}] },
+  mavericks: { q: "Luka Dončić was drafted 3rd overall by Atlanta in 2018 and immediately traded to Dallas for which player?", opts: [{t:"Trae Young",c:true},{t:"Deandre Hunter"},{t:"De'Andre Hunter"},{t:"Kevin Huerter"}] },
+  rockets: { q: "Houston selected big man Alperen Şengün with the 16th pick in 2021. Which country is he from?", opts: [{t:"Turkey",c:true},{t:"Serbia"},{t:"Greece"},{t:"Latvia"}] },
+  grizzlies: { q: "Ja Morant was the 2nd overall pick in 2019. He played college ball at which small school?", opts: [{t:"Murray State",c:true},{t:"University of Memphis"},{t:"University of Kentucky"},{t:"LSU"}] },
+  pelicans: { q: "New Orleans selected Zion Williamson 1st overall in 2019. Which college did he attend?", opts: [{t:"Duke",c:true},{t:"Kentucky"},{t:"North Carolina"},{t:"Kansas"}] },
+  spurs: { q: "Tim Duncan, Tony Parker, and Manu Ginobili formed San Antonio's 'Big Three'. How many NBA titles did they win together?", opts: [{t:"4",c:true},{t:"3"},{t:"5"},{t:"2"}] },
+
+  // ── NHL ──
+  leafs: { q: "Auston Matthews set a Toronto Maple Leafs single-season goals record with 69 goals. Which season was it?", opts: [{t:"2022–23",c:true},{t:"2021–22"},{t:"2023–24"},{t:"2024–25"}] },
+  bruins: { q: "David Pastrnak was a late bloomer drafted by Boston in 2012. In what round was he selected?", opts: [{t:"1st round",c:true},{t:"3rd round"},{t:"2nd round"},{t:"4th round"}] },
+  blackhawks: { q: "Connor Bedard was selected 1st overall by Chicago in the 2023 NHL Draft. Where is he from?", opts: [{t:"North Vancouver, BC",c:true},{t:"Burnaby, BC"},{t:"Regina, SK"},{t:"Calgary, AB"}] },
+  canadiens: { q: "The Montreal Canadiens have won more Stanley Cups than any other NHL franchise. How many?", opts: [{t:"24",c:true},{t:"21"},{t:"13"},{t:"18"}] },
+  canucks: { q: "Which Canucks goalie wore an iconic mask design and won the Vezina Trophy twice in his career?", opts: [{t:"Roberto Luongo",c:true},{t:"Ryan Miller"},{t:"Cory Schneider"},{t:"Thatcher Demko"}] },
+  knights: { q: "Vegas reached the Stanley Cup Final in their inaugural 2017–18 season. Which team beat them?", opts: [{t:"Washington Capitals",c:true},{t:"Pittsburgh Penguins"},{t:"Tampa Bay Lightning"},{t:"St. Louis Blues"}] },
+  rangers: { q: "Mika Zibanejad was acquired by the Rangers in a 2016 trade from which team?", opts: [{t:"Ottawa Senators",c:true},{t:"Colorado Avalanche"},{t:"Edmonton Oilers"},{t:"Minnesota Wild"}] },
+  avalanche: { q: "Colorado's Cale Makar won the Conn Smythe Trophy when the Avs won the 2022 Cup. What position does he play?", opts: [{t:"Defense",c:true},{t:"Center"},{t:"Right Wing"},{t:"Left Wing"}] },
+  oilers: { q: "Connor McDavid was selected 1st overall by Edmonton. In which year?", opts: [{t:"2015",c:true},{t:"2014"},{t:"2016"},{t:"2013"}] },
+  penguins: { q: "Sidney Crosby captained Pittsburgh to how many Stanley Cup championships?", opts: [{t:"3",c:true},{t:"2"},{t:"4"},{t:"1"}] },
+  ducks: { q: "The Anaheim Ducks won their only Stanley Cup Championship in which year?", opts: [{t:"2007",c:true},{t:"2006"},{t:"2009"},{t:"2003"}] },
+  sabres: { q: "Buffalo's 1999 Stanley Cup run ended in controversial fashion in Game 6 of the Finals. The opponent was?", opts: [{t:"Dallas Stars",c:true},{t:"Colorado Avalanche"},{t:"New Jersey Devils"},{t:"New York Rangers"}] },
+  flames: { q: "The Calgary Flames won their only Stanley Cup in which year?", opts: [{t:"1989",c:true},{t:"1986"},{t:"1991"},{t:"1984"}] },
+  hurricanes: { q: "Jordan Staal has been a core piece of Carolina for years. He was traded from which team?", opts: [{t:"Pittsburgh Penguins",c:true},{t:"Columbus Blue Jackets"},{t:"Nashville Predators"},{t:"Buffalo Sabres"}] },
+  bluejackets: { q: "The Blue Jackets stunned the hockey world in the 2019 playoffs by sweeping which defending Stanley Cup champion?", opts: [{t:"Tampa Bay Lightning",c:true},{t:"Pittsburgh Penguins"},{t:"Washington Capitals"},{t:"Nashville Predators"}] },
+  stars: { q: "Dallas's Jason Robertson was a 2017 draft steal. In what round was he selected?", opts: [{t:"2nd round",c:true},{t:"1st round"},{t:"3rd round"},{t:"4th round"}] },
+  redwings: { q: "Gordie Howe played nearly his entire career in Detroit. Who eventually broke his NHL goals record?", opts: [{t:"Wayne Gretzky",c:true},{t:"Jaromír Jágr"},{t:"Brett Hull"},{t:"Mike Gartner"}] },
+  panthers_nhl: { q: "The Florida Panthers won their first Stanley Cup championship in which year?", opts: [{t:"2024",c:true},{t:"2023"},{t:"2022"},{t:"2025"}] },
+  kings_nhl: { q: "Drew Doughty has won Olympic gold medals representing which country?", opts: [{t:"Canada",c:true},{t:"USA"},{t:"Sweden"},{t:"Finland"}] },
+  wild: { q: "Kirill Kaprizov won the Calder Trophy (Rookie of the Year) in 2021. He is from which country?", opts: [{t:"Russia",c:true},{t:"Finland"},{t:"Sweden"},{t:"Czech Republic"}] },
+  predators: { q: "Nashville's Roman Josi won the Norris Trophy as the NHL's best defenseman. He is from which country?", opts: [{t:"Switzerland",c:true},{t:"Sweden"},{t:"Austria"},{t:"Finland"}] },
+  devils: { q: "Jack Hughes was selected 1st overall by New Jersey in 2019. His brother Quinn Hughes plays for which NHL team?", opts: [{t:"Vancouver Canucks",c:true},{t:"Seattle Kraken"},{t:"Colorado Avalanche"},{t:"Edmonton Oilers"}] },
+  islanders: { q: "The Islanders won four consecutive Stanley Cup championships (1980–83) under which legendary coach?", opts: [{t:"Al Arbour",c:true},{t:"Mike Milbury"},{t:"Terry Simpson"},{t:"Lorne Henning"}] },
+  senators: { q: "Brady Tkachuk was Ottawa's 4th overall pick in 2018. What position does he play?", opts: [{t:"Left Wing",c:true},{t:"Center"},{t:"Right Wing"},{t:"Defense"}] },
+  flyers: { q: "Philadelphia's 'Broad Street Bullies' dynasty in the 1970s produced how many Stanley Cup titles?", opts: [{t:"2",c:true},{t:"1"},{t:"3"},{t:"0"}] },
+  sharks: { q: "Logan Couture has been San Jose's captain and franchise player. What position does he play?", opts: [{t:"Center",c:true},{t:"Left Wing"},{t:"Defense"},{t:"Right Wing"}] },
+  kraken: { q: "The Seattle Kraken played their first regular season game in which year?", opts: [{t:"2021",c:true},{t:"2020"},{t:"2022"},{t:"2019"}] },
+  blues: { q: "Ryan O'Reilly won the Conn Smythe Trophy when St. Louis won the 2019 Stanley Cup. What was his position?", opts: [{t:"Center",c:true},{t:"Left Wing"},{t:"Defense"},{t:"Right Wing"}] },
+  lightning: { q: "Tampa Bay won back-to-back Stanley Cups. In which two consecutive years?", opts: [{t:"2020 & 2021",c:true},{t:"2019 & 2020"},{t:"2021 & 2022"},{t:"2019 & 2021"}] },
+  utah_hc: { q: "The Utah Hockey Club relocated from Arizona, where it was previously known as?", opts: [{t:"Arizona Coyotes",c:true},{t:"Phoenix Roadrunners"},{t:"Arizona Cardinals"},{t:"Tucson Roadrunners"}] },
+  capitals: { q: "Alex Ovechkin holds what NHL record and wears which jersey number?", opts: [{t:"All-time goals leader, #8",c:true},{t:"All-time points leader, #77"},{t:"All-time assists leader, #8"},{t:"All-time wins, #19"}] },
+  jets_nhl: { q: "Mark Scheifele has been the Jets' franchise center since 2011. What is his jersey number?", opts: [{t:"55",c:true},{t:"26"},{t:"7"},{t:"81"}] },
+
+  // ── MLB ──
+  yankees: { q: "Aaron Judge broke which legendary Yankee's American League home run record in 2022 by hitting 62?", opts: [{t:"Roger Maris",c:true},{t:"Babe Ruth"},{t:"Mickey Mantle"},{t:"Alex Rodriguez"}] },
+  redsox: { q: "Boston ended an 86-year championship drought with their first World Series title since 1918. What year?", opts: [{t:"2004",c:true},{t:"2007"},{t:"2003"},{t:"2001"}] },
+  dodgers: { q: "Shohei Ohtani signed with the Dodgers on a record 10-year deal. How much was it worth?", opts: [{t:"$700 million",c:true},{t:"$500 million"},{t:"$600 million"},{t:"$450 million"}] },
+  cubs: { q: "The Cubs ended a 108-year World Series championship drought in which year?", opts: [{t:"2016",c:true},{t:"2015"},{t:"2017"},{t:"2014"}] },
+  giants_mlb: { q: "The San Francisco Giants won how many World Series championships between 2010 and 2014?", opts: [{t:"3",c:true},{t:"2"},{t:"4"},{t:"1"}] },
+  bluejays: { q: "Vladimir Guerrero Jr. launched moonshots in the 2021 All-Star Home Run Derby. Who is his famous baseball father?", opts: [{t:"Vladimir Guerrero Sr.",c:true},{t:"Bobby Bonilla"},{t:"Roberto Alomar"},{t:"Carlos Delgado"}] },
+  braves: { q: "Jorge Soler was named World Series MVP after Atlanta's 2021 title. How many home runs did he hit in the Series?", opts: [{t:"3",c:true},{t:"2"},{t:"4"},{t:"1"}] },
+  astros: { q: "The Astros' 2017 World Series win was later marred by a scandal involving what?", opts: [{t:"Illegal sign-stealing using cameras",c:true},{t:"Performance-enhancing drugs"},{t:"Financial fraud"},{t:"Roster manipulation"}] },
+  mets: { q: "Which Mets legend finished his career with a then-record 3,509 strikeouts as a New York Met?", opts: [{t:"Tom Seaver",c:true},{t:"Dwight Gooden"},{t:"Pedro Martinez"},{t:"Nolan Ryan"}] },
+  cardinals: { q: "Albert Pujols won how many World Series championships as a St. Louis Cardinal?", opts: [{t:"2",c:true},{t:"1"},{t:"3"},{t:"0"}] },
+  orioles: { q: "Cal Ripken Jr. broke Lou Gehrig's consecutive games record. What was Gehrig's old record?", opts: [{t:"2,130",c:true},{t:"2,000"},{t:"2,250"},{t:"1,987"}] },
+  rays: { q: "Tampa Bay pioneered the 'Opener' strategy — using a reliever to start. What does an Opener typically do?", opts: [{t:"Faces the lineup once before handing off",c:true},{t:"Pitches only to left-handed batters"},{t:"Bats leadoff before pitching"},{t:"Only enters in high-leverage spots"}] },
+  guardians: { q: "Cleveland changed its team name from the Indians to the Guardians ahead of which season?", opts: [{t:"2022",c:true},{t:"2021"},{t:"2023"},{t:"2020"}] },
+  tigers: { q: "Miguel Cabrera won the Triple Crown in 2012 — the first in 45 years. Which award did he also win that year?", opts: [{t:"AL MVP",c:true},{t:"Cy Young"},{t:"Rookie of the Year"},{t:"Gold Glove"}] },
+  royals: { q: "The Royals won the 2015 World Series. Who was their manager?", opts: [{t:"Ned Yost",c:true},{t:"Bob Boone"},{t:"Tony Perez"},{t:"Mike Matheny"}] },
+  twins: { q: "Joe Mauer is a Minnesota legend. What was his primary position before moving to first base?", opts: [{t:"Catcher",c:true},{t:"Shortstop"},{t:"Third Base"},{t:"Center Field"}] },
+  whitesox: { q: "Frank Thomas, 'The Big Hurt,' spent nearly his entire career with Chicago. What was his primary position?", opts: [{t:"First Base",c:true},{t:"Designated Hitter"},{t:"Left Field"},{t:"Third Base"}] },
+  angels: { q: "Shohei Ohtani won the AL MVP in 2021 as an Angel, becoming the first player since Babe Ruth to dominate as both a hitter and pitcher. How many home runs did he hit?", opts: [{t:"46",c:true},{t:"40"},{t:"52"},{t:"38"}] },
+  athletics: { q: "The Oakland Athletics announced plans to relocate to which city?", opts: [{t:"Las Vegas",c:true},{t:"Portland"},{t:"Nashville"},{t:"Charlotte"}] },
+  mariners: { q: "Ichiro Suzuki set the single-season MLB hits record with 262 in which year?", opts: [{t:"2004",c:true},{t:"2001"},{t:"2007"},{t:"2003"}] },
+  rangers_mlb: { q: "Texas won their first-ever World Series title in which year?", opts: [{t:"2023",c:true},{t:"2022"},{t:"2024"},{t:"2021"}] },
+  phillies: { q: "Bryce Harper won the NL MVP with Philadelphia in which year?", opts: [{t:"2021",c:true},{t:"2022"},{t:"2020"},{t:"2023"}] },
+  marlins: { q: "The Marlins have won two surprise World Series titles (1997 & 2003) and then famously did what each time?", opts: [{t:"Held a massive fire sale, dismantling the roster",c:true},{t:"Built a dynasty from within"},{t:"Signed multiple superstars"},{t:"Traded for veteran talent"}] },
+  nationals: { q: "Juan Soto made his MLB debut at a remarkably young age. How old was he when he debuted for Washington?", opts: [{t:"19",c:true},{t:"18"},{t:"20"},{t:"21"}] },
+  brewers: { q: "Christian Yelich won the NL MVP in 2018. He came to Milwaukee in a trade from which team?", opts: [{t:"Miami Marlins",c:true},{t:"San Diego Padres"},{t:"Cincinnati Reds"},{t:"Pittsburgh Pirates"}] },
+  reds: { q: "Joey Votto won the NL MVP as a Cincinnati Red in which year?", opts: [{t:"2010",c:true},{t:"2011"},{t:"2009"},{t:"2012"}] },
+  pirates: { q: "Roberto Clemente's #21 is retired across all of MLB in his honor. He played his entire career with which franchise?", opts: [{t:"Pittsburgh Pirates",c:true},{t:"San Francisco Giants"},{t:"New York Yankees"},{t:"St. Louis Cardinals"}] },
+  padres: { q: "Manny Machado signed a contract extension with San Diego in 2022. How many years was the deal?", opts: [{t:"11 years",c:true},{t:"10 years"},{t:"8 years"},{t:"12 years"}] },
+  diamondbacks: { q: "The D-backs made a surprise World Series run in 2023. Which team beat them in the Fall Classic?", opts: [{t:"Texas Rangers",c:true},{t:"Houston Astros"},{t:"Philadelphia Phillies"},{t:"Atlanta Braves"}] },
+  rockies: { q: "Colorado's Nolan Arenado was traded to which team in 2021?", opts: [{t:"St. Louis Cardinals",c:true},{t:"New York Yankees"},{t:"Philadelphia Phillies"},{t:"Chicago Cubs"}] },
+
+  // ── MLS ──
+  miami: { q: "In his Inter Miami debut (Leagues Cup 2023), Lionel Messi scored a stunning free kick in which minute?", opts: [{t:"94th",c:true},{t:"87th"},{t:"90+2"},{t:"89th"}] },
+  galaxy: { q: "David Beckham won two MLS Cups with LA Galaxy. In which years?", opts: [{t:"2011 & 2012",c:true},{t:"2010 & 2011"},{t:"2012 & 2014"},{t:"2009 & 2011"}] },
+  sounders: { q: "Seattle Sounders won consecutive MLS Cups in 2019 and 2020. Where was the 2020 final held?", opts: [{t:"BBVA Stadium, Columbus (COVID bubble)",c:true},{t:"Seattle"},{t:"Portland"},{t:"Los Angeles"}] },
+  lafc: { q: "Carlos Vela was the face of LAFC's early years. Which country does he represent internationally?", opts: [{t:"Mexico",c:true},{t:"USA"},{t:"Colombia"},{t:"Spain"}] },
+  timbers: { q: "Portland won their first MLS Cup in which year?", opts: [{t:"2015",c:true},{t:"2017"},{t:"2013"},{t:"2019"}] },
+  atlanta_utd: { q: "Atlanta United plays in which iconic multi-use stadium?", opts: [{t:"Mercedes-Benz Stadium",c:true},{t:"Bank of America Stadium"},{t:"State Farm Stadium"},{t:"Geodis Park"}] },
+  toronto_fc: { q: "Toronto FC won the 2017 MLS Cup. Who scored the first penalty in the decisive shootout?", opts: [{t:"Jozy Altidore",c:true},{t:"Sebastian Giovinco"},{t:"Michael Bradley"},{t:"Victor Vázquez"}] },
+  nycfc: { q: "NYCFC won their first MLS Cup in 2021. Which team did they beat in the final?", opts: [{t:"Portland Timbers",c:true},{t:"Seattle Sounders"},{t:"New England Revolution"},{t:"Colorado Rapids"}] },
+  crew: { q: "Columbus Crew won the 2020 MLS Cup. What made that championship unusual?", opts: [{t:"Played without fans during a COVID bubble",c:true},{t:"First Canadian host venue"},{t:"Largest margin of victory ever"},{t:"First finals decided by Golden Goal"}] },
+  cincinnati: { q: "FC Cincinnati's stadium is named after which local logistics company?", opts: [{t:"TQL (Total Quality Logistics)",c:true},{t:"Kroger"},{t:"Procter & Gamble"},{t:"Cincinnati Financial"}] },
+  austin: { q: "Austin FC's stadium is named after which fintech company?", opts: [{t:"Q2 Stadium",c:true},{t:"Dell Technologies Park"},{t:"AMD Arena"},{t:"Apple Stadium"}] },
+  cf_montreal: { q: "CF Montréal rebranded from their previous name 'Montreal Impact' in which year?", opts: [{t:"2021",c:true},{t:"2020"},{t:"2022"},{t:"2019"}] },
+  charlotte_fc: { q: "Charlotte FC joined MLS in which year?", opts: [{t:"2022",c:true},{t:"2021"},{t:"2023"},{t:"2020"}] },
+  fire: { q: "Chicago Fire won the MLS Cup in their inaugural 1998 season. Who was their legendary Czech striker?", opts: [{t:"Hristo Stoichkov",c:true},{t:"Frank Klopas"},{t:"Carlos Llamosa"},{t:"Diego Gutierrez"}] },
+  rapids: { q: "Colorado Rapids won their only MLS Cup in which year?", opts: [{t:"2010",c:true},{t:"2007"},{t:"2013"},{t:"2005"}] },
+  dc_united: { q: "D.C. United dominated early MLS history from 1996 to 2004. How many MLS Cups did they win?", opts: [{t:"4",c:true},{t:"3"},{t:"2"},{t:"5"}] },
+  fc_dallas: { q: "FC Dallas won the Supporters' Shield in 2016 under which coach?", opts: [{t:"Oscar Pareja",c:true},{t:"Luchi Gonzalez"},{t:"Peter Nowak"},{t:"Colin Clarke"}] },
+  dynamo: { q: "The Houston Dynamo won back-to-back MLS Cups in which years?", opts: [{t:"2006 & 2007",c:true},{t:"2007 & 2008"},{t:"2005 & 2006"},{t:"2008 & 2009"}] },
+  minnesota_utd: { q: "Minnesota United plays at which purpose-built stadium?", opts: [{t:"Allianz Field",c:true},{t:"Target Field"},{t:"U.S. Bank Stadium"},{t:"TCF Bank Stadium"}] },
+  nashville_sc: { q: "Nashville SC entered MLS in which year?", opts: [{t:"2020",c:true},{t:"2019"},{t:"2021"},{t:"2022"}] },
+  revolution: { q: "New England won the 2021 Supporters' Shield. Who was their standout Spanish midfielder?", opts: [{t:"Carles Gil",c:true},{t:"Adam Buksa"},{t:"Tommy McNamara"},{t:"Sebastian Lletget"}] },
+  orlando_city: { q: "Nani joined Orlando City in 2019. How many UEFA Champions League titles did he win at Manchester United?", opts: [{t:"4",c:true},{t:"3"},{t:"2"},{t:"5"}] },
+  philadelphia_union: { q: "The Union won the MLS Supporters' Shield in 2020 and 2022. Who is their long-time head coach?", opts: [{t:"Jim Curtin",c:true},{t:"Gregg Berhalter"},{t:"Sigi Schmid"},{t:"Peter Nowak"}] },
+  rsl: { q: "Real Salt Lake pulled off a massive upset in the 2009 MLS Cup, beating which team on penalties?", opts: [{t:"LA Galaxy",c:true},{t:"Columbus Crew"},{t:"New York Red Bulls"},{t:"Chicago Fire"}] },
+  red_bulls: { q: "Red Bull Arena, home to NYRB, is located in which U.S. state?", opts: [{t:"New Jersey",c:true},{t:"New York"},{t:"Connecticut"},{t:"Pennsylvania"}] },
+  san_diego_fc: { q: "San Diego FC became an MLS expansion club and began play in which year?", opts: [{t:"2025",c:true},{t:"2024"},{t:"2026"},{t:"2023"}] },
+  earthquakes: { q: "Landon Donovan began his MLS career with San Jose before eventually becoming a legend at which other club?", opts: [{t:"LA Galaxy",c:true},{t:"Seattle Sounders"},{t:"Houston Dynamo"},{t:"Sporting KC"}] },
+  sporting_kc: { q: "Sporting Kansas City won the 2013 MLS Cup in a penalty shootout. Who did they defeat?", opts: [{t:"Real Salt Lake",c:true},{t:"Portland Timbers"},{t:"Seattle Sounders"},{t:"LA Galaxy"}] },
+  stlouis_city: { q: "St. Louis City SC entered MLS in which year?", opts: [{t:"2023",c:true},{t:"2022"},{t:"2024"},{t:"2021"}] },
+  vancouver_wc: { q: "Ryan Gauld has been one of the Whitecaps' most creative players. He is from which country?", opts: [{t:"Scotland",c:true},{t:"England"},{t:"Ireland"},{t:"Wales"}] },
+
+  // ── CFL ──
+  bclions: { q: "The BC Lions have won 5 Grey Cup championships in their history. Their most recent came in which year?", opts: [{t:"2006",c:true},{t:"2011"},{t:"2000"},{t:"2004"}] },
+  stampeders: { q: "Bo Levi Mitchell led Calgary to a Grey Cup title in which year?", opts: [{t:"2018",c:true},{t:"2017"},{t:"2019"},{t:"2016"}] },
+  elks: { q: "Edmonton rebranded from the 'Eskimos' to the 'Elks' ahead of which CFL season?", opts: [{t:"2021",c:true},{t:"2020"},{t:"2022"},{t:"2019"}] },
+  roughriders: { q: "Saskatchewan Roughriders are known for their passionate fanbase. Their home stadium is in which city?", opts: [{t:"Regina",c:true},{t:"Saskatoon"},{t:"Moose Jaw"},{t:"Swift Current"}] },
+  bluebombers: { q: "Zach Collaros led Winnipeg to back-to-back Grey Cups (2021–22). Where did he play college football?", opts: [{t:"University of Cincinnati",c:true},{t:"Ohio State"},{t:"Michigan"},{t:"Penn State"}] },
+  ticats: { q: "Hamilton lost the Grey Cup three straight times from 2012 to 2014. Who beat them in the 2014 final?", opts: [{t:"Calgary Stampeders",c:true},{t:"Edmonton Eskimos"},{t:"BC Lions"},{t:"Ottawa Redblacks"}] },
+  argonauts: { q: "The Toronto Argonauts won the 2022 Grey Cup. Who was their starting quarterback?", opts: [{t:"McLeod Bethel-Thompson",c:true},{t:"Chad Kelly"},{t:"Ricky Ray"},{t:"Nick Arbuckle"}] },
+  redblacks: { q: "The Ottawa Redblacks joined the CFL as an expansion franchise in which year?", opts: [{t:"2014",c:true},{t:"2013"},{t:"2015"},{t:"2012"}] },
+  alouettes: { q: "The Montreal Alouettes won the 2023 Grey Cup. Where was the game held?", opts: [{t:"Hamilton",c:true},{t:"Montreal"},{t:"Calgary"},{t:"Vancouver"}] },
+
+  // ── PREMIER LEAGUE ──
+  arsenal: { q: "Arsenal's 2003–04 league season earned them the nickname 'The Invincibles'. What was their record?", opts: [{t:"38 games unbeaten (W26 D12)",c:true},{t:"36 games unbeaten"},{t:"38 games, 30 wins"},{t:"34 games unbeaten"}] },
+  aston_villa: { q: "Aston Villa won the European Cup in 1982 against which club in the final?", opts: [{t:"Bayern Munich",c:true},{t:"Barcelona"},{t:"Real Madrid"},{t:"Liverpool"}] },
+  bournemouth: { q: "Eddie Howe managed Bournemouth during their rise through the divisions. He later left to manage which Premier League club?", opts: [{t:"Newcastle United",c:true},{t:"West Ham"},{t:"Aston Villa"},{t:"Everton"}] },
+  brentford: { q: "Brentford reached the Premier League for the first time in their history after winning promotion in which year?", opts: [{t:"2021",c:true},{t:"2020"},{t:"2022"},{t:"2019"}] },
+  brighton: { q: "Alexis Mac Allister won the World Cup with Argentina in 2022 while at Brighton, then moved to which club?", opts: [{t:"Liverpool",c:true},{t:"Arsenal"},{t:"Chelsea"},{t:"Manchester City"}] },
+  chelsea: { q: "Chelsea won the 2021 UEFA Champions League, defeating which club in the final?", opts: [{t:"Manchester City",c:true},{t:"Bayern Munich"},{t:"Real Madrid"},{t:"PSG"}] },
+  crystal_palace: { q: "Crystal Palace's talisman Wilfried Zaha made how many senior England appearances before switching to Ivory Coast?", opts: [{t:"2",c:true},{t:"0"},{t:"5"},{t:"3"}] },
+  everton: { q: "Everton legend Dixie Dean set an English top-flight record for goals in a single season in 1927–28. How many did he score?", opts: [{t:"60",c:true},{t:"55"},{t:"63"},{t:"45"}] },
+  fulham: { q: "Fulham were promoted to the Premier League in 2022 under which manager?", opts: [{t:"Marco Silva",c:true},{t:"Scott Parker"},{t:"Slavia Jokanovic"},{t:"Jean-Marc Boissier"}] },
+  ipswich: { q: "Ipswich Town, managed by Bobby Robson, won the UEFA Cup (now Europa League) in which year?", opts: [{t:"1981",c:true},{t:"1978"},{t:"1983"},{t:"1980"}] },
+  leicester: { q: "Leicester City's miraculous Premier League title win in 2015–16 was achieved at odds of?", opts: [{t:"5000 to 1",c:true},{t:"2000 to 1"},{t:"10,000 to 1"},{t:"1000 to 1"}] },
+  liverpool: { q: "Mohamed Salah joined Liverpool in 2017. How many league goals did he score in his debut Premier League season?", opts: [{t:"32",c:true},{t:"28"},{t:"35"},{t:"24"}] },
+  man_city: { q: "Manchester City became the first English club to win the Treble in which season?", opts: [{t:"2022–23",c:true},{t:"2021–22"},{t:"2023–24"},{t:"2020–21"}] },
+  man_utd: { q: "Sir Alex Ferguson managed Manchester United before retiring in 2013. For how many years?", opts: [{t:"26 years",c:true},{t:"22 years"},{t:"30 years"},{t:"18 years"}] },
+  newcastle: { q: "Newcastle United's Saudi-led consortium takeover completed in which year?", opts: [{t:"2021",c:true},{t:"2020"},{t:"2022"},{t:"2019"}] },
+  nottm_forest: { q: "Nottingham Forest won back-to-back European Cups under Brian Clough in which years?", opts: [{t:"1979 & 1980",c:true},{t:"1977 & 1978"},{t:"1981 & 1982"},{t:"1978 & 1979"}] },
+  southampton: { q: "Gareth Bale started his career at Southampton before joining which London club in 2007?", opts: [{t:"Tottenham Hotspur",c:true},{t:"Arsenal"},{t:"Chelsea"},{t:"Fulham"}] },
+  tottenham: { q: "Harry Kane became England's all-time top scorer and then moved to Bayern Munich in which year?", opts: [{t:"2023",c:true},{t:"2022"},{t:"2024"},{t:"2021"}] },
+  west_ham: { q: "West Ham left their iconic Upton Park (Boleyn Ground) to move to which stadium?", opts: [{t:"London Stadium",c:true},{t:"West Ham Arena"},{t:"Stratford Park"},{t:"Olympic Oval"}] },
+  wolves: { q: "Wolves' recruitment transformation has been driven by a partnership with which Portuguese super-agent?", opts: [{t:"Jorge Mendes",c:true},{t:"Pini Zahavi"},{t:"Mino Raiola"},{t:"Jonathan Barnett"}] },
+
+  // ── LA LIGA ──
+  real_madrid: { q: "Real Madrid won their 15th UEFA Champions League title in which year?", opts: [{t:"2024",c:true},{t:"2022"},{t:"2023"},{t:"2021"}] },
+  barcelona: { q: "Lionel Messi won how many Ballon d'Or awards while playing for FC Barcelona?", opts: [{t:"6",c:true},{t:"5"},{t:"7"},{t:"4"}] },
+  atletico: { q: "Diego Simeone has managed Atlético Madrid to La Liga titles. He won them in which two seasons?", opts: [{t:"2013–14 & 2020–21",c:true},{t:"2012–13 & 2019–20"},{t:"2014–15 & 2021–22"},{t:"2011–12 & 2020–21"}] },
+  sevilla: { q: "Sevilla has won a record 7 UEFA Europa League titles. Their first came in which year?", opts: [{t:"2006",c:true},{t:"2007"},{t:"2005"},{t:"2009"}] },
+  real_betis: { q: "Real Betis won the Copa del Rey in 2022. Who did they beat in the final?", opts: [{t:"Valencia CF",c:true},{t:"Real Madrid"},{t:"Barcelona"},{t:"Athletic Bilbao"}] },
+  valencia: { q: "Valencia last won La Liga in which year?", opts: [{t:"2004",c:true},{t:"2007"},{t:"2002"},{t:"2009"}] },
+  villarreal: { q: "Villarreal sensationally eliminated which giants in the 2021–22 Champions League semi-finals?", opts: [{t:"Bayern Munich",c:true},{t:"Real Madrid"},{t:"PSG"},{t:"Liverpool"}] },
+  real_sociedad: { q: "Real Sociedad won their first Copa del Rey title in 2020 under which coach?", opts: [{t:"Imanol Alguacil",c:true},{t:"Julen Lopetegui"},{t:"Unai Emery"},{t:"Marcelo Bielsa"}] },
+  athletic: { q: "Athletic Club Bilbao has a unique transfer policy. They only sign players from which region?", opts: [{t:"The Basque Country",c:true},{t:"Catalonia"},{t:"Andalusia"},{t:"Madrid"}] },
+  celta: { q: "Celta de Vigo's beloved club legend Iago Aspas is known for his trickery. What position does he play?", opts: [{t:"Striker / Forward",c:true},{t:"Attacking Midfielder"},{t:"Left Wing"},{t:"Centre-Back"}] },
+  getafe: { q: "Getafe CF is located in the greater metropolitan area of which Spanish city?", opts: [{t:"Madrid",c:true},{t:"Barcelona"},{t:"Seville"},{t:"Valencia"}] },
+  alaves: { q: "Deportivo Alavés famously reached the UEFA Cup final in 2001. They lost to which English club?", opts: [{t:"Liverpool",c:true},{t:"Arsenal"},{t:"Chelsea"},{t:"Leeds United"}] },
+  girona: { q: "Girona's stunning 3rd-place La Liga finish in 2023–24 was linked to their co-ownership by which group?", opts: [{t:"City Football Group",c:true},{t:"Red Bull Group"},{t:"Liberty Media"},{t:"Fenway Sports Group"}] },
+  osasuna: { q: "CA Osasuna is proudly based in which Spanish city in the Navarre region?", opts: [{t:"Pamplona",c:true},{t:"Bilbao"},{t:"San Sebastián"},{t:"Zaragoza"}] },
+  rayo: { q: "Rayo Vallecano is famous for being the working-class club of which Madrid neighbourhood?", opts: [{t:"Vallecas",c:true},{t:"Salamanca"},{t:"Moncloa"},{t:"Retiro"}] },
+  espanyol: { q: "Following a relegation in 2020, Espanyol bounced back to La Liga under which manager?", opts: [{t:"Vicente Moreno",c:true},{t:"Óscar García"},{t:"Quique Sánchez Flores"},{t:"Pablo Machín"}] },
+  mallorca: { q: "RCD Mallorca play their home games at which stadium?", opts: [{t:"Estadi de Son Moix",c:true},{t:"Son Dotze"},{t:"Camp Mallorca"},{t:"Estadio Balear"}] },
+  las_palmas: { q: "UD Las Palmas is based on which Spanish island?", opts: [{t:"Gran Canaria",c:true},{t:"Tenerife"},{t:"Mallorca"},{t:"Lanzarote"}] },
+  valladolid: { q: "Real Valladolid was purchased by which Brazilian football legend in 2018?", opts: [{t:"Ronaldo (R9)",c:true},{t:"Ronaldinho"},{t:"Kaká"},{t:"Roberto Carlos"}] },
+  leganes: { q: "CD Leganés is a club situated close to which major Spanish city?", opts: [{t:"Madrid",c:true},{t:"Barcelona"},{t:"Valencia"},{t:"Seville"}] },
+
+  // ── BUNDESLIGA ──
+  bayern: { q: "Bayern Munich went on an extraordinary run of consecutive Bundesliga titles. How many straight championships did they win from 2013 to 2023?", opts: [{t:"11",c:true},{t:"10"},{t:"9"},{t:"12"}] },
+  dortmund: { q: "Erling Haaland played for Dortmund before joining Manchester City. How many Bundesliga goals did he score for BVB?", opts: [{t:"62",c:true},{t:"49"},{t:"57"},{t:"70"}] },
+  leverkusen: { q: "Bayer Leverkusen won their first-ever Bundesliga title under Xabi Alonso. In which season?", opts: [{t:"2023–24",c:true},{t:"2022–23"},{t:"2024–25"},{t:"2021–22"}] },
+  leipzig: { q: "RB Leipzig were founded in which year as part of the Red Bull football network?", opts: [{t:"2009",c:true},{t:"2006"},{t:"2012"},{t:"2003"}] },
+  stuttgart: { q: "VfB Stuttgart won their last Bundesliga title in which year?", opts: [{t:"2007",c:true},{t:"2009"},{t:"2003"},{t:"1992"}] },
+  frankfurt: { q: "Eintracht Frankfurt won the 2022 Europa League final against which Scottish club?", opts: [{t:"Rangers",c:true},{t:"Villarreal"},{t:"Arsenal"},{t:"West Ham"}] },
+  wolfsburg: { q: "VfL Wolfsburg won their only Bundesliga title in which year?", opts: [{t:"2009",c:true},{t:"2011"},{t:"2007"},{t:"2013"}] },
+  mgladbach: { q: "Borussia Mönchengladbach's most famous fan is which former German Chancellor?", opts: [{t:"Helmut Kohl",c:true},{t:"Angela Merkel"},{t:"Olaf Scholz"},{t:"Gerhard Schröder"}] },
+  augsburg: { q: "FC Augsburg were promoted to the Bundesliga for the first time in their history in which year?", opts: [{t:"2011",c:true},{t:"2010"},{t:"2013"},{t:"2009"}] },
+  freiburg: { q: "Christian Streich managed Freiburg until his retirement in 2024. How many full seasons did he manage the club?", opts: [{t:"12",c:true},{t:"8"},{t:"15"},{t:"10"}] },
+  mainz: { q: "Mainz is famous for developing which coach who went on to legendary success with Liverpool FC?", opts: [{t:"Jürgen Klopp",c:true},{t:"Thomas Tuchel"},{t:"Ralf Rangnick"},{t:"Julian Nagelsmann"}] },
+  hoffenheim: { q: "TSG Hoffenheim was bankrolled into professional football by which German software billionaire?", opts: [{t:"Dietmar Hopp",c:true},{t:"Dietrich Mateschitz"},{t:"Hans-Joachim Watzke"},{t:"Klaus-Michael Kühne"}] },
+  union_berlin: { q: "Union Berlin made their Bundesliga debut in which season?", opts: [{t:"2019–20",c:true},{t:"2018–19"},{t:"2020–21"},{t:"2017–18"}] },
+  bochum: { q: "VfL Bochum are a blue-collar Ruhr Area club. Their ground is also known as the?", opts: [{t:"Vonovia Ruhrstadion",c:true},{t:"Bochum Arena"},{t:"Ruhrpott Arena"},{t:"Opel Arena"}] },
+  heidenheim: { q: "FC Heidenheim made their Bundesliga debut as a promoted side in which season?", opts: [{t:"2023–24",c:true},{t:"2022–23"},{t:"2024–25"},{t:"2021–22"}] },
+  kiel: { q: "Holstein Kiel secured promotion to the Bundesliga for the first time in their history in which year?", opts: [{t:"2024",c:true},{t:"2023"},{t:"2025"},{t:"2022"}] },
+  stpauli: { q: "FC St. Pauli is internationally known for their left-wing, counter-cultural identity from which Hamburg neighbourhood?", opts: [{t:"St. Pauli district",c:true},{t:"Altona"},{t:"Wandsbek"},{t:"Eimsbüttel"}] },
+  werder: { q: "Werder Bremen last won the Bundesliga in which year?", opts: [{t:"2004",c:true},{t:"2007"},{t:"2001"},{t:"2009"}] },
+
+  // ── SERIE A ──
+  inter: { q: "Inter Milan won their 20th Serie A title (Scudetto) in which year?", opts: [{t:"2024",c:true},{t:"2023"},{t:"2022"},{t:"2021"}] },
+  ac_milan: { q: "The city derby between AC Milan and Inter Milan is known as which derby?", opts: [{t:"Derby della Madonnina",c:true},{t:"Derby d'Italia"},{t:"Derby del Nord"},{t:"Il Grande Derby"}] },
+  juventus: { q: "Juventus won nine consecutive Serie A titles. In which season did that remarkable streak end?", opts: [{t:"2020–21",c:true},{t:"2019–20"},{t:"2021–22"},{t:"2018–19"}] },
+  napoli: { q: "Napoli won their third Scudetto in 2022–23 under which coach?", opts: [{t:"Luciano Spalletti",c:true},{t:"Walter Mazzarri"},{t:"Maurizio Sarri"},{t:"Rudi Garcia"}] },
+  roma: { q: "AS Roma reached the 2022 Europa League final under José Mourinho, losing to which Spanish club?", opts: [{t:"Sevilla",c:true},{t:"Villarreal"},{t:"Feyenoord"},{t:"Liverpool"}] },
+  lazio: { q: "Gabriel Batistuta was a legendary striker in Serie A. Which club did he most famously represent?", opts: [{t:"ACF Fiorentina",c:true},{t:"SS Lazio"},{t:"AS Roma"},{t:"Parma"}] },
+  atalanta: { q: "Atalanta won their first major European trophy (Europa League) in which year?", opts: [{t:"2024",c:true},{t:"2023"},{t:"2022"},{t:"2025"}] },
+  fiorentina: { q: "Gabriel Batistuta is Fiorentina's all-time top scorer. He is from which country?", opts: [{t:"Argentina",c:true},{t:"Brazil"},{t:"Uruguay"},{t:"Colombia"}] },
+  torino: { q: "The 'Grande Torino' — the legendary 1940s Torino squad that was arguably the best in the world — perished in which tragedy?", opts: [{t:"Superga air disaster (1949)",c:true},{t:"Linate air disaster"},{t:"Mont Blanc crash"},{t:"Valle d'Aosta avalanche"}] },
+  bologna: { q: "Bologna's beloved coach Sinisa Mihajlovic fought which illness publicly before passing in 2022?", opts: [{t:"Leukemia",c:true},{t:"Lymphoma"},{t:"Prostate cancer"},{t:"Brain cancer"}] },
+  genoa: { q: "Genoa CFC is the oldest football club in Italy. In which year were they founded?", opts: [{t:"1893",c:true},{t:"1899"},{t:"1906"},{t:"1889"}] },
+  cagliari: { q: "Cagliari Calcio is based on which Italian island?", opts: [{t:"Sardinia",c:true},{t:"Sicily"},{t:"Elba"},{t:"Capri"}] },
+  udinese: { q: "Udinese is famously linked to Watford FC through which family's ownership network?", opts: [{t:"The Pozzo family",c:true},{t:"Red Bull Group"},{t:"City Football Group"},{t:"Glazer family"}] },
+  como: { q: "Como 1907 returned to Serie A in 2024 with major investment. Who are their famous Indonesian co-owners?", opts: [{t:"Robert & Michael Hartono",c:true},{t:"Bambang Hartono"},{t:"Prayogo Pangestu"},{t:"Sri Prakash Lohia"}] },
+  empoli: { q: "Empoli FC is known as a development club. Which iconic manager started his coaching career there?", opts: [{t:"Maurizio Sarri",c:true},{t:"Roberto Mancini"},{t:"Antonio Conte"},{t:"Carlo Ancelotti"}] },
+  lecce: { q: "US Lecce's nickname is 'I Giallorossi'. What do these Italian words translate to in English?", opts: [{t:"The Yellow and Reds",c:true},{t:"The Blue and Whites"},{t:"The Black and Whites"},{t:"The Red and Blacks"}] },
+  monza: { q: "AC Monza was famously purchased by which former Italian PM and AC Milan president?", opts: [{t:"Silvio Berlusconi",c:true},{t:"Romano Prodi"},{t:"Giorgio Napolitano"},{t:"Massimo D'Alema"}] },
+  parma: { q: "Parma were European powerhouses in the 1990s. Which Swedish striker helped lead them to the 1995 UEFA Cup?", opts: [{t:"Tomas Brolin",c:true},{t:"Henrik Larsson"},{t:"Martin Dahlin"},{t:"Kennet Andersson"}] },
+  hellas_verona: { q: "Hellas Verona won the Serie A title in which year — considered one of the greatest upsets in Italian football history?", opts: [{t:"1985",c:true},{t:"1981"},{t:"1989"},{t:"1983"}] },
+  venezia: { q: "Venezia FC is globally admired for their fashion-forward kits. Their home city has a unique geography — what is it?", opts: [{t:"Built on a lagoon, with canals instead of roads",c:true},{t:"Built into a hillside"},{t:"Located on a volcanic island"},{t:"The world's highest-altitude city"}] },
+
+  // ── LIGUE 1 ──
+  psg: { q: "Paris Saint-Germain signed Neymar from Barcelona in 2017 for a world-record fee. How much was it?", opts: [{t:"€222 million",c:true},{t:"€198 million"},{t:"€250 million"},{t:"€180 million"}] },
+  marseille: { q: "Olympique de Marseille are the only French club to win the UEFA Champions League. In which year?", opts: [{t:"1993",c:true},{t:"1991"},{t:"1995"},{t:"1989"}] },
+  lyon: { q: "Olympique Lyonnais won how many consecutive French league titles between 2002 and 2008?", opts: [{t:"7",c:true},{t:"6"},{t:"8"},{t:"5"}] },
+  monaco: { q: "AS Monaco finished runners-up in the Champions League in 2004, losing the final to which club?", opts: [{t:"Porto",c:true},{t:"Real Madrid"},{t:"Juventus"},{t:"Chelsea"}] },
+  lille: { q: "LOSC Lille pulled off a stunning Ligue 1 title win in 2020–21, defeating PSG. Who was their coach?", opts: [{t:"Christophe Galtier",c:true},{t:"Paulo Fonseca"},{t:"Jocelyn Gourvennec"},{t:"Lucien Favre"}] },
+  nice: { q: "OGC Nice are located on the French Riviera. What is their home city?", opts: [{t:"Nice",c:true},{t:"Monaco"},{t:"Cannes"},{t:"Antibes"}] },
+  lens: { q: "RC Lens's famous ground, the Stade Bollaert-Delelis, is known for its incredible atmosphere. Approximately how many fans does it hold?", opts: [{t:"~38,000",c:true},{t:"~25,000"},{t:"~45,000"},{t:"~30,000"}] },
+  rennes: { q: "Stade Rennais is proudly located in the historically Celtic cultural region of France known as?", opts: [{t:"Brittany",c:true},{t:"Alsace"},{t:"Normandy"},{t:"Occitania"}] },
+  nantes: { q: "FC Nantes are famous for their striking yellow and green home kit. What is their nickname?", opts: [{t:"Les Canaris (The Canaries)",c:true},{t:"Les Lions"},{t:"Les Aigles"},{t:"Les Verts"}] },
+  strasbourg: { q: "RC Strasbourg is located in the Alsace region of France, near the border with which country?", opts: [{t:"Germany",c:true},{t:"Switzerland"},{t:"Belgium"},{t:"Luxembourg"}] },
+  brest: { q: "Stade Brestois 29 qualified for the UEFA Champions League for the first time in which season?", opts: [{t:"2024–25",c:true},{t:"2023–24"},{t:"2025–26"},{t:"2022–23"}] },
+  reims: { q: "Stade de Reims were a founding force in European football and reached the European Cup final twice. In which decade were they at their peak?", opts: [{t:"1950s",c:true},{t:"1960s"},{t:"1940s"},{t:"1970s"}] },
+  toulouse: { q: "Toulouse FC returned to Ligue 1 after winning the second division in which year?", opts: [{t:"2022",c:true},{t:"2021"},{t:"2023"},{t:"2020"}] },
+  le_havre: { q: "Le Havre Athletic Club is the oldest football club in France. In which year were they founded?", opts: [{t:"1872",c:true},{t:"1889"},{t:"1900"},{t:"1880"}] },
+  montpellier: { q: "Montpellier HSC won their only Ligue 1 title in which year, beating PSG on the final day?", opts: [{t:"2012",c:true},{t:"2008"},{t:"2015"},{t:"2009"}] },
+  auxerre: { q: "AJ Auxerre were a French football powerhouse in the 1990s. Which legendary manager guided them for over 40 years?", opts: [{t:"Guy Roux",c:true},{t:"Jean Fernandez"},{t:"Henri Zambelli"},{t:"Laurent Blanc"}] },
+  angers: { q: "SCO Angers is based in the Pays de la Loire region. Their full name stands for what?", opts: [{t:"Sporting Club de l'Ouest",c:true},{t:"Sporting Club d'Orléans"},{t:"Sporting Club de l'Anjou"},{t:"Sporting Club de l'Observatoire"}] },
+  saint_etienne: { q: "AS Saint-Étienne has won the most French league championships of any club. How many?", opts: [{t:"10",c:true},{t:"8"},{t:"12"},{t:"7"}] },
+};
+
+// Helper: look up a team's trivia entry, falling back to a generic question
+function getTeamTrivia(teamId) {
+  return triviaDatabase[teamId] || {
+    q: `How well do you know ${teamId}'s history and current roster?`,
+    opts: [
+      { t: 'I know the full squad and club history', c: true },
+      { t: 'I know the star players and highlights' },
+      { t: 'I just know the name and city' },
+      { t: 'I\'m still learning about them' }
+    ]
+  };
+}
+
+
 // --- DOM ELEMENTS QUERY ---
 // Navigation and Buttons
 const btnStartFlow = document.getElementById('btn-start-flow');
@@ -626,7 +947,7 @@ function launchTryDemo() {
     isTop: i === 0,
     fanSince: String(Math.floor(1980 + Math.random() * 40)),
     prediction: String(Math.floor(2026 + Math.random() * 15)),
-    quizQuestions: getRandomQuizQuestions(4)
+    quizQuestions: getRandomQuizQuestions(2)
   }));
   recalculateTopTeam();
   savedHandle = '';
@@ -1414,7 +1735,7 @@ btnToQuiz.addEventListener('click', () => {
     score: 0,
     fanSince: sinceVal,
     prediction: "",
-    quizQuestions: getRandomQuizQuestions(4) // Choose 4 random questions for this team
+    quizQuestions: getRandomQuizQuestions(2) // Q2 & Q3: two random devotion questions
   };
   
   selectedTeams.push(newTeam);
@@ -1462,6 +1783,60 @@ function renderQuizForCurrentTeam() {
   btnQuizNext.setAttribute('disabled', 'true');
   btnQuizNext.textContent = 'Complete Team Profile';
   
+  // ── Q1: Games-Watched Slider ──
+  const sliderBuckets = getSliderBuckets(team.league);
+  const sliderKey = `${team.id}_slider`;
+  const currentSliderIdx = userQuizAnswers[sliderKey + '_idx'] ?? 0;
+
+  const sliderItem = document.createElement('div');
+  sliderItem.className = 'quiz-question-item quiz-slider-item';
+
+  const sliderLabel = document.createElement('span');
+  sliderLabel.className = 'quiz-question-text';
+  sliderLabel.textContent = `How many ${team.league} games did you watch last season?`;
+  sliderItem.appendChild(sliderLabel);
+
+  const sliderDisplay = document.createElement('div');
+  sliderDisplay.className = 'quiz-slider-display';
+
+  const sliderVal = document.createElement('span');
+  sliderVal.className = 'quiz-slider-value';
+  sliderVal.textContent = sliderBuckets[currentSliderIdx];
+  sliderDisplay.appendChild(sliderVal);
+  sliderItem.appendChild(sliderDisplay);
+
+  const sliderEl = document.createElement('input');
+  sliderEl.type = 'range';
+  sliderEl.className = 'quiz-slider';
+  sliderEl.min = '0';
+  sliderEl.max = String(sliderBuckets.length - 1);
+  sliderEl.step = '1';
+  sliderEl.value = String(currentSliderIdx);
+  sliderEl.setAttribute('id', `slider-${team.id}`);
+
+  sliderEl.addEventListener('input', () => {
+    const idx = parseInt(sliderEl.value);
+    sliderVal.textContent = sliderBuckets[idx];
+    const pts = Math.round((idx / (sliderBuckets.length - 1)) * 25);
+    userQuizAnswers[sliderKey] = pts;
+    userQuizAnswers[sliderKey + '_idx'] = idx;
+    checkQuizAnswersStatus();
+  });
+
+  // If already answered, restore
+  if (typeof userQuizAnswers[sliderKey] === 'number') {
+    sliderVal.textContent = sliderBuckets[currentSliderIdx];
+  }
+  // Pre-populate score so it counts as answered even at 0
+  if (typeof userQuizAnswers[sliderKey] !== 'number') {
+    userQuizAnswers[sliderKey] = 0;
+    userQuizAnswers[sliderKey + '_idx'] = 0;
+  }
+
+  sliderItem.appendChild(sliderEl);
+  quizQuestionsList.appendChild(sliderItem);
+
+  // ── Q2 & Q3: Random devotion questions ──
   team.quizQuestions.forEach(q => {
     const qItem = document.createElement('div');
     qItem.className = 'quiz-question-item';
@@ -1486,10 +1861,8 @@ function renderQuizForCurrentTeam() {
       }
       
       optBtn.addEventListener('click', () => {
-        // Toggle selected state
         optionsGrid.querySelectorAll('.quiz-option-btn').forEach(btn => btn.classList.remove('selected'));
         optBtn.classList.add('selected');
-        
         userQuizAnswers[answerKey] = opt.score;
         checkQuizAnswersStatus();
       });
@@ -1500,6 +1873,52 @@ function renderQuizForCurrentTeam() {
     qItem.appendChild(optionsGrid);
     quizQuestionsList.appendChild(qItem);
   });
+
+  // ── Q4: Team-Specific Trivia ──
+  const trivia = getTeamTrivia(team.id);
+  const triviaKey = `${team.id}_trivia`;
+
+  const triviaItem = document.createElement('div');
+  triviaItem.className = 'quiz-question-item quiz-trivia-item';
+
+  const triviaBadge = document.createElement('span');
+  triviaBadge.className = 'quiz-trivia-badge';
+  triviaBadge.textContent = '🏆 Fan Trivia';
+  triviaItem.appendChild(triviaBadge);
+
+  const triviaText = document.createElement('span');
+  triviaText.className = 'quiz-question-text';
+  triviaText.textContent = trivia.q;
+  triviaItem.appendChild(triviaText);
+
+  const triviaGrid = document.createElement('div');
+  triviaGrid.className = 'quiz-options-grid quiz-trivia-grid';
+
+  // Shuffle opts presentation order, but keep track of correct
+  const triviaOpts = [...trivia.opts].sort(() => 0.5 - Math.random());
+  triviaOpts.forEach(opt => {
+    const optBtn = document.createElement('button');
+    optBtn.type = 'button';
+    optBtn.className = 'quiz-option-btn';
+    optBtn.textContent = opt.t;
+
+    const score = opt.c ? 25 : 5;
+    if (userQuizAnswers[triviaKey] === score && opt.c === (score === 25)) {
+      optBtn.classList.add('selected');
+    }
+
+    optBtn.addEventListener('click', () => {
+      triviaGrid.querySelectorAll('.quiz-option-btn').forEach(btn => btn.classList.remove('selected'));
+      optBtn.classList.add('selected');
+      userQuizAnswers[triviaKey] = score;
+      checkQuizAnswersStatus();
+    });
+
+    triviaGrid.appendChild(optBtn);
+  });
+
+  triviaItem.appendChild(triviaGrid);
+  quizQuestionsList.appendChild(triviaItem);
 
   // Render Championship Prediction
   const predItem = document.createElement('div');
@@ -1571,16 +1990,24 @@ function renderQuizForCurrentTeam() {
 function checkQuizAnswersStatus() {
   const team = selectedTeams[currentQuizTeamIndex];
   if (!team) return;
-  const allAnswered = team.quizQuestions.every(q => {
+
+  // Q1: slider is always pre-populated, so always answered
+  const sliderAnswered = typeof userQuizAnswers[`${team.id}_slider`] === 'number';
+
+  // Q2 & Q3: random devotion questions
+  const devotionAnswered = team.quizQuestions.every(q => {
     const answerKey = `${team.id}_${q.key}`;
     return typeof userQuizAnswers[answerKey] === 'number';
   });
+
+  // Q4: trivia
+  const triviaAnswered = typeof userQuizAnswers[`${team.id}_trivia`] === 'number';
 
   const predInput = document.getElementById('quiz-prediction-input');
   const predVal = predInput ? parseInt(predInput.value) : NaN;
   const predValid = !isNaN(predVal) && predVal >= 2026 && predVal <= 2050;
 
-  if (allAnswered && predValid) {
+  if (sliderAnswered && devotionAnswered && triviaAnswered && predValid) {
     btnQuizNext.removeAttribute('disabled');
   } else {
     btnQuizNext.setAttribute('disabled', 'true');
@@ -1593,12 +2020,20 @@ btnQuizNext.addEventListener('click', () => {
   
   // Calculate total score out of 100 for current team
   let totalScore = 0;
+
+  // Q1: slider (0–25)
+  totalScore += userQuizAnswers[`${team.id}_slider`] || 0;
+
+  // Q2 & Q3: devotion questions
   team.quizQuestions.forEach(q => {
     const answerKey = `${team.id}_${q.key}`;
     totalScore += userQuizAnswers[answerKey] || 0;
   });
-  
-  team.score = totalScore;
+
+  // Q4: trivia (25 correct, 5 wrong)
+  totalScore += userQuizAnswers[`${team.id}_trivia`] || 0;
+
+  team.score = Math.min(totalScore, 100);
   
   const predInput = document.getElementById('quiz-prediction-input');
   if (predInput) {
@@ -2905,7 +3340,7 @@ function generateRandomCard() {
     score: [92, 74, 55][i],
     fanSince: String(1995 + Math.floor(Math.random() * 25)),
     prediction: String(2026 + Math.floor(Math.random() * 10)),
-    quizQuestions: getRandomQuizQuestions(4)
+    quizQuestions: getRandomQuizQuestions(2)
   }));
 
   if (!savedHandle) savedHandle = sampleHandles[Math.floor(Math.random() * sampleHandles.length)];
