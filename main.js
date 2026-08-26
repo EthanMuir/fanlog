@@ -1320,6 +1320,22 @@ function updateLegendChips(legendContainer, sortedTeams) {
   });
 }
 
+// Top-team percentile, shared by the card's top-right line and the share
+// caption so they always agree. Percentile is literally 100 minus the top
+// team's devotion score (a 95-score fan = "top 5%"). Nickname is the last
+// word of the team name (Toronto Raptors → Raptors), stripping a trailing
+// club suffix so soccer sides don't read "FC"/"SC" (Toronto FC → Toronto,
+// Orlando City SC → City).
+function topRankFor(team) {
+  if (!team) return null;
+  const pct = Math.max(1, Math.round(100 - (team.score || 0)));
+  const words = (team.name || '').trim().split(/\s+/).filter(Boolean);
+  const suffixes = new Set(['FC', 'SC', 'CF', 'AFC']);
+  while (words.length > 1 && suffixes.has(words[words.length - 1].toUpperCase())) words.pop();
+  const nickname = words.pop() || team.short || 'Team';
+  return { pct, nickname };
+}
+
 // --- RENDER DYNAMIC CARD LAYOUT ---
 function updateCardDOM(cardEl, profile, transition = false) {
   const archetypeEl = cardEl.querySelector('.fcard-archetype');
@@ -1357,18 +1373,10 @@ function updateCardDOM(cardEl, profile, transition = false) {
       if (predictionLabelEl) {
         predictionLabelEl.textContent = getPredictionLabel(topTeam.league, topTeam.short);
       }
-      // Top-team percentile line, top-right of the card. Literally 100 minus
-      // the top team's devotion score (per spec): a 95-score = "TOP 5%".
-      // Nickname is the last word of the team name (Toronto Raptors → RAPTORS),
-      // stripping a trailing club suffix so soccer sides don't read "FC FANS"
-      // / "SC FANS" (Toronto FC → TORONTO, Orlando City SC → CITY).
+      // Top-team percentile line, top-right of the card (see topRankFor).
       if (topRankEl) {
-        const pct = Math.max(1, Math.round(100 - (topTeam.score || 0)));
-        const words = (topTeam.name || '').trim().split(/\s+/).filter(Boolean);
-        const suffixes = new Set(['FC', 'SC', 'CF', 'AFC']);
-        while (words.length > 1 && suffixes.has(words[words.length - 1].toUpperCase())) words.pop();
-        const nickname = words.pop() || topTeam.short || 'TEAM';
-        topRankEl.textContent = `TOP ${pct}% ${String(nickname).toUpperCase()} FANS`;
+        const rank = topRankFor(topTeam);
+        topRankEl.textContent = rank ? `TOP ${rank.pct}% ${rank.nickname.toUpperCase()} FANS` : '';
       }
     } else {
       if (sinceLabelEl) sinceLabelEl.textContent = "FAN SINCE";
@@ -3083,7 +3091,9 @@ function getShareUrl() {
 }
 
 function getShareText() {
-  return `Judge my Sports Loyalty Card. 👇\nI'll judge yours. ${getShareUrl()}`;
+  const rank = topRankFor(selectedTeams.find(t => t.isTop) || selectedTeams[0]);
+  const intro = rank ? `I'm a top ${rank.pct}% ${rank.nickname} fan. ` : '';
+  return `${intro}Judge my Sports Loyalty Card. 👇\nI'll judge yours. ${getShareUrl()}`;
 }
 
 function getCardFileName() {

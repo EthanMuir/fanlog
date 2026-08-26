@@ -47,15 +47,39 @@ export default async function handler(req) {
   const appUrl = `${origin}/?${appParams.toString()}`;
 
   // Not a known link-preview bot — this is someone actually tapping the
-  // link, so send them straight to the landing page instead of showing the
+  // link, so send them straight to the app instead of showing the
   // intermediate card-preview page first.
   const ua = req.headers.get('user-agent') || '';
   if (!BOT_UA_PATTERN.test(ua)) {
-    // Explicit no-store here too, not just on the HTML branch below — same
-    // reasoning: this response depends on the request's User-Agent, so a
-    // shared cache keyed by URL alone must never be allowed to serve it
+    // Prefer resolving the short ?id= here (same server-side lookup that
+    // renders the OG image below) and forwarding the card inline as ?c=, so
+    // the app can rebuild it synchronously without the recipient's browser
+    // having to reach Supabase itself — that client read is the one link in
+    // the chain we can't guarantee (RLS/keys/blocked requests), and a shared
+    // link that lands on a blank page instead of the card is the whole
+    // failure we're guarding against. Falls back to forwarding ?id= (client
+    // resolves) or ?c= untouched if the server-side lookup comes up empty.
+    let dest = appUrl;
+    if (id && !c) {
+      try {
+        const payload = await resolveCircle(url.searchParams);
+        if (payload) {
+          const enc = btoa(unescape(encodeURIComponent(JSON.stringify(payload))))
+            .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+          const pr = new URLSearchParams();
+          if (ref) pr.set('ref', ref);
+          if (utm) pr.set('utm_source', utm);
+          pr.set('c', enc);
+          dest = `${origin}/?${pr.toString()}`;
+        }
+      } catch {
+        // fall back to appUrl (?id=), client resolves
+      }
+    }
+    // Explicit no-store: this response depends on the request's User-Agent,
+    // so a shared cache keyed by URL alone must never be allowed to serve it
     // (or the bot-branch response) to the wrong kind of requester.
-    return new Response(null, { status: 302, headers: { Location: appUrl, 'cache-control': 'no-store' } });
+    return new Response(null, { status: 302, headers: { Location: dest, 'cache-control': 'no-store' } });
   }
 
   const ogImageParam = id ? `id=${encodeURIComponent(id)}` : c ? `c=${encodeURIComponent(c)}` : '';
