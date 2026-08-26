@@ -1147,7 +1147,7 @@ button, input, select {
 .fcard-scene,
 .morphing-card-wrapper {
   width: 360px;
-  height: 540px;
+  height: 556px;
   perspective: 1200px;
   margin-bottom: 24px;
 }
@@ -1302,7 +1302,7 @@ button, input, select {
 .rainbow-chart-container {
   position: relative;
   width: 100%;
-  max-width: 280px;
+  max-width: 260px;
   aspect-ratio: 300 / 180;
   display: flex;
   justify-content: center;
@@ -1317,7 +1317,11 @@ button, input, select {
 .rainbow-score-box {
   position: absolute;
   left: 50%;
-  bottom: 8px;
+  /* Sit low: the arcs are the top half of the gauge, so the strip below the
+     baseline is fully clear. Pushing the score box down keeps the label out
+     of the arcs (which otherwise slice through it) while the number stays in
+     the open vertical channel down the gauge's center. */
+  bottom: 2px;
   transform: translate(-50%, 0);
   text-align: center;
   display: flex;
@@ -1329,22 +1333,30 @@ button, input, select {
 
 .rainbow-score-box .fcard-score-value {
   font-family: var(--font-mono), monospace;
-  font-size: 2.4rem;
+  /* Kept deliberately small so the rainbow arcs read as the hero and the
+     score sits cleanly in the open center instead of covering the rings /
+     colliding with the innermost badge. */
+  font-size: 1.7rem;
   font-weight: 800;
   line-height: 0.95;
   color: var(--text-main);
-  letter-spacing: -2px;
+  letter-spacing: -1px;
   font-variant-numeric: tabular-nums;
   transition: opacity 0.4s ease, filter 0.4s ease, transform 0.4s ease;
 }
 
 .rainbow-score-label {
   font-family: var(--font-mono);
-  font-size: 0.6rem;
-  letter-spacing: 1.5px;
+  /* Kept small and tightly-spaced so the full label fits inside the clear
+     center of the gauge — at a wider size its ends poked out into where the
+     innermost (smallest) ring's arc descends, so the arc sliced through the
+     text. */
+  font-size: 0.5rem;
+  letter-spacing: 0.3px;
   color: var(--text-muted);
   font-weight: 700;
-  margin-top: 4px;
+  margin-top: 3px;
+  white-space: nowrap;
 }
 
 /* Dynamic Team Legend Chips */
@@ -1418,14 +1430,23 @@ button, input, select {
   transform: scale(0.98);
 }
 
+/* Recipient "make your own" CTA (shown when viewing a shared card) */
+.shared-recipient-cta {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 360px;
+}
+
 /* Card Metadata Grid */
 .fcard-meta-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  gap: 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
-  padding-top: 16px;
-  margin-bottom: 16px;
+  padding-top: 12px;
+  margin-bottom: 12px;
 }
 
 .fcard-meta-box {
@@ -2044,7 +2065,7 @@ button, input, select {
   .fcard-scene,
   .morphing-card-wrapper {
     width: 300px;
-    height: 500px;
+    height: 516px;
   }
 
   /* The card scales down on phones but its internal padding/margins were fixed,
@@ -2075,7 +2096,7 @@ button, input, select {
   }
 
   .rainbow-chart-container {
-    max-width: 210px;
+    max-width: 200px;
   }
 
   .fcard-legend-container {
@@ -2593,12 +2614,31 @@ button, input, select {
    Sports Circle Card Redesign Styles
    ========================================================================== */
 
-/* Sports Circle header: just the large archetype, centered */
+/* Sports Circle header: top-team percentile line (right-aligned) stacked
+   above the centered archetype pill. */
 .fcard-header-sports-circle {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
-  margin-bottom: 20px;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+/* "TOP 5% RAPTORS FANS" — thin line in the card's top-right corner. */
+.fcard-toprank {
+  width: 100%;
+  text-align: right;
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  line-height: 1;
+  min-height: 0.55rem;
+}
+.fcard-toprank:empty {
+  display: none;
 }
 
 /* Large archetype label across the top of the Sports Circle card */
@@ -3131,8 +3171,8 @@ button, input, select {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 5px;
-  margin-top: 8px;
-  margin-bottom: 12px;
+  margin-top: 6px;
+  margin-bottom: 8px;
 }
 
 .fcard-legend-container.legend-grid-4 .legend-chip {

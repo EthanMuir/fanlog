@@ -3,7 +3,7 @@ import confetti from 'canvas-confetti';
 import html2canvas from 'html2canvas';
 import { HubSDK } from '@ethanhodge7373/hub-sdk';
 import { saveWaitlistEntry } from './waitlist.js';
-import { saveCircle } from './circles.js';
+import { saveCircle, fetchCircle } from './circles.js';
 import { RAINBOW_RADII, RAINBOW_CX, RAINBOW_CY, getLuminance, getContrastAdaptedColor, getPredictionLabel, computeFanScore } from './cardVisuals.js';
 
 HubSDK.init({
@@ -534,6 +534,9 @@ document.addEventListener('DOMContentLoaded', () => {
   goToStep(1);
   setupWaitlistBindings();
   initYearPickers();
+  // A shared ?id=/?c= link replaces the landing page with the sharer's card
+  // once it resolves (async for ?id=); no-op for a normal visit.
+  loadSharedCardFromUrl();
 });
 
 
@@ -923,12 +926,12 @@ function updateRainbowSVG(svgEl, sortedTeams) {
         logoImg.style.opacity = '0';
       } else {
         fill.setAttribute('stroke-dasharray', `${L} ${C - L}`);
-        
+
         // Calculate position at end of rainbow arc
         const angle = Math.PI * (1 - team.score / 100);
         const x = cx + r * Math.cos(angle);
         const y = cy - r * Math.sin(angle);
-        
+
         logoBg.style.opacity = '1';
         logoImg.style.opacity = '1';
         logoBg.setAttribute('stroke', adaptedColor);
@@ -1009,7 +1012,8 @@ function updateCardDOM(cardEl, profile, transition = false) {
   
   const svgEl = cardEl.querySelector('.rainbow-svg');
   const legendContainer = cardEl.querySelector('.fcard-legend-container');
-  
+  const topRankEl = cardEl.querySelector('.fcard-toprank');
+
   // Sort teams: Highest score first (outermost/top bar)
   const sortedTeams = [...profile.teams].sort((a, b) => {
     return b.score - a.score;
@@ -1032,9 +1036,23 @@ function updateCardDOM(cardEl, profile, transition = false) {
       if (predictionLabelEl) {
         predictionLabelEl.textContent = getPredictionLabel(topTeam.league, topTeam.short);
       }
+      // Top-team percentile line, top-right of the card. Literally 100 minus
+      // the top team's devotion score (per spec): a 95-score = "TOP 5%".
+      // Nickname is the last word of the team name (Toronto Raptors → RAPTORS),
+      // stripping a trailing club suffix so soccer sides don't read "FC FANS"
+      // / "SC FANS" (Toronto FC → TORONTO, Orlando City SC → CITY).
+      if (topRankEl) {
+        const pct = Math.max(1, Math.round(100 - (topTeam.score || 0)));
+        const words = (topTeam.name || '').trim().split(/\s+/).filter(Boolean);
+        const suffixes = new Set(['FC', 'SC', 'CF', 'AFC']);
+        while (words.length > 1 && suffixes.has(words[words.length - 1].toUpperCase())) words.pop();
+        const nickname = words.pop() || topTeam.short || 'TEAM';
+        topRankEl.textContent = `TOP ${pct}% ${String(nickname).toUpperCase()} FANS`;
+      }
     } else {
       if (sinceLabelEl) sinceLabelEl.textContent = "FAN SINCE";
       if (predictionLabelEl) predictionLabelEl.textContent = "PREDICTION";
+      if (topRankEl) topRankEl.textContent = '';
     }
 
     const verifiedBadge = cardEl.querySelector('#' + cardEl.id.charAt(0) + '-card-verified-badge');
@@ -1743,12 +1761,75 @@ function updateRevealFanId() {
   el.style.display = h ? '' : 'none';
 }
 
-function setupStep5MainPage(finalScore) {
+// Toggle the actions column between "your own card" mode (email capture,
+// share, download) and "recipient" mode (landing-style "make your own" CTA).
+function applySharedRecipientView(isShared, displayHandle) {
+  const titleEl = document.querySelector('.main-reveal-title');
+  const descEl = document.querySelector('.main-reveal-desc');
+  const emailArea = document.getElementById('share-email-area');
+  const actionsGrid = document.querySelector('.card-actions-grid');
+  const socialRow = document.querySelector('.social-share-horizontal');
+  const restartBox = document.querySelector('.restart-flow-box');
+  const recipientCta = document.getElementById('shared-recipient-cta');
+  const ownControls = [emailArea, actionsGrid, socialRow, restartBox];
+
+  if (isShared) {
+    if (titleEl) titleEl.textContent = `${displayHandle}'s Loyalty Card`;
+    if (descEl) descEl.textContent = `This is ${displayHandle}'s FanLog Score — the teams, loyalty, and moments that define their fandom. Build your own and see how you compare.`;
+    ownControls.forEach(el => { if (el) el.style.display = 'none'; });
+    if (recipientCta) recipientCta.style.display = '';
+  } else {
+    if (titleEl) titleEl.textContent = 'Your Loyalty Card Is Ready.';
+    if (descEl) descEl.textContent = 'Your Fanlog Score reveals who you are as a fan, from your loyalty level to the teams that define you. Enter your email to unlock your Loyalty Card, then share it and see how your fandom compares.';
+    // Restore only the always-on controls; the email success/form and the
+    // phone-hidden grids keep their own display logic elsewhere.
+    if (emailArea) emailArea.style.display = '';
+    if (actionsGrid) actionsGrid.style.display = '';
+    if (socialRow) socialRow.style.display = '';
+    if (restartBox) restartBox.style.display = '';
+    if (recipientCta) recipientCta.style.display = 'none';
+  }
+}
+
+// Reset all card state for building a fresh card (shared by the "create a new
+// card" restart link and the recipient view's "make your own" buttons).
+function resetForNewCard() {
+  selectedTeams = [];
+  userQuizAnswers = {};
+  currentQuizTeamIndex = 0;
+  savedHandle = '';
+  cachedShareId = null; // stale — belonged to the card being replaced
+
+  const shareEmailForm = document.getElementById('share-email-form');
+  const shareEmailSuccess = document.getElementById('share-email-success');
+  if (shareEmailForm) shareEmailForm.style.display = '';
+  if (shareEmailSuccess) shareEmailSuccess.style.display = 'none';
+  rearmWaitlistForm();
+
+  if (sincePickerWidget) {
+    sincePickerWidget.selectedYear = null;
+    sincePickerWidget.hiddenInput.value = '';
+    const displayEl = document.getElementById('b-since-display');
+    if (displayEl) displayEl.textContent = 'Select Year';
+    const trigger = document.getElementById('b-since-trigger');
+    if (trigger) trigger.classList.remove('has-value');
+  }
+}
+
+function setupStep5MainPage(finalScore, isSharedView = false) {
   const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
   const tagline = generateSportsIdentityTagline();
 
   // Fan ID defaults to @GUEST, will be updated from email prefix once user enters email
   const displayHandle = savedHandle ? (savedHandle.startsWith('@') ? savedHandle : `@${savedHandle}`) : "@GUEST";
+
+  // Recipient view: someone opened a shared link and is looking at another
+  // fan's card, not one they built. Swap the "your card is ready / share it"
+  // column for a landing-style "here's their card — make your own" invite,
+  // and hide the email-capture + share/download controls that only make sense
+  // for your own card. Reset back to the normal state otherwise so it doesn't
+  // linger once a recipient starts building their own.
+  applySharedRecipientView(isSharedView, displayHandle);
 
   // Form profile object
   const userProfile = {
@@ -2355,30 +2436,19 @@ function setupWaitlistBindings() {
 
 // Restart button
 btnRestartFlow.addEventListener('click', () => {
-  selectedTeams = [];
-  userQuizAnswers = {};
-  currentQuizTeamIndex = 0;
-  savedHandle = '';
-  cachedShareId = null; // stale — belonged to the card being replaced
-
-  // Reset share email form (re-arm for a fresh signup + rebuild the captcha)
-  const shareEmailForm = document.getElementById('share-email-form');
-  const shareEmailSuccess = document.getElementById('share-email-success');
-  if (shareEmailForm) shareEmailForm.style.display = '';
-  if (shareEmailSuccess) shareEmailSuccess.style.display = 'none';
-  rearmWaitlistForm();
-  
-  // Reset since picker
-  if (sincePickerWidget) {
-    sincePickerWidget.selectedYear = null;
-    sincePickerWidget.hiddenInput.value = '';
-    const displayEl = document.getElementById('b-since-display');
-    if (displayEl) displayEl.textContent = 'Select Year';
-    const trigger = document.getElementById('b-since-trigger');
-    if (trigger) trigger.classList.remove('has-value');
-  }
-  
+  resetForNewCard();
   goToStep(2);
+});
+
+// Recipient view's landing-style "make your own" buttons: reset the sharer's
+// state, then start the normal build flow (or a random card).
+document.getElementById('b-shared-create')?.addEventListener('click', () => {
+  resetForNewCard();
+  goToStep(2);
+});
+document.getElementById('b-shared-surprise')?.addEventListener('click', () => {
+  resetForNewCard();
+  generateRandomCard();
 });
 
 // --- DEVICE DETECTION UTILITY ---
@@ -2873,6 +2943,76 @@ if (import.meta.env.DEV) {
   document.body.appendChild(devBtn);
 }
 
-// Shared card links no longer drop visitors straight onto the sharer's card
-// — every link opens the normal landing page. ?ref= is still read separately
-// above for referral attribution regardless.
+// --- SHARED CARD (RECIPIENT VIEW) ---
+// Opening someone's shared link drops the recipient straight onto the
+// sharer's Loyalty Card, then invites them to build their own. The link
+// carries the card either as a short ?id= (looked up in Supabase) or, for
+// links made before that shipped / when Supabase is unreachable, the whole
+// payload base64'd into ?c=. Both resolve to the same { h, a, sc, t } shape.
+// ?ref= is still read separately above for referral attribution.
+function buildTeamFromId(id) {
+  for (const lg in sportsData) {
+    const t = sportsData[lg].teams.find(x => x.id === id);
+    if (t) {
+      return {
+        id: t.id, name: t.name, short: t.short, logo: t.logo, city: t.city,
+        status: t.status, primaryColor: t.primary, secondaryColor: t.secondary,
+        league: lg.toUpperCase()
+      };
+    }
+  }
+  return null;
+}
+
+function decodeCircleToken(enc) {
+  try {
+    const b64 = enc.replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(decodeURIComponent(escape(atob(b64))));
+  } catch {
+    return null;
+  }
+}
+
+// Rebuild selectedTeams from a resolved circle payload and jump to the card in
+// recipient mode. Returns true if it rendered a card, false if the payload was
+// unusable (so the caller can leave the normal landing page in place).
+function renderSharedCard(payload) {
+  if (!payload) return false;
+  const teams = (payload.t || []).map(tt => {
+    const base = buildTeamFromId(tt.i);
+    if (!base) return null;
+    return {
+      ...base,
+      score: Number(tt.s) || 0,
+      fanSince: '',
+      prediction: '',
+      isTop: !!tt.top,
+      quizQuestions: getRandomQuizQuestions(4)
+    };
+  }).filter(Boolean);
+  if (!teams.length) return false;
+  if (!teams.some(t => t.isTop)) teams[0].isTop = true;
+
+  selectedTeams = teams;
+  savedHandle = payload.h || savedHandle;
+  userQuizAnswers = {};
+
+  setupStep5MainPage(computeFanScore(selectedTeams), true);
+  return true;
+}
+
+// Called on load: if the URL carries a shared card, resolve and show it. The
+// ?c= form decodes synchronously; the ?id= form needs a Supabase round trip,
+// so the normal landing page shows first and is replaced once it resolves.
+async function loadSharedCardFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const id = params.get('id');
+  const c = params.get('c');
+  if (!id && !c) return;
+  try {
+    const payload = c ? decodeCircleToken(c) : await fetchCircle(id);
+    if (payload) renderSharedCard(payload);
+  } catch {
+    // leave the normal landing page in place
+  }
+}

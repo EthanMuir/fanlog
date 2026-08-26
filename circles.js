@@ -55,3 +55,27 @@ export async function saveCircle(payload) {
   }
   return null;
 }
+
+/**
+ * Look up a stored card summary by its short id (anon SELECT, allowed by the
+ * circles RLS policy). Used when a recipient opens a shared ?id= link so the
+ * app can rebuild and show the sharer's card. Returns null on any failure so
+ * the caller can fall back to the normal landing page.
+ * @param {string} id
+ * @returns {Promise<{ h: string, a: string, sc: number, t: object[] }|null>}
+ */
+export async function fetchCircle(id) {
+  if (!supabase || !id) return null;
+  try {
+    const { data, error } = await supabase
+      .from('circles')
+      .select('payload')
+      .eq('id', id)
+      .maybeSingle();
+    if (error || !data) return null;
+    return data.payload || null;
+  } catch (err) {
+    console.warn('fetchCircle failed:', err);
+    return null;
+  }
+}

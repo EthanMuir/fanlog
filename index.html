@@ -275,8 +275,9 @@
                 <!-- FRONT FACE -->
                 <div class="fcard-face fcard-front" id="fcard-front-face">
                   <div class="fcard-inner-border">
-                    <!-- Card Header: Archetype tagline shown prominently at top, brand label removed -->
+                    <!-- Card Header: top-team percentile line (top-right) above the archetype tagline -->
                     <div class="fcard-header fcard-header-sports-circle">
+                      <div class="fcard-toprank" id="f-card-toprank"></div>
                       <div class="fcard-archetype fcard-archetype-large" id="f-card-archetype">PURE LOYALIST</div>
                     </div>
                     
@@ -401,6 +402,14 @@
             
             <div class="restart-flow-box">
               <button id="b-restart-flow" class="btn-link">Create a new Loyalty Card</button>
+            </div>
+
+            <!-- Recipient CTA: shown only when viewing a shared card (see
+                 applySharedRecipientView). Landing-style buttons that start
+                 the visitor building their own card. -->
+            <div class="shared-recipient-cta" id="shared-recipient-cta" style="display: none;">
+              <button id="b-shared-create" class="btn btn-primary btn-lg btn-block">Create My Loyalty Card</button>
+              <button id="b-shared-surprise" class="btn btn-secondary btn-lg btn-block">Surprise Me</button>
             </div>
           </div>
         </div>
