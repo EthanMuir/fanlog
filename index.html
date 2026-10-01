@@ -6,18 +6,23 @@
   <title>FanLog - Your Sports Identity</title>
   <link rel="icon" type="image/svg+xml" href="fanlog_logo.svg">
   <meta name="description" content="Create your Loyalty Card and share your sports identity. Show every team you support, your loyalty, and the moments that define you.">
-  <!-- Generic, text-only Open Graph tags for direct/organic visits to the app
-       root. Shared Loyalty Card links point at /share instead (see
-       getShareUrl() in main.js), which serves its own per-card og:image via
-       /api/og — that's the one that renders the actual card as a link-preview
-       thumbnail, not this one. -->
+  <!-- Open Graph tags for links to the app root. The image is a sample card
+       (@YourFanID: Leafs/Chiefs/Arsenal) rendered by /api/og, so homepage
+       links unfurl with the real card design. Shared Loyalty Card links point
+       at /share instead (see getShareUrl() in main.js), which serves the
+       sharer's own card. Relative URLs: Facebook/LinkedIn prefer absolute
+       ones, so swap in the production domain if those previews matter. -->
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="FanLog">
   <meta property="og:title" content="FanLog — Your Sports Identity">
   <meta property="og:description" content="Build your Loyalty Card and reveal your FanLog Score. Every team you support, your loyalty, and the moments that define you.">
-  <meta name="twitter:card" content="summary">
+  <meta property="og:image" content="/api/og?c=eyJoIjoiWW91ckZhbklEIiwiYSI6IlRocmVlLUxlYWd1ZSBKdWdnbGVyIiwidCI6W3siaSI6ImxlYWZzIiwicyI6OTIsInRvcCI6MX0seyJpIjoiY2hpZWZzIiwicyI6NzQsInRvcCI6MH0seyJpIjoiYXJzZW5hbCIsInMiOjU1LCJ0b3AiOjB9XX0">
+  <meta property="og:image:width" content="900">
+  <meta property="og:image:height" content="443">
+  <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="FanLog — Your Sports Identity">
   <meta name="twitter:description" content="Build your Loyalty Card and reveal your FanLog Score.">
+  <meta name="twitter:image" content="/api/og?c=eyJoIjoiWW91ckZhbklEIiwiYSI6IlRocmVlLUxlYWd1ZSBKdWdnbGVyIiwidCI6W3siaSI6ImxlYWZzIiwicyI6OTIsInRvcCI6MX0seyJpIjoiY2hpZWZzIiwicyI6NzQsInRvcCI6MH0seyJpIjoiYXJzZW5hbCIsInMiOjU1LCJ0b3AiOjB9XX0">
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -35,7 +40,7 @@
     <div class="header-container">
       <div class="logo-area" id="admin-trigger">
         <img src="fanlog_logo.svg" alt="FanLog Logo" class="logo-img">
-        <span class="logo-text">Fanlog</span><span class="logo-beta">beta</span>
+        <span class="logo-text">FanLog</span><span class="logo-beta">beta</span>
       </div>
       <div class="header-cta" id="header-cta-container">
         <div class="header-menu" id="header-menu">
@@ -58,7 +63,7 @@
         <!-- Title & Subtitle -->
         <div class="welcome-hero-left">
           <h1 class="welcome-title">Home to Your <br><span class="text-gradient">Sports Identity.</span></h1>
-          <p class="welcome-subtitle">Every fan has a story. Fanlog brings yours to life. Create your profile, share your Loyalty Card to proudly display every team you support, your years of loyalty, and the moments that have shaped your fandom.</p>
+          <p class="welcome-subtitle">Every fan has a story. FanLog brings yours to life. Create your profile, share your Loyalty Card to proudly display every team you support, your years of loyalty, and the moments that have shaped your fandom.</p>
         </div>
 
         <!-- Onboarding Actions (below the subtitle; above the card on mobile so the CTA is visible without scrolling) -->
@@ -234,7 +239,7 @@
     <section id="step-hub" class="onboarding-step">
       <div class="hub-step-container">
         <div class="step-header">
-          <span class="step-indicator">STEP 3 OF 4</span>
+          <span class="step-indicator">STEP 3 OF 3</span>
           <h2 class="step-title">Your Fan Profile</h2>
           <p class="step-subtitle">These are the teams that make up your sports identity. Choose your Top Team to personalize your Loyalty Card, then add more teams to complete your fan story.</p>
         </div>
@@ -313,6 +318,10 @@
                         <div class="fcard-name-wrapper" style="display: flex; align-items: center; gap: 4px; justify-content: center; width: 100%;">
                           <span class="fcard-meta-value fcard-fan-id-editable" id="f-card-name" title="Click to edit" contenteditable="false">@GUEST</span>
                           <span id="f-card-verified-badge" class="verified-badge" style="display: none; color: #10b981; font-size: 0.85rem;" title="Verified Waitlist Member">✓</span>
+                          <!-- data-html2canvas-ignore keeps the pencil out of the downloaded PNG -->
+                          <button type="button" class="fan-id-edit-btn" id="f-card-edit-btn" aria-label="Edit your Fan ID" title="Edit your Fan ID" data-html2canvas-ignore>
+                            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                          </button>
                         </div>
                       </div>
                       <div class="fcard-meta-box">
@@ -328,8 +337,8 @@
                     <!-- Card Footer with FanLog logo -->
                     <div class="fcard-footer fcard-footer-sports-circle">
                       <div class="fcard-footer-logo-row">
-                        <img src="fanlog_logo.svg" alt="Fanlog" class="fcard-footer-logo">
-                        <span class="fcard-footer-brand-name">Fanlog</span>
+                        <img src="fanlog_logo.svg" alt="FanLog" class="fcard-footer-logo">
+                        <span class="fcard-footer-brand-name">FanLog</span>
                       </div>
                       <div class="fcard-serial" id="f-card-serial">FL-2026-INDEX</div>
                     </div>
@@ -375,18 +384,18 @@
           <div class="main-card-actions-column">
             <h2 class="main-reveal-title">Your Loyalty Card Is Ready.</h2>
             <p class="main-reveal-fanid" id="main-reveal-fanid" style="display: none;"></p>
-            <p class="main-reveal-desc">Your Fanlog Score reveals who you are as a fan, from your loyalty level to the teams that define you. Enter your email to unlock your Loyalty Card, then share it and see how your fandom compares.</p>
+            <p class="main-reveal-desc">Your FanLog Score reveals who you are as a fan, from your loyalty level to the teams that define you. Join the waitlist to share your card and see how your fandom compares.</p>
 
             <!-- Email capture before sharing -->
             <div class="share-email-capture" id="share-email-area">
               <form id="share-email-form" class="share-email-form">
                 <div class="share-email-input-row">
                   <input type="email" id="fan-email" placeholder="Enter your email" required>
-                  <button type="submit" class="btn btn-primary" id="submit-btn">Share</button>
+                  <button type="submit" class="btn btn-primary" id="submit-btn">Join &amp; Share</button>
                 </div>
                 <div id="turnstile-container" style="margin-top: 10px; margin-bottom: 10px;"></div>
                 <p id="share-email-error" class="share-email-error" role="alert" hidden></p>
-                <p class="share-email-note">We'll also add you to the Fanlog waitlist and email you when we launch.</p>
+                <p class="share-email-note">We'll also add you to the FanLog waitlist and email you when we launch.</p>
               </form>
               <div id="share-email-success" style="display:none;">
                 <button type="button" id="b-set-fan-id" class="btn btn-secondary btn-block share-set-fan-id">Set your Fan ID</button>
@@ -403,10 +412,9 @@
               </button>
             </div>
             
+            <!-- Desktop only (hidden ≤768px, where the native share sheet covers X too) -->
             <div class="social-share-horizontal">
-              <button class="social-btn x-btn" data-platform="X / Twitter" title="Share on X">X</button>
-              <button class="social-btn insta-btn" data-platform="Instagram Stories" title="Share on Instagram">IG</button>
-              <button class="social-btn imsg-btn" data-platform="iMessage" title="Share via Messages">MSG</button>
+              <button type="button" class="social-btn x-btn" id="b-share-x">Share on X</button>
             </div>
             
             <div class="restart-flow-box">
@@ -436,18 +444,18 @@
         <section class="showcase-section" id="showcase-section">
           <div class="section-header">
             <h2 class="section-title">The Fan Experience, Transformed.</h2>
-            <p class="section-subtitle">Fanlog is your permanent, verified home for your life as a sports fan. Your teams, your loyalty, your memories, and your fan journey, all captured in one evolving identity.</p>
-            <p class="section-subtitle-beta">Fanlog is currently in beta. This is a preview of the Fanlog experience we're building, pre-loaded with your team picks. Explore your profile, discover your Loyalty Card, and see what your fandom looks like.</p>
+            <p class="section-subtitle">FanLog is your permanent, verified home for your life as a sports fan. Your teams, your loyalty, your memories, and your fan journey, all captured in one evolving identity.</p>
+            <p class="section-subtitle-beta">FanLog is currently in beta. This is a preview of the FanLog experience we're building, pre-loaded with your team picks. Explore your profile, discover your Loyalty Card, and see what your fandom looks like.</p>
           </div>
 
           <div class="showcase-features-grid">
             <div class="showcase-feature-card">
-              <div class="showcase-feature-icon">&#127952;</div>
+              <div class="showcase-feature-icon">&#127967;&#65039;</div>
               <h3>Track Your Fandom</h3>
-              <p>Build your complete sports identity by logging every team you support across NHL, NBA, NFL, Premier League, La Liga, CFL, MLB, F1, and more.</p>
+              <p>Build your complete sports identity by logging every team you support across the NFL, NBA, NHL, MLB, MLS, CFL, and Europe's top five soccer leagues.</p>
             </div>
             <div class="showcase-feature-card">
-              <div class="showcase-feature-icon">&#128309;</div>
+              <div class="showcase-feature-icon">&#129706;</div>
               <h3>Your Loyalty Card</h3>
               <p>Turn your fandom into a shareable identity. Your Loyalty Card visualizes your teams, loyalty, and fan priorities in one unique graphic that evolves as your fandom grows.</p>
             </div>

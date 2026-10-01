@@ -163,7 +163,7 @@ export default async function handler(req) {
     h('div', { style: { display: 'flex', width: '100%', alignItems: 'center' } },
       h('div', { style: { display: 'flex', flex: 1, alignItems: 'center', gap: 10 } },
         h('div', { style: { display: 'flex', width: 10, height: 10, borderRadius: 999, backgroundColor: cardAccent } }),
-        h('div', { style: { display: 'flex', fontSize: 20, fontWeight: 700 } }, 'Fanlog')
+        h('div', { style: { display: 'flex', fontSize: 20, fontWeight: 700 } }, 'FanLog')
       ),
       h('div', { style: { display: 'flex', fontSize: 14, fontWeight: 700, letterSpacing: 2, color: '#d7dae0' } }, 'LOYALTY CARD')
     ),

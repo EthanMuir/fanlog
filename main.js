@@ -38,7 +38,11 @@ function getDevotionTier(score) {
   return "ROOKIE";
 }
 
-// Automatically recalculate the top team based on highest devotion score
+// Team the visitor crowned on Your Fan Profile ("Make Top Team"), if any.
+let pinnedTopTeamId = null;
+
+// Recalculate the top team: the visitor's own pick if they made one and that
+// team is still on the card, otherwise the highest devotion score.
 function recalculateTopTeam() {
   if (selectedTeams.length === 0) return;
   let maxScore = -1;
@@ -48,7 +52,7 @@ function recalculateTopTeam() {
       maxScore = t.score;
     }
   });
-  const topTeam = selectedTeams.find(t => t.score === maxScore);
+  const topTeam = selectedTeams.find(t => t.id === pinnedTopTeamId) || selectedTeams.find(t => t.score === maxScore);
   if (topTeam) {
     topTeam.isTop = true;
   }
@@ -902,6 +906,13 @@ function goToStep(stepIndex) {
     stopMorphingLoop();
   }
 
+  // Builder label: step 1 of the 3-step flow for the first team, otherwise
+  // the visitor came from Your Fan Profile to add another one.
+  if (stepIndex === 2) {
+    const builderIndicator = document.getElementById('builder-step-indicator');
+    if (builderIndicator) builderIndicator.textContent = selectedTeams.length ? 'ADD ANOTHER TEAM' : 'STEP 1 OF 3';
+  }
+
   // Render Hub UI
   if (stepIndex === 4) {
     renderHubUI();
@@ -951,6 +962,7 @@ function launchTryDemo() {
     prediction: String(Math.floor(2026 + Math.random() * 15)),
     quizQuestions: getRandomQuizQuestions(2)
   }));
+  pinnedTopTeamId = null;
   recalculateTopTeam();
   savedHandle = '';
 
@@ -1086,6 +1098,17 @@ function getTeamDatabaseColors(teamName) {
   return null;
 }
 
+// Blend a #rrggbb color toward white by `amount` (0–1).
+function mixWithWhite(hex, amount) {
+  const c = hex.replace('#', '');
+  const full = c.length === 3 ? c.split('').map(ch => ch + ch).join('') : c;
+  const channel = (i) => {
+    const v = parseInt(full.slice(i, i + 2), 16);
+    return Math.round(v + (255 - v) * amount).toString(16).padStart(2, '0');
+  };
+  return `#${channel(0)}${channel(2)}${channel(4)}`;
+}
+
 // --- HELPER: APPLY TEAM THEME GLOBALLY ---
 // Single entry point for setting the page accent colors. Guarantees the accent
 // is never black/near-black (teams like the Raiders, Nets, or LAFC would
@@ -1097,6 +1120,11 @@ function applyTeamTheme(primaryHex, secondaryHex) {
   }
   document.documentElement.style.setProperty('--team-primary', accent);
   document.documentElement.style.setProperty('--team-secondary', secondaryHex || accent);
+  // Gradient text (headings like "Cincinnati Bengals") fades from the accent
+  // into this color. A dark secondary (Bengals, Falcons, Ravens…) would fade
+  // the end of the text into the background, so use a lightened accent instead.
+  const gradientEnd = secondaryHex && getLuminance(secondaryHex) >= 70 ? secondaryHex : mixWithWhite(accent, 0.45);
+  document.documentElement.style.setProperty('--team-gradient-end', gradientEnd);
   // Determine whether button text should be dark or light for contrast
   const btnTextColor = getLuminance(accent) > 155 ? '#0a0a0a' : '#ffffff';
   document.documentElement.style.setProperty('--btn-text', btnTextColor);
@@ -1328,6 +1356,10 @@ function updateLegendChips(legendContainer, sortedTeams) {
 // word of the team name (Toronto Raptors → Raptors), stripping a trailing
 // club suffix so soccer sides don't read "FC"/"SC" (Toronto FC → Toronto,
 // Orlando City SC → City).
+// "TOP 51% BENGALS FANS" reads as bottom half — only show the line (and the
+// share caption's matching intro) at or below this.
+const TOP_RANK_MAX_PCT = 25;
+
 function topRankFor(team) {
   if (!team) return null;
   const pct = Math.max(1, Math.round(100 - (team.score || 0)));
@@ -1367,7 +1399,10 @@ function updateCardDOM(cardEl, profile, transition = false) {
     if (sinceEl) sinceEl.textContent = profile.since || '----';
     if (predictionEl) predictionEl.textContent = profile.prediction || '----';
     
-    const topTeam = sortedTeams[0];
+    // The labels follow the card's Top Team (which the visitor can choose on
+    // Your Fan Profile) — the same team whose fan-since/prediction values
+    // setupStep5MainPage puts in this row. Arcs stay ordered by score.
+    const topTeam = profile.teams.find(t => t.isTop) || sortedTeams[0];
     if (topTeam) {
       if (sinceLabelEl) {
         sinceLabelEl.textContent = `${topTeam.short} SINCE`;
@@ -1375,10 +1410,11 @@ function updateCardDOM(cardEl, profile, transition = false) {
       if (predictionLabelEl) {
         predictionLabelEl.textContent = getPredictionLabel(topTeam.league, topTeam.short);
       }
-      // Top-team percentile line, top-right of the card (see topRankFor).
+      // Top-team percentile line, top-right of the card (see topRankFor) —
+      // only when it's actually a brag.
       if (topRankEl) {
         const rank = topRankFor(topTeam);
-        topRankEl.textContent = rank ? `TOP ${rank.pct}% ${rank.nickname.toUpperCase()} FANS` : '';
+        topRankEl.textContent = rank && rank.pct <= TOP_RANK_MAX_PCT ? `TOP ${rank.pct}% ${rank.nickname.toUpperCase()} FANS` : '';
       }
     } else {
       if (sinceLabelEl) sinceLabelEl.textContent = "FAN SINCE";
@@ -1649,7 +1685,8 @@ bSportSelect.addEventListener('change', (e) => {
   bTeamSelect.innerHTML = '<option value="" disabled selected>Select Team</option>';
   
   if (leagueData) {
-    leagueData.teams.forEach(team => {
+    // Teams already on the card aren't offered again.
+    leagueData.teams.filter(team => !selectedTeams.some(t => t.id === team.id)).forEach(team => {
       const option = document.createElement('option');
       option.value = team.id;
       option.textContent = team.name;
@@ -1777,16 +1814,14 @@ function renderQuizForCurrentTeam() {
   const team = selectedTeams[currentQuizTeamIndex];
   if (!team) return;
   
-  // Dynamic header styles
-  quizProgressText.textContent = `TEAM QUIZ`;
+  // Dynamic header styles: the first team is step 2 of the 3-step flow; teams
+  // added later from Your Fan Profile get a plain label instead.
+  quizProgressText.textContent = currentQuizTeamIndex === 0 ? 'STEP 2 OF 3' : 'TEAM QUIZ';
   quizTeamName.textContent = team.name;
-  
+
   // Set primary team theme color for quiz elements (contrast-safe)
   applyTeamTheme(team.primaryColor, team.secondaryColor);
-  
-  // Update progress bar
-  quizProgressBarFill.style.width = `100%`;
-  
+
   // Render questions
   quizQuestionsList.innerHTML = '';
   quizQuestionsList.scrollTop = 0;
@@ -1993,8 +2028,8 @@ function renderQuizForCurrentTeam() {
 
   if (team.prediction) {
     predInput.value = team.prediction;
-    checkQuizAnswersStatus();
   }
+  checkQuizAnswersStatus(); // sets the progress bar and the button state
 }
 
 function checkQuizAnswersStatus() {
@@ -2016,6 +2051,15 @@ function checkQuizAnswersStatus() {
   const predInput = document.getElementById('quiz-prediction-input');
   const predVal = predInput ? parseInt(predInput.value) : NaN;
   const predValid = !isNaN(predVal) && predVal >= 2026 && predVal <= 2050;
+
+  // Progress bar: share of questions answered (slider + devotion + trivia + prediction).
+  const answered = [
+    sliderAnswered,
+    ...team.quizQuestions.map(q => typeof userQuizAnswers[`${team.id}_${q.key}`] === 'number'),
+    triviaAnswered,
+    predValid
+  ];
+  quizProgressBarFill.style.width = `${Math.round((answered.filter(Boolean).length / answered.length) * 100)}%`;
 
   if (sliderAnswered && devotionAnswered && triviaAnswered && predValid) {
     btnQuizNext.removeAttribute('disabled');
@@ -2092,21 +2136,28 @@ function renderHubUI() {
         <div class="hub-team-info">
           <span class="hub-team-name">${team.name}</span>
           <div class="hub-team-meta-row">
-            <span>League: <strong>${team.league}</strong></span>
-            <span>Fan Since: <strong>${team.fanSince}</strong></span>
-            <span>Prediction: <strong>${team.prediction}</strong></span>
+            ${team.league} · Fan since ${team.fanSince} · Title pick ${team.prediction}
           </div>
         </div>
       </div>
       <div class="hub-team-actions">
-        <span class="hub-team-score-badge" style="color: ${adaptedColor}">Score: ${team.score}</span>
-        ${team.isTop ? `<span class="hub-top-badge" style="background-color: ${adaptedColor}; color: ${getLuminance(adaptedColor) > 155 ? '#0a0a0a' : '#ffffff'}; padding: 3px 8px; border-radius: 4px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase;">Top Team</span>` : ''}
-        <span class="builder-remove-btn" onclick="window.removeHubTeam('${team.id}')" title="Remove Team">&times;</span>
+        <span class="hub-team-score-badge" style="color: ${adaptedColor}">Devotion ${team.score}</span>
+        ${team.isTop
+          ? `<span class="hub-top-badge" style="background-color: ${adaptedColor}; color: ${getLuminance(adaptedColor) > 155 ? '#0a0a0a' : '#ffffff'}; padding: 3px 8px; border-radius: 4px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase;">Top Team</span>`
+          : `<button type="button" class="hub-make-top-btn" data-make-top="${team.id}">Make Top Team</button>`}
+        <button type="button" class="builder-remove-btn" data-remove-team="${team.id}" aria-label="Remove ${team.name}" title="Remove ${team.name}">&times;</button>
       </div>
     `;
     hubAddedTeamsList.appendChild(card);
   });
-  
+
+  // Four teams is the card's limit (four rings on the gauge).
+  if (btnHubAddTeam) {
+    const full = selectedTeams.length >= 4;
+    btnHubAddTeam.disabled = full;
+    btnHubAddTeam.textContent = full ? '4 Teams Max' : 'Add Another Team';
+  }
+
   // Set theme to matching top team (contrast-safe)
   const topTeam = selectedTeams.find(t => t.isTop);
   if (topTeam) {
@@ -2114,18 +2165,27 @@ function renderHubUI() {
   }
 }
 
-window.removeHubTeam = (teamId) => {
-  selectedTeams = selectedTeams.filter(t => t.id !== teamId);
-  recalculateTopTeam();
-  renderHubUI();
-};
+// Make Top Team / remove buttons on Your Fan Profile.
+if (hubAddedTeamsList) {
+  hubAddedTeamsList.addEventListener('click', (e) => {
+    const makeTop = e.target.closest('[data-make-top]');
+    const remove = e.target.closest('[data-remove-team]');
+    if (makeTop) {
+      pinnedTopTeamId = makeTop.dataset.makeTop;
+      HubSDK.track('top_team_chosen', { teamId: pinnedTopTeamId });
+    } else if (remove) {
+      selectedTeams = selectedTeams.filter(t => t.id !== remove.dataset.removeTeam);
+    } else {
+      return;
+    }
+    recalculateTopTeam();
+    renderHubUI();
+  });
+}
 
 if (btnHubAddTeam) {
   btnHubAddTeam.addEventListener('click', () => {
-    if (selectedTeams.length >= 4) {
-      alert("You've reached the maximum limit of 4 teams. Remove a team to add another.");
-      return;
-    }
+    if (selectedTeams.length >= 4) return;
     goToStep(2);
   });
 }
@@ -2211,7 +2271,15 @@ function updateRevealFanId() {
 
 // Toggle the actions column between "your own card" mode (email capture,
 // share, download) and "recipient" mode (landing-style "make your own" CTA).
+// True while showing someone else's shared card (their Fan ID isn't editable).
+let isRecipientView = false;
+
 function applySharedRecipientView(isShared, displayHandle) {
+  isRecipientView = isShared;
+  const fanIdEditBtn = document.getElementById('f-card-edit-btn');
+  if (fanIdEditBtn) fanIdEditBtn.style.display = isShared ? 'none' : '';
+  const fanIdEl = document.getElementById('f-card-name');
+  if (fanIdEl) fanIdEl.style.cursor = isShared ? '' : 'pointer';
   const titleEl = document.querySelector('.main-reveal-title');
   const descEl = document.querySelector('.main-reveal-desc');
   const emailArea = document.getElementById('share-email-area');
@@ -2228,7 +2296,7 @@ function applySharedRecipientView(isShared, displayHandle) {
     if (recipientCta) recipientCta.style.display = '';
   } else {
     if (titleEl) titleEl.textContent = 'Your Loyalty Card Is Ready.';
-    if (descEl) descEl.textContent = 'Your Fanlog Score reveals who you are as a fan, from your loyalty level to the teams that define you. Enter your email to unlock your Loyalty Card, then share it and see how your fandom compares.';
+    if (descEl) descEl.textContent = 'Your FanLog Score reveals who you are as a fan, from your loyalty level to the teams that define you. Join the waitlist to share your card and see how your fandom compares.';
     // Restore only the always-on controls; the email success/form and the
     // phone-hidden grids keep their own display logic elsewhere.
     if (emailArea) emailArea.style.display = '';
@@ -2244,6 +2312,7 @@ function applySharedRecipientView(isShared, displayHandle) {
 function resetForNewCard() {
   selectedTeams = [];
   userQuizAnswers = {};
+  pinnedTopTeamId = null;
   currentQuizTeamIndex = 0;
   savedHandle = '';
   cachedShareId = null; // stale — belonged to the card being replaced
@@ -2361,7 +2430,7 @@ let fanIdEditorBound = false;
 
 function startFanIdEdit() {
   const fanIdEl = document.getElementById('f-card-name');
-  if (!fanIdEl || fanIdEl.getAttribute('contenteditable') === 'true') return;
+  if (!fanIdEl || isRecipientView || fanIdEl.getAttribute('contenteditable') === 'true') return;
   fanIdEl.setAttribute('contenteditable', 'true');
   fanIdEl.classList.add('fan-id-editing');
   const range = document.createRange();
@@ -2377,8 +2446,8 @@ function setupEditableFanId() {
   if (!fanIdEl || fanIdEditorBound) return;
   fanIdEditorBound = true;
 
-  fanIdEl.style.cursor = 'pointer';
   fanIdEl.addEventListener('click', startFanIdEdit);
+  document.getElementById('f-card-edit-btn')?.addEventListener('click', startFanIdEdit);
 
   fanIdEl.addEventListener('blur', () => {
     fanIdEl.setAttribute('contenteditable', 'false');
@@ -2861,7 +2930,7 @@ function getShareUrl() {
 
 function getShareText() {
   const rank = topRankFor(selectedTeams.find(t => t.isTop) || selectedTeams[0]);
-  const intro = rank ? `I'm a top ${rank.pct}% ${rank.nickname} fan. ` : '';
+  const intro = rank && rank.pct <= TOP_RANK_MAX_PCT ? `I'm a top ${rank.pct}% ${rank.nickname} fan. ` : '';
   return `${intro}Judge my Sports Loyalty Card. 👇\nI'll judge yours. ${getShareUrl()}`;
 }
 
@@ -2927,7 +2996,7 @@ if (btnShareCard) btnShareCard.addEventListener('click', () => shareTextOrDownlo
 // --- COPY LINK: always copies, no share sheet ---
 btnCopyLink.addEventListener('click', () => {
   HubSDK.track('card_shared', { platform: 'copy_link' });
-  copyToClipboardText(getShareText());
+  copyToClipboardText(getShareUrl()); // just the link — the caption is for the share sheet
 });
 
 function copyToClipboardText(shareText, feedbackBtn = btnCopyLink, feedbackLabel = 'Link Copied!') {
@@ -2948,26 +3017,16 @@ function copyToClipboardText(shareText, feedbackBtn = btnCopyLink, feedbackLabel
   });
 }
 
-// Real Social Share Handlers
-const socialButtons = document.querySelectorAll('.social-share-horizontal .social-btn');
-socialButtons.forEach(btn => {
-  btn.addEventListener('click', () => {
-    const platform = btn.getAttribute('data-platform');
-    HubSDK.track('card_shared', { platform });
-    const tagline = generateSportsIdentityTagline();
-    const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
-    const teamName = topTeam ? topTeam.name : 'my teams';
-    const shareMessage = `My FanLog archetype: "${tagline}" supporting ${teamName}. Mapped my teams on FanLog:`;
-    
-    if (platform === 'X / Twitter') {
-      const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareMessage)}&url=${encodeURIComponent(getShareUrl())}`;
-      window.open(xUrl, '_blank');
-    } else if (platform === 'iMessage' || platform === 'Instagram Stories') {
-      shareTextOrDownload(getShareText(), btn);
-    } else {
-      alert(`Archetype: "${tagline}". Link copied: ${getShareUrl()}`);
-    }
-  });
+// Share on X (desktop only — phones use the native share sheet, which covers
+// X, Instagram and Messages).
+document.getElementById('b-share-x')?.addEventListener('click', () => {
+  HubSDK.track('card_shared', { platform: 'X / Twitter' });
+  const tagline = generateSportsIdentityTagline();
+  const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
+  const teamName = topTeam ? topTeam.name : 'my teams';
+  const shareMessage = `My FanLog archetype: "${tagline}" supporting ${teamName}. Mapped my teams on FanLog:`;
+  const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareMessage)}&url=${encodeURIComponent(getShareUrl())}`;
+  window.open(xUrl, '_blank', 'noopener');
 });
 
 // --- DEV-ONLY ADMIN PANEL ---
@@ -3113,6 +3172,7 @@ function generateRandomCard() {
 
   if (!savedHandle) savedHandle = sampleHandles[Math.floor(Math.random() * sampleHandles.length)];
   userQuizAnswers = {};
+  pinnedTopTeamId = null;
   recalculateTopTeam();
 
   const finalScore = computeFanScore(selectedTeams);

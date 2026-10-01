@@ -104,6 +104,12 @@ export function getPredictionLabel(league, teamShort) {
     case "nba": return `${prefix}TITLE PREDICTION`;
     case "mlb": return `${prefix}SERIES PREDICTION`;
     case "mls": return `${prefix}CUP PREDICTION`;
+    case "cfl": return `${prefix}CUP PREDICTION`; // the Grey Cup; "GREY CUP PREDICTION" wraps on the card
+    case "epl":
+    case "laliga":
+    case "bundesliga":
+    case "seriea":
+    case "ligue1": return `${prefix}TITLE PREDICTION`;
     default: return `${prefix}PREDICTION`;
   }
 }
