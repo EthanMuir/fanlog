@@ -15,8 +15,11 @@
 // tension (want bots to see the tags-only page, everyone else to skip
 // straight past it): known unfurlers self-identify in their UA string, so
 // only requests that don't match get the redirect.
-import { estimateOgImageHeight, OG_IMAGE_WIDTH } from '../cardVisuals.js';
+import { estimateOgImageHeight, OG_IMAGE_WIDTH, computeFanScore } from '../cardVisuals.js';
 import { resolveCircle } from '../circleLookup.js';
+import { sportsData } from '../teams.js';
+
+const isKnownTeam = (id) => Object.values(sportsData).some((lg) => lg.teams.some((t) => t.id === id));
 
 export const config = { runtime: 'edge' };
 
@@ -85,7 +88,9 @@ export default async function handler(req) {
   const ogImageParam = id ? `id=${encodeURIComponent(id)}` : c ? `c=${encodeURIComponent(c)}` : '';
   const ogImage = `${origin}/api/og${ogImageParam ? `?${ogImageParam}` : ''}`;
 
-  // Pull display fields from the resolved circle for a nicer unfurl title/description.
+  // Pull display fields from the resolved (already sanitized) circle for a
+  // nicer unfurl title/description. The score is computed from the teams the
+  // same way api/og.js and the live card do — never read from the payload.
   let handle = '';
   let archetype = '';
   let score = '';
@@ -93,10 +98,11 @@ export default async function handler(req) {
   try {
     const p = await resolveCircle(url.searchParams);
     if (p) {
-      handle = p.h ? '@' + String(p.h).replace(/^@/, '') : '';
-      archetype = p.a || '';
-      score = p.sc != null ? String(p.sc) : '';
-      teamCount = Array.isArray(p.t) ? p.t.length : 0;
+      const teams = p.t.filter((tt) => isKnownTeam(tt.i));
+      handle = p.h ? '@' + p.h : '';
+      archetype = p.a;
+      score = teams.length ? String(computeFanScore(teams.map((tt) => ({ score: tt.s })))) : '';
+      teamCount = teams.length;
     }
   } catch {
     // ignore — fall back to generic copy

@@ -2,18 +2,21 @@ import { createClient } from '@supabase/supabase-js';
 
 // Waitlist persistence.
 //
-//   form submit (+ Cloudflare Turnstile token)
+//   form submit (waits for the Cloudflare Turnstile token)
 //        │
-//        ├─► HubSDK.track('waitlist_signup')   (xdesk analytics funnel — unchanged)
-//        ├─► saveWaitlistEntry(entry, token) ─► waitlist-signup edge function
-//        │                                        │ verifies captcha server-side
-//        │                                        ▼ public.waitlist (service_role)
-//        └─► localStorage mirror   (dev-only admin panel)
+//        ▼
+//   saveWaitlistEntry(entry, token) ─► waitlist-signup edge function
+//        │                               │ verifies captcha server-side
+//        │                               ▼ public.waitlist (service_role)
+//        ├─ ok     ─► success UI, HubSDK.track('waitlist_signup'),
+//        │            localStorage mirror (dev only, for the dev admin panel)
+//        └─ failed ─► inline error + retry, HubSDK.track('waitlist_signup_failed')
 //
 // The insert no longer goes anon → table directly (that path is closed by RLS).
 // It goes through the captcha-gated edge function, so the public anon key can't
-// be used to spam signups. All failures here are non-fatal: the signup already
-// reached xdesk, so a DB/captcha hiccup must not break the success UX.
+// be used to spam signups. This function never throws; the caller decides what
+// a failure means (main.js shows an error and lets the visitor retry, rather
+// than showing a success screen for a signup that was never saved).
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;

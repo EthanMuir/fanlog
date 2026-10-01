@@ -1,7 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Share-link short-id storage (same xdesk Supabase project as waitlist.js,
-// separate table — see supabase/migrations/20260815_circles.sql).
+// separate table — see supabase/migrations/20260815_circles.sql, and
+// 20261001/20261002 for the by-id-only read path).
 //
 //   share tap ──► saveCircle(payload) ─► public.circles (anon insert, RLS-checked)
 //                     │
@@ -39,7 +40,7 @@ function randomId() {
  * Store a card summary and return a short id for it, or null if it
  * couldn't be saved (Supabase not configured, offline, RLS rejected the
  * shape, etc). Retries a couple of times on an actual id collision only.
- * @param {{ h: string, a: string, sc: number, t: object[] }} payload
+ * @param {{ h: string, a: string, t: object[] }} payload
  * @returns {Promise<string|null>}
  */
 export async function saveCircle(payload) {
@@ -57,23 +58,22 @@ export async function saveCircle(payload) {
 }
 
 /**
- * Look up a stored card summary by its short id (anon SELECT, allowed by the
- * circles RLS policy). Used when a recipient opens a shared ?id= link so the
- * app can rebuild and show the sharer's card. Returns null on any failure so
- * the caller can fall back to the normal landing page.
+ * Look up a stored card summary by its exact short id via the get_circle()
+ * function — anon can't SELECT the table directly, so the circles can't be
+ * listed (see supabase/migrations/20261001_circles_get_rpc.sql). Used when a
+ * recipient opens a shared ?id= link so the app can rebuild and show the
+ * sharer's card. Returns null on any failure so the caller can fall back to
+ * the normal landing page. The result is unvalidated — run it through
+ * sanitizeCircle (circlePayload.js) before use.
  * @param {string} id
- * @returns {Promise<{ h: string, a: string, sc: number, t: object[] }|null>}
+ * @returns {Promise<object|null>}
  */
 export async function fetchCircle(id) {
-  if (!supabase || !id) return null;
+  if (!supabase || !id || !/^[A-Za-z0-9]{6,12}$/.test(id)) return null;
   try {
-    const { data, error } = await supabase
-      .from('circles')
-      .select('payload')
-      .eq('id', id)
-      .maybeSingle();
+    const { data, error } = await supabase.rpc('get_circle', { p_id: id });
     if (error || !data) return null;
-    return data.payload || null;
+    return data;
   } catch (err) {
     console.warn('fetchCircle failed:', err);
     return null;
