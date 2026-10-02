@@ -33,7 +33,7 @@
   <!-- Header -->
   <header class="site-header">
     <div class="header-container">
-      <div class="logo-area" id="admin-trigger" title="Double click for Admin Panel">
+      <div class="logo-area" id="admin-trigger">
         <img src="fanlog_logo.svg" alt="FanLog Logo" class="logo-img">
         <span class="logo-text">Fanlog</span><span class="logo-beta">beta</span>
       </div>
@@ -61,7 +61,7 @@
           <p class="welcome-subtitle">Every fan has a story. Fanlog brings yours to life. Create your profile, share your Loyalty Card to proudly display every team you support, your years of loyalty, and the moments that have shaped your fandom.</p>
         </div>
 
-        <!-- Onboarding Actions (Left Side, below subtitle on desktop, below card on mobile) -->
+        <!-- Onboarding Actions (below the subtitle; above the card on mobile so the CTA is visible without scrolling) -->
         <div class="welcome-hero-actions">
           <div class="welcome-actions">
             <div class="welcome-cta-row">
@@ -385,9 +385,11 @@
                   <button type="submit" class="btn btn-primary" id="submit-btn">Share</button>
                 </div>
                 <div id="turnstile-container" style="margin-top: 10px; margin-bottom: 10px;"></div>
+                <p id="share-email-error" class="share-email-error" role="alert" hidden></p>
                 <p class="share-email-note">We'll also add you to the Fanlog waitlist and email you when we launch.</p>
               </form>
               <div id="share-email-success" style="display:none;">
+                <button type="button" id="b-set-fan-id" class="btn btn-secondary btn-block share-set-fan-id">Set your Fan ID</button>
                 <button id="b-share-sports-circle" class="btn btn-primary btn-block">Share My Loyalty Card</button>
               </div>
             </div>
@@ -467,26 +469,16 @@
 
   </main>
 
-  <!-- Hidden Admin Panel Modal -->
+  <!-- Dev-only admin panel (bound in main.js under import.meta.env.DEV; inert in production) -->
   <div class="admin-modal-overlay" id="admin-modal">
     <div class="admin-modal-container">
       <div class="admin-modal-header">
-        <h3>FanLog Admin Panel</h3>
+        <h3>FanLog Admin Panel (dev)</h3>
         <button class="close-modal-btn" id="admin-close-btn">&times;</button>
       </div>
       <div class="admin-modal-content">
-        <!-- Password gate -->
-        <div id="admin-login-area">
-          <p>Please enter the administrator password to access the waitlist data.</p>
-          <div class="form-group">
-            <input type="password" id="admin-password" placeholder="Enter password">
-          </div>
-          <button id="admin-login-btn" class="btn btn-primary">Login</button>
-          <p id="admin-login-error" class="error-text" style="display: none; color: #ff3333; margin-top: 10px; font-size: 0.9em;"></p>
-        </div>
-
-        <!-- Dashboard dashboard -->
-        <div id="admin-dashboard-area" style="display: none;">
+        <p>Signups made in this browser during local development. Real signups live in the Supabase <code>waitlist</code> table.</p>
+        <div id="admin-dashboard-area">
           <div class="admin-actions-bar">
             <div>
               <strong>Waitlist Signups: </strong><span id="admin-signup-count">0</span>
