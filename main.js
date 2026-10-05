@@ -2214,12 +2214,13 @@ function updateRevealFanId() {
 function applySharedRecipientView(isShared, displayHandle) {
   const titleEl = document.querySelector('.main-reveal-title');
   const descEl = document.querySelector('.main-reveal-desc');
+  const sharePrimary = document.getElementById('share-primary');
   const emailArea = document.getElementById('share-email-area');
   const actionsGrid = document.querySelector('.card-actions-grid');
   const socialRow = document.querySelector('.social-share-horizontal');
   const restartBox = document.querySelector('.restart-flow-box');
   const recipientCta = document.getElementById('shared-recipient-cta');
-  const ownControls = [emailArea, actionsGrid, socialRow, restartBox];
+  const ownControls = [sharePrimary, emailArea, actionsGrid, socialRow, restartBox];
 
   if (isShared) {
     if (titleEl) titleEl.textContent = `${displayHandle}'s Loyalty Card`;
@@ -2228,9 +2229,10 @@ function applySharedRecipientView(isShared, displayHandle) {
     if (recipientCta) recipientCta.style.display = '';
   } else {
     if (titleEl) titleEl.textContent = 'Your Loyalty Card Is Ready.';
-    if (descEl) descEl.textContent = 'Your Fanlog Score reveals who you are as a fan, from your loyalty level to the teams that define you. Enter your email to unlock your Loyalty Card, then share it and see how your fandom compares.';
+    if (descEl) descEl.textContent = 'Your Fanlog Score reveals who you are as a fan, from your loyalty level to the teams that define you. Share your Loyalty Card and see how your fandom compares.';
     // Restore only the always-on controls; the email success/form and the
     // phone-hidden grids keep their own display logic elsewhere.
+    if (sharePrimary) sharePrimary.style.display = '';
     if (emailArea) emailArea.style.display = '';
     if (actionsGrid) actionsGrid.style.display = '';
     if (socialRow) socialRow.style.display = '';
@@ -2436,6 +2438,11 @@ function renderTurnstile() {
     // actually needs to challenge the visitor. Verification still happens
     // server-side, so this is purely a visual de-emphasis.
     appearance: 'interaction-only',
+    // Surfaces Cloudflare's error code (e.g. 110200 = this domain isn't on the
+    // sitekey's allowed hostnames) instead of failing with no trace.
+    'error-callback': (code) => {
+      console.warn(`[turnstile] widget error ${code}`);
+    },
   });
 }
 // Retry until the async Turnstile script has loaded (up to ~5s).
@@ -2574,7 +2581,7 @@ function setupWaitlistBindings() {
         submitBtn.textContent = submitLabel;
       }
       setWaitlistError(result.error === 'missing-captcha'
-        ? "We couldn't verify you're human. If you use an ad blocker, try pausing it, then submit again."
+        ? "We couldn't verify you're human, so you weren't added yet. If you use an ad blocker, try pausing it, then submit again."
         : 'Something went wrong adding you to the waitlist. Please try again.');
       return;
     }
@@ -2620,11 +2627,8 @@ function setupWaitlistBindings() {
     }
   });
   
-  // Share My Loyalty Card button (shown after email submitted). Shares the
-  // link via the native sheet; /share's Open Graph tags render the card as
-  // the link-preview thumbnail wherever it lands.
-  // Post-signup prompt for visitors still showing @GUEST: jump to the card's
-  // Fan ID and start editing it in place.
+  // Prompt for visitors still showing @GUEST: jump to the card's Fan ID and
+  // start editing it in place.
   const setFanIdBtn = document.getElementById('b-set-fan-id');
   if (setFanIdBtn) {
     setFanIdBtn.addEventListener('click', () => {
@@ -2634,6 +2638,9 @@ function setupWaitlistBindings() {
     });
   }
 
+  // Primary share CTA, always available — not gated on the waitlist form.
+  // Opens the native sheet; /share's Open Graph tags render the card as the
+  // link-preview thumbnail wherever it lands.
   const shareSportsCircleBtn = document.getElementById('b-share-sports-circle');
   if (shareSportsCircleBtn) {
     shareSportsCircleBtn.addEventListener('click', () => shareTextOrDownload(getShareText(), shareSportsCircleBtn));
