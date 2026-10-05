@@ -2,19 +2,19 @@ import { createClient } from '@supabase/supabase-js';
 
 // Waitlist persistence.
 //
-//   form submit (waits for the Cloudflare Turnstile token)
+//   form submit
 //        │
 //        ▼
-//   saveWaitlistEntry(entry, token) ─► waitlist-signup edge function
-//        │                               │ verifies captcha server-side
-//        │                               ▼ public.waitlist (service_role)
+//   saveWaitlistEntry(entry) ─► waitlist-signup edge function
+//        │                        │ (Turnstile check currently disabled)
+//        │                        ▼ public.waitlist (service_role)
 //        ├─ ok     ─► success UI, HubSDK.track('waitlist_signup'),
 //        │            localStorage mirror (dev only, for the dev admin panel)
 //        └─ failed ─► inline error + retry, HubSDK.track('waitlist_signup_failed')
 //
 // The insert no longer goes anon → table directly (that path is closed by RLS).
-// It goes through the captcha-gated edge function, so the public anon key can't
-// be used to spam signups. This function never throws; the caller decides what
+// It goes through the edge function, which validates and size-caps each row.
+// This function never throws; the caller decides what
 // a failure means (main.js shows an error and lets the visitor retry, rather
 // than showing a success screen for a signup that was never saved).
 
@@ -26,18 +26,15 @@ const supabase = (supabaseUrl && supabaseAnonKey)
   : null;
 
 /**
- * Send a waitlist signup through the captcha-gated edge function.
+ * Send a waitlist signup through the waitlist-signup edge function.
  * Idempotent on email (upsert-ignore server-side), non-throwing.
  * @param {object} entry
- * @param {string} token  Cloudflare Turnstile response token
+ * @param {string} [token]  Cloudflare Turnstile token (ignored while the check is disabled)
  * @returns {Promise<{ ok: boolean, error?: string }>}
  */
-export async function saveWaitlistEntry(entry, token) {
+export async function saveWaitlistEntry(entry, token = '') {
   if (!supabase) {
     return { ok: false, error: 'supabase-not-configured' };
-  }
-  if (!token) {
-    return { ok: false, error: 'missing-captcha' };
   }
   try {
     const { data, error } = await supabase.functions.invoke('waitlist-signup', {

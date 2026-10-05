@@ -916,7 +916,7 @@ function goToStep(stepIndex) {
   const headerCta = document.getElementById('header-cta-container');
   if (stepIndex === 6) {
     headerCta.style.display = 'block';
-    ensureTurnstile(); // build the captcha widget now that the form is visible
+    // ensureTurnstile(); // captcha disabled — see supabase/functions/waitlist-signup
   } else {
     headerCta.style.display = 'none';
   }
@@ -2481,7 +2481,7 @@ function rearmWaitlistForm() {
   const el = document.getElementById('turnstile-container');
   if (el) el.style.display = '';
   turnstileWidgetId = null; // force a fresh render
-  ensureTurnstile();
+  // ensureTurnstile(); // captcha disabled — see supabase/functions/waitlist-signup
 }
 
 // --- WAITLIST DATA AND FORM SUBMISSION ENGINE ---
@@ -2553,8 +2553,9 @@ function setupWaitlistBindings() {
     const teamsFormat = selectedTeams.map(t => `${t.name} (${t.league}) [Score: ${t.score}/100]${t.isTop ? ' *TOP*' : ''}`).join(', ');
     const overallScore = computeFanScore(selectedTeams);
 
-    // Durable, structured store via the captcha-gated edge function.
-    const captchaToken = await waitForTurnstileToken();
+    // Durable, structured store via the waitlist-signup edge function.
+    // Captcha disabled: to re-enable, restore the token wait and pass it below.
+    // const captchaToken = await waitForTurnstileToken();
     const result = await saveWaitlistEntry({
       name,
       handle: name,
@@ -2566,7 +2567,7 @@ function setupWaitlistBindings() {
       prediction,
       overallScore,
       archetype: generateSportsIdentityTagline()
-    }, captchaToken);
+    });
 
     // Local dev runs without the Supabase/Turnstile env vars, so let the
     // success UI run there. Anywhere else a failed save must not look like

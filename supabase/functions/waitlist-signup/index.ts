@@ -2,14 +2,15 @@
 //
 // This is the ONLY write path into public.waitlist. Direct anon inserts are
 // disabled by RLS (see supabase/migrations/20260802_lockdown_waitlist.sql), so
-// spammers can't hit the REST endpoint with the public anon key. Every signup
-// must carry a valid Cloudflare Turnstile token, which we verify server-side
-// here before inserting with the service_role key (which bypasses RLS).
+// spammers can't hit the REST endpoint with the public anon key. Signups used
+// to require a Cloudflare Turnstile token verified here; that check is
+// currently disabled (see step 1 below). Inserts use the service_role key
+// (which bypasses RLS).
 //
-//   browser ──(Turnstile token + form)──► this function
-//                                            │ verify token w/ Cloudflare secret
-//                                            ▼
-//                                    public.waitlist (service_role insert)
+//   browser ──(form)──► this function
+//                          │ validate + size-cap (captcha check disabled)
+//                          ▼
+//                  public.waitlist (service_role insert)
 //
 // Env (secrets):
 //   TURNSTILE_SECRET_KEY        - Cloudflare Turnstile secret (set via `supabase secrets set`)
@@ -42,36 +43,38 @@ Deno.serve(async (req) => {
     return json({ error: 'bad_json' }, 400);
   }
 
-  const token = typeof body.token === 'string' ? body.token : '';
-  if (!token) return json({ error: 'missing_captcha' }, 400);
-
-  // 1) Verify the Turnstile token with Cloudflare (server-side, un-forgeable).
-  const secret = Deno.env.get('TURNSTILE_SECRET_KEY') ?? '';
-  const ip =
-    req.headers.get('CF-Connecting-IP') ??
-    req.headers.get('x-forwarded-for')?.split(',')[0].trim() ??
-    '';
-  let outcome: { success?: boolean; 'error-codes'?: string[] } = {};
-  try {
-    const verifyRes = await fetch(
-      'https://challenges.cloudflare.com/turnstile/v0/siteverify',
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ secret, response: token, remoteip: ip }),
-      },
-    );
-    outcome = await verifyRes.json();
-  } catch {
-    return json({ error: 'captcha_unreachable' }, 502);
-  }
-  if (!outcome.success) {
-    return json({ error: 'captcha_failed', detail: outcome['error-codes'] ?? [] }, 403);
-  }
+  // 1) Turnstile verification is DISABLED: the widget stopped producing tokens
+  // in production, which blocked every signup. Every request now passes.
+  // To re-enable, uncomment this block and restore the client-side widget.
+  //
+  // const token = typeof body.token === 'string' ? body.token : '';
+  // if (!token) return json({ error: 'missing_captcha' }, 400);
+  // const secret = Deno.env.get('TURNSTILE_SECRET_KEY') ?? '';
+  // const ip =
+  //   req.headers.get('CF-Connecting-IP') ??
+  //   req.headers.get('x-forwarded-for')?.split(',')[0].trim() ??
+  //   '';
+  // let outcome: { success?: boolean; 'error-codes'?: string[] } = {};
+  // try {
+  //   const verifyRes = await fetch(
+  //     'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+  //     {
+  //       method: 'POST',
+  //       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  //       body: new URLSearchParams({ secret, response: token, remoteip: ip }),
+  //     },
+  //   );
+  //   outcome = await verifyRes.json();
+  // } catch {
+  //   return json({ error: 'captcha_unreachable' }, 502);
+  // }
+  // if (!outcome.success) {
+  //   return json({ error: 'captcha_failed', detail: outcome['error-codes'] ?? [] }, 403);
+  // }
 
   // 2) Validate email shape.
   const email = String(body.email ?? '').trim().toLowerCase();
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+  if (email.length > 254 || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
     return json({ error: 'bad_email' }, 400);
   }
 
@@ -81,16 +84,23 @@ Deno.serve(async (req) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   );
 
+  // With no captcha this endpoint is open to anyone, so cap what a single
+  // request can write.
+  const str = (v: unknown, max: number) =>
+    typeof v === 'string' ? v.slice(0, max) : null;
   const overall = Number(body.overall_score);
+  const teams = body.teams;
   const row = {
-    name: body.name ?? null,
-    handle: body.handle ?? null,
+    name: str(body.name, 60),
+    handle: str(body.handle, 60),
     email,
-    top_team: body.top_team ?? null,
-    teams: body.teams ?? null,
-    prediction: body.prediction ?? null,
-    overall_score: Number.isFinite(overall) ? overall : null,
-    archetype: body.archetype ?? null,
+    top_team: str(body.top_team, 80),
+    teams: Array.isArray(teams) && JSON.stringify(teams).length <= 4000
+      ? teams.slice(0, 8)
+      : null,
+    prediction: str(body.prediction, 120),
+    overall_score: Number.isFinite(overall) ? Math.round(overall) : null,
+    archetype: str(body.archetype, 80),
   };
 
   const { error } = await supabase.from('waitlist').insert(row);
