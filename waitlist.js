@@ -48,6 +48,7 @@ export async function saveWaitlistEntry(entry, token = '') {
         prediction: entry.prediction ?? null,
         overall_score: Number.isFinite(entry.overallScore) ? entry.overallScore : null,
         archetype: entry.archetype ?? null,
+        fan_id: entry.fanId ?? null,
       },
     });
     if (error) {

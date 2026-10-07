@@ -923,6 +923,7 @@ button, input, select {
   max-height: 480px;
   overflow-y: auto;
   padding-right: 8px;
+  padding-bottom: 4px; /* keep the last input's border from being clipped */
 }
 
 /* Scrollbar for container */
@@ -3322,3 +3323,80 @@ button, input, select {
   flex-shrink: 0;
 }
 
+
+/* ==========================================================================
+   Quiz: Fan ID (username) question
+   ========================================================================== */
+
+.quiz-handle-hint {
+  margin-top: -6px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.quiz-handle-input-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 16px;
+  background-color: var(--bg-tertiary);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  transition: var(--transition-smooth);
+}
+
+.quiz-handle-input-row:focus-within {
+  border-color: var(--team-primary);
+}
+
+.quiz-handle-at {
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.quiz-handle-input-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 14px 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-main);
+  font-size: 16px; /* >=16px so iOS Safari doesn't auto-zoom on focus */
+  font-family: var(--font-main);
+}
+
+.quiz-handle-error {
+  margin: 0;
+  color: #f87171;
+  font-size: 0.85rem;
+}
+
+/* ==========================================================================
+   Card screen on phones: keep Share visible without scrolling
+   ========================================================================== */
+
+@media (max-width: 768px) {
+  /* The active step's transform would make it the containing block for
+     position:fixed, pinning the bar to the section instead of the screen. */
+  #step-main.onboarding-step.active {
+    transform: none;
+  }
+
+  #step-main .share-primary {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    z-index: 50;
+  }
+
+  #step-main .share-primary #b-share-sports-circle {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+  }
+
+  /* Room so the end of the page can scroll clear of the pinned button. */
+  #step-main .main-landing-container {
+    padding-bottom: 96px;
+  }
+}

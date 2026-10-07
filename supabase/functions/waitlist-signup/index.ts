@@ -90,7 +90,12 @@ Deno.serve(async (req) => {
     typeof v === 'string' ? v.slice(0, max) : null;
   const overall = Number(body.overall_score);
   const teams = body.teams;
+  const rawFanId = typeof body.fan_id === 'string' ? body.fan_id : '';
+  const fanId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(rawFanId)
+    ? rawFanId
+    : null;
   const row = {
+    fan_id: fanId,
     name: str(body.name, 60),
     handle: str(body.handle, 60),
     email,

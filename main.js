@@ -7,11 +7,15 @@ import { saveCircle, fetchCircle } from './circles.js';
 import { getArchetype, KNOWN_ARCHETYPES } from './archetypes.js';
 import { sanitizeCircle, sanitizeHandle } from './circlePayload.js';
 import { RAINBOW_RADII, RAINBOW_CX, RAINBOW_CY, getLuminance, getContrastAdaptedColor, getPredictionLabel, computeFanScore } from './cardVisuals.js';
+import { getFanId, getLastHandle, claimHandle, HANDLE_PATTERN } from './fans.js';
 
+// Every event (page views, errors, custom) carries this browser's anonymous
+// fan id as user_id, so one person's activity can be followed across visits.
 HubSDK.init({
   appSlug: 'fanlog',
   supabaseUrl: import.meta.env.VITE_SUPABASE_URL,
   supabaseKey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+  userId: getFanId(),
 });
 
 // --- REFERRAL ATTRIBUTION ---
@@ -1995,6 +1999,65 @@ function renderQuizForCurrentTeam() {
     predInput.value = team.prediction;
     checkQuizAnswersStatus();
   }
+
+  // ── Last question: Fan ID (username), asked once per card ──
+  if (!savedHandle) {
+    const handleItem = document.createElement('div');
+    handleItem.className = 'quiz-question-item quiz-handle-item';
+
+    const handleText = document.createElement('span');
+    handleText.className = 'quiz-question-text';
+    handleText.textContent = 'Last one: pick your Fan ID';
+    handleItem.appendChild(handleText);
+
+    const handleHint = document.createElement('span');
+    handleHint.className = 'quiz-handle-hint';
+    handleHint.textContent = 'Your username on your Loyalty Card. 3–20 letters, numbers or _.';
+    handleItem.appendChild(handleHint);
+
+    const handleRow = document.createElement('div');
+    handleRow.className = 'quiz-handle-input-row';
+    const handleAt = document.createElement('span');
+    handleAt.className = 'quiz-handle-at';
+    handleAt.textContent = '@';
+    const handleInput = document.createElement('input');
+    handleInput.type = 'text';
+    handleInput.id = 'quiz-handle-input';
+    handleInput.maxLength = 20;
+    handleInput.placeholder = 'yourname';
+    handleInput.autocomplete = 'off';
+    handleInput.setAttribute('autocapitalize', 'off');
+    handleInput.spellcheck = false;
+    handleInput.value = getLastHandle();
+    handleInput.addEventListener('input', () => {
+      const cleaned = handleInput.value.replace(/[^A-Za-z0-9_]/g, '');
+      if (cleaned !== handleInput.value) handleInput.value = cleaned;
+      setQuizHandleError('');
+      checkQuizAnswersStatus();
+    });
+    handleRow.appendChild(handleAt);
+    handleRow.appendChild(handleInput);
+    handleItem.appendChild(handleRow);
+
+    const handleError = document.createElement('p');
+    handleError.className = 'quiz-handle-error';
+    handleError.id = 'quiz-handle-error';
+    handleError.setAttribute('role', 'alert');
+    handleError.hidden = true;
+    handleItem.appendChild(handleError);
+
+    quizQuestionsList.appendChild(handleItem);
+    checkQuizAnswersStatus();
+  }
+}
+
+function setQuizHandleError(message) {
+  const el = document.getElementById('quiz-handle-error');
+  if (!el) return;
+  el.textContent = message;
+  el.hidden = !message;
+  // The question list is its own scroll box; make sure the message is in view.
+  if (message) el.scrollIntoView({ block: 'nearest' });
 }
 
 function checkQuizAnswersStatus() {
@@ -2017,17 +2080,41 @@ function checkQuizAnswersStatus() {
   const predVal = predInput ? parseInt(predInput.value) : NaN;
   const predValid = !isNaN(predVal) && predVal >= 2026 && predVal <= 2050;
 
-  if (sliderAnswered && devotionAnswered && triviaAnswered && predValid) {
+  const handleInput = document.getElementById('quiz-handle-input');
+  const handleValid = !handleInput || HANDLE_PATTERN.test(handleInput.value);
+
+  if (sliderAnswered && devotionAnswered && triviaAnswered && predValid && handleValid) {
     btnQuizNext.removeAttribute('disabled');
   } else {
     btnQuizNext.setAttribute('disabled', 'true');
   }
 }
 
-btnQuizNext.addEventListener('click', () => {
+btnQuizNext.addEventListener('click', async () => {
   const team = selectedTeams[currentQuizTeamIndex];
   if (!team) return;
-  
+
+  // Claim the Fan ID first; a taken name keeps them on the quiz. If the check
+  // can't run (offline/Supabase down), let them through rather than block.
+  const handleInput = document.getElementById('quiz-handle-input');
+  if (handleInput) {
+    const handle = handleInput.value;
+    btnQuizNext.setAttribute('disabled', 'true');
+    btnQuizNext.textContent = 'Checking Fan ID…';
+    const result = await claimHandle(handle);
+    btnQuizNext.textContent = 'Complete Team Profile';
+    if (result === 'taken' || result === 'invalid') {
+      btnQuizNext.removeAttribute('disabled');
+      handleInput.focus({ preventScroll: true });
+      setQuizHandleError(result === 'taken'
+        ? `@${handle} is already taken. Try another.`
+        : 'Use 3–20 letters, numbers or _.');
+      return;
+    }
+    if (result === 'unavailable') HubSDK.track('handle_claim_unavailable');
+    savedHandle = handle;
+  }
+
   // Calculate total score out of 100 for current team
   let totalScore = 0;
 
@@ -2270,7 +2357,7 @@ function setupStep5MainPage(finalScore, isSharedView = false) {
   const topTeam = selectedTeams.find(t => t.isTop) || selectedTeams[0];
   const tagline = generateSportsIdentityTagline();
 
-  // Fan ID defaults to @GUEST, will be updated from email prefix once user enters email
+  // Fan ID comes from the quiz's last question; @GUEST only if none was set.
   const displayHandle = savedHandle ? (savedHandle.startsWith('@') ? savedHandle : `@${savedHandle}`) : "@GUEST";
 
   // Recipient view: someone opened a shared link and is looking at another
@@ -2280,6 +2367,7 @@ function setupStep5MainPage(finalScore, isSharedView = false) {
   // for your own card. Reset back to the normal state otherwise so it doesn't
   // linger once a recipient starts building their own.
   applySharedRecipientView(isSharedView, displayHandle);
+  viewingSharedCard = isSharedView;
 
   // Form profile object
   const userProfile = {
@@ -2360,10 +2448,12 @@ function setupStep5MainPage(finalScore, isSharedView = false) {
 // --- SETUP EDITABLE FAN ID ON CARD ---
 // setupEditableFanId runs on every card render, so its listeners are bound once.
 let fanIdEditorBound = false;
+// True while showing someone else's shared card: their Fan ID isn't editable.
+let viewingSharedCard = false;
 
 function startFanIdEdit() {
   const fanIdEl = document.getElementById('f-card-name');
-  if (!fanIdEl || fanIdEl.getAttribute('contenteditable') === 'true') return;
+  if (!fanIdEl || viewingSharedCard || fanIdEl.getAttribute('contenteditable') === 'true') return;
   fanIdEl.setAttribute('contenteditable', 'true');
   fanIdEl.classList.add('fan-id-editing');
   const range = document.createRange();
@@ -2382,16 +2472,26 @@ function setupEditableFanId() {
   fanIdEl.style.cursor = 'pointer';
   fanIdEl.addEventListener('click', startFanIdEdit);
 
-  fanIdEl.addEventListener('blur', () => {
+  fanIdEl.addEventListener('blur', async () => {
     fanIdEl.setAttribute('contenteditable', 'false');
     fanIdEl.classList.remove('fan-id-editing');
-    const handle = sanitizeHandle(fanIdEl.textContent);
-    const changed = handle !== sanitizeHandle(savedHandle);
-    fanIdEl.textContent = handle ? `@${handle}` : '@GUEST';
+    const previous = savedHandle;
+    const revert = (message) => {
+      fanIdEl.textContent = previous ? `@${previous}` : '@GUEST';
+      if (message) alert(message);
+    };
+    const handle = fanIdEl.textContent.replace(/[^A-Za-z0-9_]/g, '').slice(0, 20);
+    if (!handle || handle === previous) return revert();
+    if (!HANDLE_PATTERN.test(handle)) return revert('Fan IDs are 3–20 letters, numbers or _.');
+
+    fanIdEl.textContent = `@${handle}`;
+    const result = await claimHandle(handle);
+    if (result === 'taken') return revert(`@${handle} is already taken. Try another.`);
+    if (result === 'invalid') return revert('Fan IDs are 3–20 letters, numbers or _.');
     savedHandle = handle;
     updateRevealFanId();
     // The pre-saved share link carries the handle, so re-save it.
-    if (changed) prepareShareUrl();
+    prepareShareUrl();
   });
 
   fanIdEl.addEventListener('keydown', (e) => {
@@ -2566,7 +2666,8 @@ function setupWaitlistBindings() {
       })),
       prediction,
       overallScore,
-      archetype: generateSportsIdentityTagline()
+      archetype: generateSportsIdentityTagline(),
+      fanId: getFanId()
     });
 
     // Local dev runs without the Supabase/Turnstile env vars, so let the
@@ -2587,10 +2688,10 @@ function setupWaitlistBindings() {
       return;
     }
 
-    HubSDK.setUser(email);
+    // No email in analytics: events carry the fan id (user_id), and the
+    // waitlist row stores the same fan id alongside the email.
     HubSDK.track('waitlist_signup', {
       name,
-      email,
       teams: teamsFormat,
       prediction,
       overallScore,
