@@ -33,7 +33,7 @@
   <!-- Header -->
   <header class="site-header">
     <div class="header-container">
-      <div class="logo-area" id="admin-trigger">
+      <div class="logo-area" id="site-logo">
         <img src="fanlog_logo.svg" alt="FanLog Logo" class="logo-img">
         <span class="logo-text">Fanlog</span><span class="logo-beta">beta</span>
       </div>
@@ -471,46 +471,6 @@
     </section>
 
   </main>
-
-  <!-- Dev-only admin panel (bound in main.js under import.meta.env.DEV; inert in production) -->
-  <div class="admin-modal-overlay" id="admin-modal">
-    <div class="admin-modal-container">
-      <div class="admin-modal-header">
-        <h3>FanLog Admin Panel (dev)</h3>
-        <button class="close-modal-btn" id="admin-close-btn">&times;</button>
-      </div>
-      <div class="admin-modal-content">
-        <p>Signups made in this browser during local development. Real signups live in the Supabase <code>waitlist</code> table.</p>
-        <div id="admin-dashboard-area">
-          <div class="admin-actions-bar">
-            <div>
-              <strong>Waitlist Signups: </strong><span id="admin-signup-count">0</span>
-            </div>
-            <div class="admin-btn-group">
-              <button id="admin-export-btn" class="btn btn-secondary btn-sm">Export CSV</button>
-              <button id="admin-clear-btn" class="btn btn-danger btn-sm">Clear All</button>
-            </div>
-          </div>
-          <div class="table-responsive">
-            <table class="admin-table">
-              <thead>
-                <tr>
-                  <th>Timestamp</th>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Teams & Devotion Scores</th>
-                  <th>Title Prediction</th>
-                </tr>
-              </thead>
-              <tbody id="admin-table-body">
-                <!-- Populated via Javascript -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- Footer -->
   <footer class="site-footer">

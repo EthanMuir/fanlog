@@ -933,7 +933,7 @@ btnStartFlow.addEventListener('click', () => {
 });
 
 // Logo click: go back to step 1 (home)
-document.getElementById('admin-trigger')?.addEventListener('click', (e) => {
+document.getElementById('site-logo')?.addEventListener('click', (e) => {
   // Only handle single clicks (double click is handled separately for admin)
   // If already on step 1, do nothing
   const welcomeStep = document.getElementById('step-welcome');
@@ -3085,8 +3085,40 @@ socialButtons.forEach(btn => {
 // which live in public.waitlist. Vite strips this block from production
 // builds, so there's no client-side password to ship (the old one sat in the
 // public bundle) and no "Double click for Admin Panel" hint on the live logo.
+// The panel's markup is created here too, so the production HTML has no
+// trace of it (page readers would otherwise see "Waitlist Signups: 0").
 if (import.meta.env.DEV) {
-  const adminTrigger = document.getElementById('admin-trigger');
+  document.body.insertAdjacentHTML('beforeend', `
+    <div class="admin-modal-overlay" id="admin-modal">
+      <div class="admin-modal-container">
+        <div class="admin-modal-header">
+          <h3>FanLog Admin Panel (dev)</h3>
+          <button class="close-modal-btn" id="admin-close-btn">&times;</button>
+        </div>
+        <div class="admin-modal-content">
+          <p>Signups made in this browser during local development. Real signups live in the Supabase <code>waitlist</code> table.</p>
+          <div id="admin-dashboard-area">
+            <div class="admin-actions-bar">
+              <div><strong>Waitlist Signups: </strong><span id="admin-signup-count">0</span></div>
+              <div class="admin-btn-group">
+                <button id="admin-export-btn" class="btn btn-secondary btn-sm">Export CSV</button>
+                <button id="admin-clear-btn" class="btn btn-danger btn-sm">Clear All</button>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="admin-table">
+                <thead>
+                  <tr><th>Timestamp</th><th>Name</th><th>Email</th><th>Teams & Devotion Scores</th><th>Title Prediction</th></tr>
+                </thead>
+                <tbody id="admin-table-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`);
+
+  const adminTrigger = document.getElementById('site-logo');
   const adminModal = document.getElementById('admin-modal');
   const adminCloseBtn = document.getElementById('admin-close-btn');
   const adminSignupCount = document.getElementById('admin-signup-count');
