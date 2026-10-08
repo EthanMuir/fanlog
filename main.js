@@ -879,7 +879,8 @@ function goToStep(stepIndex) {
     document.getElementById('step-quiz'),    // 3
     document.getElementById('step-hub'),     // 4
     document.getElementById('step-reveal'),  // 5
-    document.getElementById('step-main')     // 6
+    document.getElementById('step-main'),    // 6
+    document.getElementById('step-fanid')    // 7: between hub (4) and reveal (5)
   ];
 
   steps.forEach(stepEl => {
@@ -1999,65 +2000,6 @@ function renderQuizForCurrentTeam() {
     predInput.value = team.prediction;
     checkQuizAnswersStatus();
   }
-
-  // ── Last question: Fan ID (username), asked once per card ──
-  if (!savedHandle) {
-    const handleItem = document.createElement('div');
-    handleItem.className = 'quiz-question-item quiz-handle-item';
-
-    const handleText = document.createElement('span');
-    handleText.className = 'quiz-question-text';
-    handleText.textContent = 'Last one: pick your Fan ID';
-    handleItem.appendChild(handleText);
-
-    const handleHint = document.createElement('span');
-    handleHint.className = 'quiz-handle-hint';
-    handleHint.textContent = 'Your username on your Loyalty Card. 3–20 letters, numbers or _.';
-    handleItem.appendChild(handleHint);
-
-    const handleRow = document.createElement('div');
-    handleRow.className = 'quiz-handle-input-row';
-    const handleAt = document.createElement('span');
-    handleAt.className = 'quiz-handle-at';
-    handleAt.textContent = '@';
-    const handleInput = document.createElement('input');
-    handleInput.type = 'text';
-    handleInput.id = 'quiz-handle-input';
-    handleInput.maxLength = 20;
-    handleInput.placeholder = 'yourname';
-    handleInput.autocomplete = 'off';
-    handleInput.setAttribute('autocapitalize', 'off');
-    handleInput.spellcheck = false;
-    handleInput.value = getLastHandle();
-    handleInput.addEventListener('input', () => {
-      const cleaned = handleInput.value.replace(/[^A-Za-z0-9_]/g, '');
-      if (cleaned !== handleInput.value) handleInput.value = cleaned;
-      setQuizHandleError('');
-      checkQuizAnswersStatus();
-    });
-    handleRow.appendChild(handleAt);
-    handleRow.appendChild(handleInput);
-    handleItem.appendChild(handleRow);
-
-    const handleError = document.createElement('p');
-    handleError.className = 'quiz-handle-error';
-    handleError.id = 'quiz-handle-error';
-    handleError.setAttribute('role', 'alert');
-    handleError.hidden = true;
-    handleItem.appendChild(handleError);
-
-    quizQuestionsList.appendChild(handleItem);
-    checkQuizAnswersStatus();
-  }
-}
-
-function setQuizHandleError(message) {
-  const el = document.getElementById('quiz-handle-error');
-  if (!el) return;
-  el.textContent = message;
-  el.hidden = !message;
-  // The question list is its own scroll box; make sure the message is in view.
-  if (message) el.scrollIntoView({ block: 'nearest' });
 }
 
 function checkQuizAnswersStatus() {
@@ -2080,41 +2022,17 @@ function checkQuizAnswersStatus() {
   const predVal = predInput ? parseInt(predInput.value) : NaN;
   const predValid = !isNaN(predVal) && predVal >= 2026 && predVal <= 2050;
 
-  const handleInput = document.getElementById('quiz-handle-input');
-  const handleValid = !handleInput || HANDLE_PATTERN.test(handleInput.value);
-
-  if (sliderAnswered && devotionAnswered && triviaAnswered && predValid && handleValid) {
+  if (sliderAnswered && devotionAnswered && triviaAnswered && predValid) {
     btnQuizNext.removeAttribute('disabled');
   } else {
     btnQuizNext.setAttribute('disabled', 'true');
   }
 }
 
-btnQuizNext.addEventListener('click', async () => {
+btnQuizNext.addEventListener('click', () => {
   const team = selectedTeams[currentQuizTeamIndex];
   if (!team) return;
-
-  // Claim the Fan ID first; a taken name keeps them on the quiz. If the check
-  // can't run (offline/Supabase down), let them through rather than block.
-  const handleInput = document.getElementById('quiz-handle-input');
-  if (handleInput) {
-    const handle = handleInput.value;
-    btnQuizNext.setAttribute('disabled', 'true');
-    btnQuizNext.textContent = 'Checking Fan ID…';
-    const result = await claimHandle(handle);
-    btnQuizNext.textContent = 'Complete Team Profile';
-    if (result === 'taken' || result === 'invalid') {
-      btnQuizNext.removeAttribute('disabled');
-      handleInput.focus({ preventScroll: true });
-      setQuizHandleError(result === 'taken'
-        ? `@${handle} is already taken. Try another.`
-        : 'Use 3–20 letters, numbers or _.');
-      return;
-    }
-    if (result === 'unavailable') HubSDK.track('handle_claim_unavailable');
-    savedHandle = handle;
-  }
-
+  
   // Calculate total score out of 100 for current team
   let totalScore = 0;
 
@@ -2220,9 +2138,61 @@ if (btnHubAddTeam) {
 if (btnHubFinish) {
   btnHubFinish.addEventListener('click', () => {
     if (selectedTeams.length === 0) return;
-    goToStep(5); // Transition to Step 5: Reveal
+    showFanIdStep(); // then the reveal
   });
 }
+
+// --- FAN ID (USERNAME) STEP ---
+// Asked once per card, after all teams are added. Usernames are unique
+// (claim_handle in fans.js); a taken name keeps them here. If the check can't
+// run (offline/Supabase down), let them through rather than block the card.
+const fanIdForm = document.getElementById('fanid-form');
+const fanIdInput = document.getElementById('fanid-input');
+const fanIdError = document.getElementById('fanid-error');
+const btnFanIdContinue = document.getElementById('btn-fanid-continue');
+const fanIdContinueLabel = btnFanIdContinue.textContent;
+
+function setFanIdError(message) {
+  fanIdError.textContent = message;
+  fanIdError.hidden = !message;
+}
+
+function showFanIdStep() {
+  fanIdInput.value = savedHandle || getLastHandle();
+  setFanIdError('');
+  btnFanIdContinue.textContent = fanIdContinueLabel;
+  btnFanIdContinue.disabled = !HANDLE_PATTERN.test(fanIdInput.value);
+  goToStep(7);
+  fanIdInput.focus({ preventScroll: true });
+}
+
+fanIdInput.addEventListener('input', () => {
+  const cleaned = fanIdInput.value.replace(/[^A-Za-z0-9_]/g, '');
+  if (cleaned !== fanIdInput.value) fanIdInput.value = cleaned;
+  setFanIdError('');
+  btnFanIdContinue.disabled = !HANDLE_PATTERN.test(cleaned);
+});
+
+fanIdForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const handle = fanIdInput.value;
+  if (!HANDLE_PATTERN.test(handle) || btnFanIdContinue.disabled) return;
+  btnFanIdContinue.disabled = true;
+  btnFanIdContinue.textContent = 'Checking Fan ID…';
+  const result = await claimHandle(handle);
+  btnFanIdContinue.textContent = fanIdContinueLabel;
+  if (result === 'taken' || result === 'invalid') {
+    btnFanIdContinue.disabled = false;
+    setFanIdError(result === 'taken'
+      ? `@${handle} is already taken. Try another.`
+      : 'Use 3–20 letters, numbers or _.');
+    fanIdInput.focus({ preventScroll: true });
+    return;
+  }
+  if (result === 'unavailable') HubSDK.track('handle_claim_unavailable');
+  savedHandle = handle;
+  goToStep(5); // Reveal
+});
 
 // --- STEP 4: REVEAL SEQUENCE ---
 function runRevealSequence() {

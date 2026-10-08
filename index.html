@@ -253,6 +253,29 @@
     </section>
 
 
+    <!-- FAN ID (USERNAME): asked once, after all teams, before the reveal -->
+    <section id="step-fanid" class="onboarding-step">
+      <div class="quiz-step-container">
+        <div class="step-header">
+          <span class="step-indicator">LAST STEP</span>
+          <h2 class="step-title">Pick your Fan ID</h2>
+          <p class="step-subtitle">This is your username on your Loyalty Card. Use 3–20 letters, numbers or _.</p>
+        </div>
+
+        <div class="quiz-box-card">
+          <form id="fanid-form" class="fanid-form" novalidate>
+            <div class="fanid-input-row">
+              <span class="fanid-at">@</span>
+              <input type="text" id="fanid-input" maxlength="20" placeholder="yourname" autocomplete="off" autocapitalize="off" spellcheck="false">
+            </div>
+            <p class="fanid-error" id="fanid-error" role="alert" hidden></p>
+            <button type="submit" id="btn-fanid-continue" class="btn btn-primary btn-block" disabled>Reveal My Loyalty Card</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+
     <!-- STEP 4: REVEAL / CALCULATING ANIMATION -->
     <section id="step-reveal" class="onboarding-step">
       <div class="reveal-step-container">

@@ -3325,16 +3325,16 @@ button, input, select {
 
 
 /* ==========================================================================
-   Quiz: Fan ID (username) question
+   Fan ID (username) step
    ========================================================================== */
 
-.quiz-handle-hint {
-  margin-top: -6px;
-  font-size: 0.85rem;
-  color: var(--text-muted);
+.fanid-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
-.quiz-handle-input-row {
+.fanid-input-row {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -3345,16 +3345,16 @@ button, input, select {
   transition: var(--transition-smooth);
 }
 
-.quiz-handle-input-row:focus-within {
+.fanid-input-row:focus-within {
   border-color: var(--team-primary);
 }
 
-.quiz-handle-at {
+.fanid-at {
   font-weight: 700;
   color: var(--text-muted);
 }
 
-.quiz-handle-input-row input {
+.fanid-input-row input {
   flex: 1;
   min-width: 0;
   padding: 14px 0;
@@ -3366,7 +3366,7 @@ button, input, select {
   font-family: var(--font-main);
 }
 
-.quiz-handle-error {
+.fanid-error {
   margin: 0;
   color: #f87171;
   font-size: 0.85rem;
