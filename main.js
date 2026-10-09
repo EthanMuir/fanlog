@@ -1833,8 +1833,16 @@ function renderQuizForCurrentTeam() {
   sliderEl.value = String(currentSliderIdx);
   sliderEl.setAttribute('id', `slider-${team.id}`);
 
+  // Track fill ends at the thumb's center (22px thumb, see .quiz-slider).
+  const setSliderFill = () => {
+    const ratio = parseInt(sliderEl.value) / (sliderBuckets.length - 1);
+    sliderEl.style.setProperty('--fill', `calc(11px + (100% - 22px) * ${ratio})`);
+  };
+  setSliderFill();
+
   sliderEl.addEventListener('input', () => {
     const idx = parseInt(sliderEl.value);
+    setSliderFill();
     sliderVal.textContent = sliderBuckets[idx];
     const pts = Math.round((idx / (sliderBuckets.length - 1)) * 25);
     userQuizAnswers[sliderKey] = pts;
