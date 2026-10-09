@@ -1010,10 +1010,7 @@ button, input, select {
   width: 100%;
   height: 6px;
   border-radius: 100px;
-  /* Team color up to the thumb (--fill, set in main.js), visible track after. */
-  background: linear-gradient(to right,
-    var(--team-primary) 0%, var(--team-primary) var(--fill, 0%),
-    rgba(255, 255, 255, 0.14) var(--fill, 0%), rgba(255, 255, 255, 0.14) 100%);
+  background: var(--bg-tertiary);
   outline: none;
   cursor: pointer;
   accent-color: var(--team-primary);
