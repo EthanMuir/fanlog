@@ -1101,7 +1101,11 @@ function applyTeamTheme(primaryHex, secondaryHex) {
     accent = '#64748b'; // both team colors too dark - neutral slate fallback
   }
   document.documentElement.style.setProperty('--team-primary', accent);
-  document.documentElement.style.setProperty('--team-secondary', secondaryHex || accent);
+  // --team-secondary ends text gradients and is the button hover color, so a
+  // near-black secondary (e.g. Roughriders #000000) would vanish on the dark
+  // page. Same threshold as the accent: too dark falls back to the accent.
+  const secondary = secondaryHex && getLuminance(secondaryHex) >= 45 ? secondaryHex : accent;
+  document.documentElement.style.setProperty('--team-secondary', secondary);
   // Determine whether button text should be dark or light for contrast
   const btnTextColor = getLuminance(accent) > 155 ? '#0a0a0a' : '#ffffff';
   document.documentElement.style.setProperty('--btn-text', btnTextColor);
