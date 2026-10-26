@@ -2401,6 +2401,10 @@ function setupStep5MainPage(finalScore, isSharedView = false) {
   // Transition step
   goToStep(6);
 
+  // Someone else's shared card isn't a card this visitor made: don't count it
+  // as a conversion or save another copy of it to share.
+  if (isSharedView) return;
+
   // Reaching the final card = a completed Loyalty Card. This is the key
   // conversion event: the numerator for visitor→circle and the denominator
   // for share rate. `referredBy` attributes it to a sharer when present.
@@ -3226,7 +3230,10 @@ function generateRandomCard() {
     quizQuestions: getRandomQuizQuestions(2)
   }));
 
-  if (!savedHandle) savedHandle = sampleHandles[Math.floor(Math.random() * sampleHandles.length)];
+  // savedHandle is stored without the "@" everywhere else; with it, clicking
+  // the card's Fan ID and leaving it unchanged looked like a rename and
+  // claimed the sample name for this fan.
+  if (!savedHandle) savedHandle = sampleHandles[Math.floor(Math.random() * sampleHandles.length)].replace(/^@/, '');
   userQuizAnswers = {};
   recalculateTopTeam();
 

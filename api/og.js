@@ -70,6 +70,9 @@ function getFonts() {
     fontsPromise = loadGoogleFont('Space Grotesk', 700).then((bold) => [
       { name: 'Space Grotesk', data: bold, weight: 700, style: 'normal' }
     ]);
+    // Don't cache a failure: one Google Fonts blip would otherwise leave this
+    // warm instance on the fallback font until it's recycled.
+    fontsPromise.catch(() => { fontsPromise = null; });
   }
   return fontsPromise;
 }
