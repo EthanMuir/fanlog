@@ -26,3 +26,7 @@ Thumbs.db
 
 # Supabase CLI scratch
 supabase/.temp/
+
+# Test output
+test-results/
+playwright-report/
