@@ -17,6 +17,9 @@
     "html2canvas": "^1.4.1"
   },
   "devDependencies": {
-    "vite": "^5.2.11"
+    "vite": "^6.4.5"
+  },
+  "engines": {
+    "node": "22.x"
   }
 }
